@@ -584,7 +584,7 @@ Check: fetch_url
 
 **Scenario**: SC-38a — `PUT` applies exactly the fields sent
 **Given**: FX-STAFF-A signed in (cookie S1); the session is ADMIN.
-**When**: In turn, with S1 sent to `GET /v1/auth/me` after each step: (1) `PUT` `{"name":"Tc Renamed"}`; (2) `PUT` `{"is_active":false}` then `{"is_active":true}`; (3) `PUT` `{"password":"staff-pass-C3"}`; (4) `PUT` `{"name":"Tc Both","password":"staff-pass-D4"}`; (5) `PUT` `{"name":"Tc Pair","is_active":false}`.
+**When**: In turn, with S1 sent to `GET /v1/auth/me` after each step: (1) `PUT` `{"name":"Tc Renamed"}`; (2) `PUT` `{"is_active":false}` then `{"is_active":true}`; (3) a fresh sign-in S2 with the current password, then `PUT` `{"password":"staff-pass-C3"}`; (4) `PUT` `{"name":"Tc Both","password":"staff-pass-D4"}`; (5) `PUT` `{"name":"Tc Pair","is_active":false}`.
 **Then**: (1) answers 200 with name "Tc Renamed" and everything else unchanged, S1 answers 200 afterwards (a rename ends no session) and the password A still signs in; (2) switching off then on answers 200 each time with only `is_active` changed, S1 answers 401 after the switch-off; (3) answers 200, only the password changes (name stays, `is_active` stays true), the old sessions answer 401, `staff-pass-C3` signs in; (4) answers 200 with name "Tc Both", `staff-pass-D4` signs in and `staff-pass-C3` does not; (5) answers 200 with name "Tc Pair" and `is_active` false. Each answer has exactly the five account keys.
 Traces: SC-38 (ADMIN-031 item 1)
 Check: fetch_url
