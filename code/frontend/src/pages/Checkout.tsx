@@ -8,6 +8,7 @@ import { useDemo } from "../lib/demo";
 import { formatPrice } from "../lib/format";
 import { placeOrder } from "../lib/mock/orders";
 import { digitsOf, fill, type DeliveryOption, type PaymentMethod, type Product, type ShopTerms } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import Icon, { type IconName } from "../components/Icon";
 import EmptyBag from "../components/EmptyBag";
 import ProductImage from "../components/ProductImage";
@@ -163,7 +164,7 @@ export default function Checkout() {
           </fieldset>
         </div>
 
-        <aside className="lg:col-span-5 lg:pl-8">
+        <Bleed as="aside" side="right" ground className="py-8 lg:col-span-5">
           <T k="pages.checkout.summary" as="h2" className="text-lg text-ink" />
           <ul className="mt-5 border-t border-line">
             {lines.map((l) => (
@@ -198,7 +199,7 @@ export default function Checkout() {
             <Icon name="lock" size={16} />{paying ? words.paying : <T k="pages.checkout.place" />}
           </button>
           <T k="pages.checkout.terms" as="p" className="mt-3 text-sm leading-relaxed text-ink-soft" />
-        </aside>
+        </Bleed>
       </form>
     </>
   );
