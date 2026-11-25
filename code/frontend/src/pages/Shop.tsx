@@ -93,7 +93,7 @@ export default function Shop() {
             <span data-count="" className="tabular-nums text-ink">{total}</span>{" "}<T k="pages.shop.count" />
           </p>
         </div>
-        <HeadPicture src={oneCat?.image || headImage} alt={oneCat?.name || headAlt} className="lg:col-span-6 lg:col-start-7" />
+        <HeadPicture src={oneCat?.image || headImage} alt={oneCat?.name || headAlt} className="lg:flex-1" />
       </section>
       <Bleed side="both" ground className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <form key={t.q} role="search" onSubmit={search} className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-md">
