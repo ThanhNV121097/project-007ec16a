@@ -711,5 +711,5 @@ Every page above is drawn once for a phone width and widens at 1024px, as `desig
 
 | Plan item | Requirement ids | Test cases |
 |---|---|---|
-| The site as designed | SITE-001, SITE-002, SITE-003, SITE-004, SITE-005, SITE-006, SITE-007, SITE-008, SITE-009, SITE-010, SITE-011, SITE-012, SITE-013 | `test-cases/the-site-as-designed.md` |
+| The site as designed | SITE-001, SITE-002, SITE-003, SITE-004, SITE-005, SITE-006, SITE-007, SITE-008, SITE-009, SITE-010, SITE-011, SITE-012, SITE-013, SITE-015 | `test-cases/the-site-as-designed.md` |
 | Product page waits for the shoe before saying it is missing | SITE-014 | `test-cases/product-page-waits-for-the-shoe-before-saying-it-is-missing.md` |
