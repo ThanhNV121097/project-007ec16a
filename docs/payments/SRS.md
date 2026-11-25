@@ -54,7 +54,7 @@ Behaviour:
 3. The amount is the order's stored total, read from the database; no amount from the browser is used.
 4. The address is signed with the shop's hash secret (HMAC-SHA512 over the parameters, as VNPay requires).
 5. Every earlier reference of the order still leads to the same order.
-6. VNPay is offered at checkout only when both of its keys are set. When they are not, "Pay now" for an order of this way to pay answers 503.
+6. VNPay is the only way to pay at checkout, and no order can be completed without it. When either key is missing, checkout still shows the VNPay row but shows under it "Online payment is not available right now. Please try again later." in alert style and disables "Place order"; a request to place an order answers 503, creates no order and takes no pair off the shelf; "Pay now" for an unpaid order answers 503.
 7. "Pay now" for an order that is paid, cancelled or not a VNPay order is refused with 409 (ORD-007).
 
 **Acceptance criteria**
