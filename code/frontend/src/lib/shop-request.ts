@@ -37,11 +37,7 @@ export interface PriceRange {
 
 /**
  * One page of live shoes. A union of price bands is a list of ranges here;
-<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
- * how a request carries it over the wire is the technical design's decision.
-=======
  * `toParams` writes it the way the API reads it.
->>>>>>> refs/heads/main
  */
 export interface ProductsRequest {
   status: "live";
@@ -113,8 +109,6 @@ export function toRequest(query: ShopQuery, page: number): ProductsRequest {
     price: bandRanges(query.price),
   };
 }
-<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
-=======
 
 /** One range as the API reads it: `from..to`, an end left out left empty. */
 function rangeText(r: PriceRange): string {
@@ -143,4 +137,3 @@ export function toParams(req: ProductsRequest): Record<string, string> {
   if (req.price.length > 0) params.price_ranges = req.price.map(rangeText).join(",");
   return params;
 }
->>>>>>> refs/heads/main
