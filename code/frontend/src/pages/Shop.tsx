@@ -5,11 +5,11 @@ import { useCollection } from "../data";
 import { useTableQuery } from "../lib/table";
 import { formatPrice } from "../lib/format";
 import { fill, inBand, PRICE_BANDS, sizeKey, sizesInStock, type Category, type Line, type Product } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import FilterRail from "../components/FilterRail";
 import Grid from "../components/Grid";
 import Icon from "../components/Icon";
 import ProductCard from "../components/ProductCard";
-import Rule from "../components/Rule";
 import Select from "../components/Select";
 import { sizeColumns } from "../components/SizePicker";
 
@@ -89,8 +89,7 @@ export default function Shop() {
           <span data-count="" className="tabular-nums text-ink">{total}</span>{" "}<T k="pages.shop.count" />
         </p>
       </section>
-      <Rule />
-      <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <Bleed side="both" ground className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <form key={t.q} role="search" onSubmit={search} className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-md">
           <Icon name="search" className="shrink-0 text-ink-soft" />
           <input id="shop-search" name="q" type="search" defaultValue={t.q} placeholder={searchLabel} aria-label={searchLabel}
@@ -110,8 +109,7 @@ export default function Shop() {
               { value: "-rating", label: sortText.rated },
             ]} />
         </div>
-      </div>
-      <Rule />
+      </Bleed>
       <div className="flex flex-col gap-10 py-8 lg:flex-row lg:gap-12">
         <aside className={`${filtersOpen ? "block" : "hidden"} lg:block lg:w-56 lg:shrink-0`}>
           <FilterRail
