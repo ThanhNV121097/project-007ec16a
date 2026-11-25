@@ -144,7 +144,7 @@ Behaviour:
 
 Behaviour:
 
-1. An order that is still unpaid 30 minutes after it was placed is cancelled. Every order is paid online, so the rule applies to every unpaid order placed through checkout, whatever its status.
+1. An order whose way to pay is VNPay (and, from the later story, MoMo — PAY-021) that is still unpaid 30 minutes after it was placed and whose status is placed, confirmed or packed is cancelled. The rule is scoped to those orders: an unpaid bank-transfer order is cancelled only after 24 hours (PAY-020 item 5), and an unpaid order that is already shipped or delivered is left alone — the dealer cannot cancel a shipped order (ADMIN-016 item 2), so the rule does not either; it stays unpaid and the dealer follows it up in the gateway's portal.
 2. Cancelling puts the order's pairs back on the shelf; the shoes' sold-out and last-pairs lists and "pairs in stock" are brought up to date (ORD-005).
 3. The check runs at least once a minute, so an order is cancelled within 31 minutes of being placed.
 4. Orders that are paid and orders already cancelled are left alone. The sample orders that came with the first design (DOI-24804 to DOI-24817) are never cancelled by this rule, so the figures in `docs/admin/SRS.md` hold (open question 7).
