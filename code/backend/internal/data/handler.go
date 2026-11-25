@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
 )
 
@@ -16,6 +17,7 @@ import (
 // fault, not a slow page.
 const queryTimeout = 5 * time.Second
 
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 // Register mounts the eighteen read routes on mux: GET /v1/<collection> and
 // GET /v1/<collection>/{id} for each of the nine collections. They are public:
 // no session, no cookie is read. Routes carry no /api prefix — the edge proxy
@@ -23,10 +25,26 @@ const queryTimeout = 5 * time.Second
 //
 // Orders are not among them: they hold a customer's details, so internal/orders
 // serves them, by the order's own token.
+=======
+// Register mounts the twenty read routes on mux: GET /v1/<collection> and
+// GET /v1/<collection>/{id} for each of the ten collections. They are public:
+// no session is needed, with ONE exception: the list of a TeamOnly collection
+// (orders) is behind auth.Require(auth.Admin, auth.Staff) — 401 with no
+// session, 403 for a customer. Routes carry no /api prefix — the edge proxy
+// strips it.
+//
+// The record route of orders stays public until the checkout story replaces it
+// (story DATA-004 item 4); the checkout story also removes orders from the
+// registry in the pull request that mounts its own protected routes.
+>>>>>>> refs/heads/main
 func Register(mux *http.ServeMux, db Querier, log *slog.Logger) {
 	h := &handler{store: store{db: db}, log: log}
 	for _, c := range registry {
-		mux.HandleFunc("GET /v1/"+c.Name, h.list(c))
+		var list http.Handler = h.list(c)
+		if c.TeamOnly {
+			list = auth.Require(auth.Admin, auth.Staff)(list)
+		}
+		mux.Handle("GET /v1/"+c.Name, list)
 		mux.HandleFunc("GET /v1/"+c.Name+"/{id}", h.record(c))
 	}
 }
