@@ -442,7 +442,7 @@ Behaviour:
 Behaviour:
 
 1. `/returns`, titled "Return policy" (tab title and menu label), shows the heading "No exchanges", the lead "Exchanges are not accepted. Please check your size on the size chart before you order, and contact us if you have a question.", and a picture. The owner's answer to the return question is "no exchanges allowed"; they gave no return window, shoe condition, return-shipping rule or refund terms, so the page states none.
-2. Three large figures on a hairline: the days to exchange a size with "Days to exchange a size, counted from delivery."; the days to return for a refund with "Days to return an unworn pair for a refund."; `0 ₫` with "For your first size exchange: we pay the courier both ways." The first two come from the shop's terms.
+2. Three large words on a hairline, each with a line under it: "No" — "Exchanges are not accepted."; "Size" — "Check the size chart before you order."; "Ask" — "Call us, message us on Zalo or use the contact form." They are words, not numbers: none counts up and none comes from the shop's terms.
 3. "How to exchange" shows three numbered steps (01 Message us, 02 Hand over the pair, 03 Wear the right size), each with its sentence.
 4. "What we ask" shows four conditions, each with a tick.
 5. "Questions about returns" lists the shop's questions of topic "returns" as closed rows, beside a "Start an exchange" pill to `/contact`.
