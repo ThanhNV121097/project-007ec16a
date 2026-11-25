@@ -316,7 +316,7 @@ Behaviour:
 |---|---|---|---|
 | Ways to pay: id, name, note, online, icon | read | yes | |
 | Order: payment (way to pay id), paid | write | yes | paid starts false |
-| Payment address | write | no | Empty for cash on delivery |
+| Payment address | write | no | Empty only before the VNPay story, or when VNPay cannot give one |
 
 **Requirement ORD-007 — The order page**
 
