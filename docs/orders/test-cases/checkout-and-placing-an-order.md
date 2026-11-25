@@ -323,7 +323,7 @@ Check: fetch_url — if the instrument returns no per-request time, the case is 
 ## D. Pairs leave the shelf, and the stock shown stays true (SC-23 … SC-29)
 
 **Scenario**: TC-39 — an order for 1 of 2 pairs is saved and 1 is left
-**Given**: SHELF(`samba-og-w-core-black`, `38`, 2); the shoe's `stock` S0 read; `38` is in neither `sizes_low` nor `sizes_out`? — it is in `sizes_low` (2 pairs); `SELECT pairs` reads 2.
+**Given**: SHELF(`samba-og-w-core-black`, `38`, 2); the shoe's `stock` S0 read; `SELECT pairs` for that size reads 2 (and `38` is in the shoe's `sizes_low`).
 **When**: REQ is sent for `samba-og-w-core-black` `38` qty 1; the shoe is read; `SELECT pairs` is read.
 **Then**: 201; `stock` is S0 − 1; pairs left is 1 (read from the database); `38` is in `sizes_low`.
 Traces: SC-23 (ORD-004 AC-1)
