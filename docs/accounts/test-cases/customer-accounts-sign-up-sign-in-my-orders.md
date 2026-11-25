@@ -185,7 +185,7 @@ Traces: SC-4 (last sentence)
 Check: fetch_url
 
 **Scenario**: SC-4.5 — A forged left-most `X-Forwarded-For` does not get round the sign-up limit
-**Given**: R done.
+**Given**: R done. Every call goes through the edge proxy — the URL `run_project` gives, with the `/api` prefix (`<run URL>/api/v1/account/sign-up`) — and not straight to the Go service's own port. The edge appends the real client address to the right of whatever `X-Forwarded-For` the caller sent, so only through it is the right-most entry the real address (called straight at the Go port, the right-most entry is the forged one and the case would count eleven different addresses). If only the Go port is reachable in the run, this case is UNVERIFIED and says so; it is never passed from the code.
 **When**: Eleven sign-up attempts with new valid emails, each carrying a different `X-Forwarded-For` header (`10.0.0.1`, `10.0.0.2`, … `10.0.0.11`).
 **Then**: The first ten answer 201 and the eleventh answers 429 `rate_limited` — the address counted is the right-most entry the edge appended, not the one the caller wrote.
 Traces: SC-4 ("The address is the right-most `X-Forwarded-For` entry"); contract (§2.2 Client address)
