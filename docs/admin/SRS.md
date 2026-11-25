@@ -606,7 +606,7 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | The 14 seeded orders DOI-24804 to DOI-24817, with the totals the story "Free delivery on every order" leaves them (each the sum of its pairs: DOI-24815 5.890.000 ₫, DOI-24810 3.290.000 ₫, DOI-24806 3.090.000 ₫), and the clock at 25/11/2026 12:00 Vietnam time | `GET /v1/admin/overview` as the dealer | This month's sales are 47.810.000 ₫ over 13 orders (DOI-24811 is cancelled and left out) |
+| AC-1 | The 14 seeded orders DOI-24804 to DOI-24817, with the totals the story "Free delivery on every order" leaves them (each the sum of its pairs: DOI-24815 5.890.000 ₫, DOI-24810 3.290.000 ₫, DOI-24806 3.090.000 ₫), and the clock at 25/11/2026 12:00 Vietnam time | `GET /v1/admin/overview` as the dealer | This month's sales are 47.660.000 ₫ over 13 orders (DOI-24811 is cancelled and left out) |
 | AC-2 | The same | The same | Orders waiting to be packed: 2 (DOI-24816 placed, DOI-24815 confirmed) |
 | AC-3 | The same | The same | The 14-day series runs from 12/11 to 25/11, 14 entries; 25/11 is 3.290.000 ₫, 23/11 is 5.380.000 ₫, 20/11 and 16/11 are 0, and the 14 amounts add up to 47.810.000 ₫ |
 | AC-4 | The same | The same | Pairs sold by line: Samba 8, Gazelle 2, Megaride 2, Handball Spezial 1, Adizero 1, in that order |
