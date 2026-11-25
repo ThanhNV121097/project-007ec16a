@@ -267,7 +267,7 @@ Behaviour:
 
 ### 4.2 More ways to pay: VietQR transfer and MoMo
 
-This story is left for later and is not needed to open the shop. Until it is built, checkout offers cash on delivery and VNPay only (ORD-006). Its requirements are written at the level the later story needs; its keys are requested from the owner when the story starts.
+This story is left for later and is not needed to open the shop. Until it is built, checkout offers VNPay only (ORD-006). Its requirements are written at the level the later story needs; its keys are requested from the owner when the story starts.
 
 **Requirement PAY-020 — Bank transfer with a VietQR code**
 
