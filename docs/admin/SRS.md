@@ -137,6 +137,11 @@ Behaviour:
 | AC-13 | A session 8 days old | `GET /v1/auth/me` | 401 |
 | AC-14 | `POST /v1/auth/sign-out` with no session | It is called | 204 (nothing to end) |
 | AC-15 | Every page route of the area except sign-in | Each is opened with no session | Each goes to `/admin/sign-in` |
+| AC-16 | A staff account | It signs in at `/admin/sign-in` | The address becomes `/admin`, the overview shows and `GET /v1/auth/me` says role `staff` |
+| AC-17 | A signed-in customer | `/admin` and `/admin/orders` are opened | The text "This area is for the shop's team" and a link to `/` are shown; no admin page, list or figure is drawn |
+| AC-18 | A signed-in customer | Any dealer endpoint is called | 403 |
+| AC-19 | A session of each role, and no session | `useRole` is read | It returns "admin", "staff", "customer", and nothing |
+| AC-20 | An admin account and a staff account | Both sign in | Both reach `/admin` and both see the orders, the shoes and the overview |
 
 **Failure, boundary and permission behaviour**
 
