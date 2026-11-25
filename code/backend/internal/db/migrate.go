@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,6 +18,10 @@ import (
 // migrationLockKey serialises Migrate across instances that start together:
 // the second one waits, then finds nothing left to apply.
 const migrationLockKey int64 = 7424001
+
+// lockPollInterval is how long an instance that did not get the lock waits
+// before asking again. See takeLock for why it asks rather than waits.
+const lockPollInterval = 100 * time.Millisecond
 
 var (
 	upName       = regexp.MustCompile(`^(\d{14})_[a-z0-9_]+\.up\.sql$`)
@@ -43,7 +48,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS, log *slog.Logg
 	}
 	defer conn.Release()
 
-	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
+	if err := takeLock(ctx, conn); err != nil {
 		return fmt.Errorf("take migration lock: %w", err)
 	}
 	defer func() {
@@ -77,6 +82,32 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS, log *slog.Logg
 		log.Info("migration applied", "version", m.version, "name", m.name)
 	}
 	return nil
+}
+
+// takeLock takes the migration lock by asking for it every lockPollInterval
+// until it is free or ctx is done.
+//
+// It does not block in pg_advisory_lock. A blocked pg_advisory_lock is a running
+// statement, so its session holds a snapshot and a virtual transaction id; the
+// holder of the lock, running CREATE INDEX CONCURRENTLY, waits for every such
+// transaction to end — and the waiter waits for the holder. PostgreSQL detects
+// the cycle and fails one of them (SQLSTATE 40P01). pg_try_advisory_lock
+// answers at once, so between two asks the waiter is idle and holds nothing.
+func takeLock(ctx context.Context, conn *pgxpool.Conn) error {
+	for {
+		var got bool
+		if err := conn.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", migrationLockKey).Scan(&got); err != nil {
+			return err
+		}
+		if got {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(lockPollInterval):
+		}
+	}
 }
 
 func appliedVersions(ctx context.Context, conn *pgxpool.Conn) (map[string]bool, error) {
