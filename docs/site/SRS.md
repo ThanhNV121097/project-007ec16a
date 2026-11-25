@@ -262,7 +262,7 @@ Behaviour:
 
 Behaviour:
 
-1. Under the buy box three closed rows open on tap: "Details", "Payment options", "Delivery & returns". Opening one shows its content; a row with nothing to show is not drawn.
+1. Under the buy box three closed rows open on tap: "Details", "Payment options", "Delivery & return policy". Opening one shows its content; a row with nothing to show is not drawn.
 2. "Details" lists, label and value: Line, For, Style code, Colourway, Upper, Lining, Sole, Fit, Care. A row whose value is empty is left out.
 3. "Payment options" lists every way to pay the shop has on record, each with its icon, its name followed by a full stop, and its note.
 4. "Delivery & returns" reads "Free standard delivery in {days} working days, sent the same day if you order before {cutoff}. Exchange the size within {n} days, or return it unworn within {refund} days for a refund." with the shop's terms filled in, then links "Delivery" (`/shipping`) and "Returns and exchange" (`/returns`).
