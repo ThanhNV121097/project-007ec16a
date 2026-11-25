@@ -190,6 +190,22 @@ function More({ items }: { items: Item[] }) {
 }
 
 /**
+ * The shoe the address names, and whether the shop has said there is none.
+ *
+ * `useRecord` reports a request in flight (`loading`) and one that failed
+ * (`error`) beside the record. Only an answered "not found" — no record, not
+ * loading, no failure — is a missing pair; waiting, or a shop that cannot be
+ * reached, is neither the shoe nor that view. A record the hook still holds
+ * from the previous address is not this address's answer, so it is neither
+ * drawn nor read as "not found".
+ */
+function useShoe(id: string | undefined): { item?: Item; missing: boolean } {
+  const { item, loading, error } = useRecord<Item>("products", id);
+  if (item) return { item: item.id === id ? item : undefined, missing: false };
+  return { missing: !loading && !error };
+}
+
+/**
  * ONE PAIR, AS THE TEMPLATE'S PICTURE SETS IT: the name large at the left
  * with its price, its colourways as dots, the sizes with their stock and the
  * button, and the photographs at the right — then three disclosure rows,
@@ -199,7 +215,7 @@ function More({ items }: { items: Item[] }) {
 export default function Product() {
   usePageMeta("pages.product.title", "pages.product.description");
   const { id } = useParams();
-  const { item } = useRecord<Item>("products", id);
+  const { item, missing } = useShoe(id);
   const all = useCollection<Item>("products", { where: { status: "live" }, pageSize: 500 }).items;
   const line = useRecord<Line>("lines", item?.line).item;
   const cat = useRecord<Category>("categories", item?.category).item;
@@ -209,6 +225,8 @@ export default function Product() {
   const w = useWords();
 
   if (!item) {
+    // Waiting for the shop, or the shop cannot be reached: nothing between the header and the footer.
+    if (!missing) return null;
     return (
       <section className="flex flex-col items-start gap-6 py-24">
         <T k="pages.product.missing" as="h1" className="text-[length:var(--size-h2)] text-ink" />
