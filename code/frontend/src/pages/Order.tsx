@@ -30,6 +30,36 @@ interface View {
   tracking?: string;
 }
 
+/** When it arrives, or that it has: the line under the answer. */
+function etaLine(view: View, words: { eta: string; done: string }): string {
+  if (view.status === "delivered") return words.done;
+  if (view.status === "cancelled" || !view.eta) return "";
+  return fill(words.eta, { date: formatDate(view.eta) });
+}
+
+/** The answer at the left, and the pair it is about running off the right edge. */
+function OrderHead({ view, headline, words }: { view: View; headline: string; words: { number: string; eta: string; done: string } }) {
+  const first = view.lines[0];
+  return (
+    <section className="grid gap-8 pb-10 pt-8 lg:grid-cols-12 lg:pt-10">
+      <div className="lg:col-span-6">
+        <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink-soft">
+          {fill(words.number, { number: view.number, date: formatDateTime(view.placed_at) })}
+        </p>
+        <h1 data-testid="order-status" className="mt-4 max-w-[18ch] text-[length:var(--size-h1)] leading-[1.02] text-ink">{headline}</h1>
+        <p className="mt-5 text-sm text-ink-soft">{etaLine(view, words)}</p>
+      </div>
+      {first?.image && (
+        <Bleed side="right" className="lg:col-span-5 lg:col-start-8">
+          <Link to={`/shop/${first.id}`} aria-label={first.name} data-record={`products:${first.id}`} className="block">
+            <ProductImage src={first.image} alt={first.name} aspect="4/3" eager />
+          </Link>
+        </Bleed>
+      )}
+    </section>
+  );
+}
+
 /**
  * AFTER THE ORDER: the answer first and largest — placed, on its way,
  * delivered — then the five steps as one line, then the pairs with their
@@ -79,28 +109,10 @@ export default function Order() {
   const headline = params.has("placed") ? thanks : headlines?.[view.status] ?? "";
   const method = payments.find((m) => m.id === view.payment);
   const option = deliveries.find((d) => d.id === view.delivery);
-  const first = view.lines[0];
 
   return (
     <>
-      <section className="grid gap-8 pb-10 pt-8 lg:grid-cols-12 lg:pt-10">
-        <div className="lg:col-span-6">
-          <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink-soft">
-            {fill(numberText, { number: view.number, date: formatDateTime(view.placed_at) })}
-          </p>
-          <h1 data-testid="order-status" className="mt-4 max-w-[18ch] text-[length:var(--size-h1)] leading-[1.02] text-ink">{headline}</h1>
-          <p className="mt-5 text-sm text-ink-soft">
-            {view.status === "delivered" ? doneText : view.status === "cancelled" ? "" : view.eta ? fill(etaText, { date: formatDate(view.eta) }) : ""}
-          </p>
-        </div>
-        {first?.image && (
-          <Bleed side="right" className="lg:col-span-5 lg:col-start-8">
-            <Link to={`/shop/${first.id}`} aria-label={first.name} data-record={`products:${first.id}`} className="block">
-              <ProductImage src={first.image} alt={first.name} aspect="4/3" eager />
-            </Link>
-          </Bleed>
-        )}
-      </section>
+      <OrderHead view={view} headline={headline} words={{ number: numberText, eta: etaText, done: doneText }} />
       <Rule />
       <section className="py-10">
         <OrderSteps status={view.status} />
