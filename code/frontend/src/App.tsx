@@ -6,6 +6,9 @@ import SiteFooter from "./components/SiteFooter";
 import SiteHeader from "./components/SiteHeader";
 import { useSession } from "./lib/session";
 import About from "./pages/About";
+import Account from "./pages/Account";
+import AccountSignIn from "./pages/AccountSignIn";
+import AccountSignUp from "./pages/AccountSignUp";
 import AdminKinds from "./pages/AdminKinds";
 import AdminLines from "./pages/AdminLines";
 import AdminOrder from "./pages/AdminOrder";
@@ -67,6 +70,9 @@ export default function App() {
         <Route path="/returns" element={<Returns />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/account" element={<Account />} />
+        <Route path="/account/sign-in" element={<AccountSignIn />} />
+        <Route path="/account/sign-up" element={<AccountSignUp />} />
       </Route>
       <Route path="/admin/sign-in" element={<AdminSignIn />} />
       <Route path="/admin" element={<SignedIn><AdminOverview /></SignedIn>} />
