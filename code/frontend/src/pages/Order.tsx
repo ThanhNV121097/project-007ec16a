@@ -83,6 +83,7 @@ export default function Order() {
   const doneText = useContent("pages.order.done");
   const paidText = useContent("pages.order.paid");
   const dueText = useContent("pages.order.due");
+  const freeText = useContent("pages.cart.free");
   const lineText = useContent("pages.checkout.line");
   const spec = useContent<Record<string, string>>("pages.order.spec");
 
@@ -141,7 +142,7 @@ export default function Order() {
             <T k="pages.order.details" as="h2" className="text-lg text-ink" />
             <SpecList className="mt-4" items={[
               [spec?.to, [view.customer, view.city].filter(Boolean).join(", ")],
-              [spec?.delivery, option ? `${option.name} · ${option.days}` : view.delivery],
+              [spec?.delivery, option ? `${option.name} · ${option.days} · ${freeText}` : view.delivery],
               [spec?.payment, method ? `${method.name} · ${view.paid ? paidText : dueText}` : view.payment],
               [spec?.carrier, view.carrier],
               [spec?.tracking, view.tracking],

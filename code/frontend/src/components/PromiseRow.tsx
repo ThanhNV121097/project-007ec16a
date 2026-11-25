@@ -4,8 +4,8 @@ import { fill, type ShopTerms } from "../lib/shop";
 import Icon, { type IconName } from "./Icon";
 
 /**
- * What the shop promises, in four cells on a hairline: delivery, that
- * exchanges are not accepted, cash on delivery and genuine pairs. The numbers in it are the
+ * What the shop promises, in four cells on a hairline: free delivery, that
+ * exchanges are not accepted, paying online and genuine pairs. The numbers in it are the
  * shop's own terms (src/data/shop.json), so changing a term changes every
  * place it is said.
  */
@@ -15,7 +15,7 @@ export default function PromiseRow({ compact = false }: { compact?: boolean }) {
   const cells: { icon: IconName; title: string; line: string }[] = [
     { icon: "shipping", title: useContent("promises.delivery_title"), line: fill(useContent("promises.delivery_line"), values) },
     { icon: "info", title: useContent("promises.exchange_title"), line: useContent("promises.exchange_line") },
-    { icon: "cash", title: useContent("promises.cod_title"), line: useContent("promises.cod_line") },
+    { icon: "card", title: useContent("promises.pay_title"), line: useContent("promises.pay_line") },
     { icon: "quality", title: useContent("promises.genuine_title"), line: useContent("promises.genuine_line") },
   ];
   return (
