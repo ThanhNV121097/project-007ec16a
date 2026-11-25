@@ -7,6 +7,7 @@ import { addToCart } from "../lib/cart";
 import { openBag } from "../lib/bag";
 import { formatDate, formatPrice } from "../lib/format";
 import { fill, picturesOf, sizesInStock, type Category, type Line, type PaymentMethod, type Product as Item, type Review, type ShopTerms } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import ColourDots from "../components/ColourDots";
 import Disclosure from "../components/Disclosure";
 import Grid from "../components/Grid";
@@ -234,7 +235,10 @@ export default function Product() {
           <DetailRows item={item} line={line} cat={cat} terms={terms} payments={payments} w={w} />
         </div>
         <div className="lg:w-7/12">
-          <ProductGallery key={item.id} images={picturesOf(item)} alt={item.name} aspect="1/1" />
+          <Bleed side="right">
+            <ProductGallery key={item.id} images={picturesOf(item)} alt={item.name} aspect="4/3"
+              className="[&>[role=group]]:px-[var(--bleed)] lg:[&>[role=group]]:px-0" />
+          </Bleed>
         </div>
       </section>
       {reviews.length > 0 && (
