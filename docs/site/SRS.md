@@ -512,7 +512,7 @@ Behaviour:
 
 1. `/contact` shows the heading "Ask about a size or an order", the lead "Send a message about a size, an order or a gift. We answer {reply}." (reply time from the shop's terms), and a picture. When the address carries `?about=<shoe name>`, the line "You are asking about <shoe name>" is shown under the heading.
 2. A list of ways to reach the shop shows Phone (a `tel:` link), Zalo, Email (a `mailto:` link), Shop (address) and Hours, each with its icon and label. A row whose value is empty is not drawn.
-3. "Already answered" lists four links: Find your size (`/size-chart`), Delivery times and fees (`/shipping`), Returns and size exchange (`/returns`), Track an order (`/track`), each with an arrow.
+3. "Already answered" lists four links: Find your size (`/size-chart`), Free delivery and arrival times (`/shipping`), Return policy (`/returns`), Track an order (`/track`), each with an arrow.
 4. "Send a message" holds the form: "Your name" (required), "Phone or email" (required), "Your message" (a four-line box), and a "Send message" button. A hidden field named "website" is off-screen, not tabbable and hidden from assistive technology; a person never fills it.
 5. Pressing "Send message" with both required fields filled sends the visitor's name, phone-or-email, message and the page path to the shop's Agent Team inbox, where the owner reads it. While it is sending the button reads "Sending…" and is disabled. When Agent Team accepts it the form is replaced by "Thank you — we have your message and will answer the same working day."
 6. The message box is optional. A message with a name and a way to reply and no text is accepted.
