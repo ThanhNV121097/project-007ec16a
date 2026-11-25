@@ -25,13 +25,13 @@ export default function OrderSteps({ status }: { status: OrderStatus }) {
   }
   const at = ORDER_STEPS.indexOf(status);
   return (
-    <ol className="grid grid-cols-5" aria-label={labels[status]}>
+    <ol className="flex flex-col gap-4 sm:grid sm:grid-cols-5 sm:gap-0" aria-label={labels[status]}>
       {ORDER_STEPS.map((s, i) => {
         const done = i <= at;
         return (
-          <li key={s} aria-current={i === at ? "step" : undefined} className="relative flex flex-col gap-3 pr-2">
-            <span className={`h-px w-full ${i < at ? "bg-ink" : "bg-line"}`} />
-            <span className={`absolute -top-1 left-0 size-2.5 rounded-full ${done ? "bg-ink" : "border border-field bg-ground"} ${i === at ? "outline outline-1 outline-offset-2 outline-ink" : ""}`} />
+          <li key={s} aria-current={i === at ? "step" : undefined} className="relative flex items-center gap-3 sm:flex-col sm:items-stretch sm:pr-2">
+            <span className={`hidden h-px w-full sm:block ${i < at ? "bg-ink" : "bg-line"}`} />
+            <span className={`size-2.5 shrink-0 rounded-full sm:absolute sm:-top-1 sm:left-0 ${done ? "bg-ink" : "border border-field bg-ground"} ${i === at ? "outline outline-1 outline-offset-2 outline-ink" : ""}`} />
             <span className={`text-[0.6875rem] uppercase tracking-[0.1em] sm:text-xs ${done ? "text-ink" : "text-ink-soft"}`}>{labels[s]}</span>
           </li>
         );
