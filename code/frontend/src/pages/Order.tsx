@@ -79,17 +79,27 @@ export default function Order() {
   const headline = params.has("placed") ? thanks : headlines?.[view.status] ?? "";
   const method = payments.find((m) => m.id === view.payment);
   const option = deliveries.find((d) => d.id === view.delivery);
+  const first = view.lines[0];
 
   return (
     <>
-      <section className="pb-10 pt-8 lg:pt-10">
-        <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink-soft">
-          {fill(numberText, { number: view.number, date: formatDateTime(view.placed_at) })}
-        </p>
-        <h1 data-testid="order-status" className="mt-4 max-w-[18ch] text-[length:var(--size-h1)] leading-[1.02] text-ink">{headline}</h1>
-        <p className="mt-5 text-sm text-ink-soft">
-          {view.status === "delivered" ? doneText : view.status === "cancelled" ? "" : view.eta ? fill(etaText, { date: formatDate(view.eta) }) : ""}
-        </p>
+      <section className="grid gap-8 pb-10 pt-8 lg:grid-cols-12 lg:pt-10">
+        <div className="lg:col-span-6">
+          <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink-soft">
+            {fill(numberText, { number: view.number, date: formatDateTime(view.placed_at) })}
+          </p>
+          <h1 data-testid="order-status" className="mt-4 max-w-[18ch] text-[length:var(--size-h1)] leading-[1.02] text-ink">{headline}</h1>
+          <p className="mt-5 text-sm text-ink-soft">
+            {view.status === "delivered" ? doneText : view.status === "cancelled" ? "" : view.eta ? fill(etaText, { date: formatDate(view.eta) }) : ""}
+          </p>
+        </div>
+        {first?.image && (
+          <Bleed side="right" className="lg:col-span-5 lg:col-start-8">
+            <Link to={`/shop/${first.id}`} aria-label={first.name} data-record={`products:${first.id}`} className="block">
+              <ProductImage src={first.image} alt={first.name} aspect="4/3" eager />
+            </Link>
+          </Bleed>
+        )}
       </section>
       <Rule />
       <section className="py-10">
