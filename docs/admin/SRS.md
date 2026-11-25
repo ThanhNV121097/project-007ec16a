@@ -257,7 +257,7 @@ Behaviour:
 5. A new record gets a unique id from the shop: for a shoe, its name in lower case with hyphens (`samba-og-new-colour`), with `-2`, `-3` added when taken; for other collections, a short unique text.
 6. Saving a shoe with "Opens the home page" on turns that off on every other shoe, so one shoe at a time opens the home page.
 7. When two saves of one record arrive, the later one wins and the record shows what was saved last.
-8. Saving a shoe's sizes, last-pairs, sold-out and stock follows ADMIN-015.
+8. Saving a shoe's per-size pairs follows ADMIN-015: staff type the counts; the last-pairs list, the sold-out list and the stock total are derived from them.
 9. A change shows on the public site at once: the next read of the shoe or list returns it.
 
 **Acceptance criteria**
