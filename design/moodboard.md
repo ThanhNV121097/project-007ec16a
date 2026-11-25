@@ -74,8 +74,7 @@ their own (or adidas's, under their dealer agreement). The about page's two scen
 
 ## Motion — LIVELY, from the kit only
 
-The hero's headline words rise (`SplitHeading`), its tile drifts a few percent against the scroll
-(`data-parallax` inside a clipping frame), "See this pair" and "Add to bag" lean to the pointer
+The hero's headline words rise (`SplitHeading`), "See this pair" and "Add to bag" lean to the pointer
 (`data-magnetic`), the New-in cards tilt (`data-tilt`), the catalogue's count counts up
 (`data-count`), each card shows its second picture under the pointer (`ProductImage hover`) and the
 product photograph is looked into under the pointer (`ProductGallery`'s lens). Every section arrives
@@ -183,11 +182,11 @@ arrangement), so they are not here. The management area is the scaffold's dashbo
 
 ## COMMITMENTS
 
-1. A 1px hairline in --line runs the full content width under the header and between every band of every page; no shaded panel separates two sections.
+1. A 1px hairline in --line runs the full content width under the header and between every band of every page; no shaded panel separates two sections. What runs off the edge of the screen (`Bleed.tsx`): the photographs, and the panel where a visitor acts — the bag's and the checkout's total, the order's details, the size chart, the track and contact forms, the catalogue's tools, the delivery and returns figures — on the tiles' own grey.
 2. Every shoe photograph fills a square, square-cornered pale grey tile with no border, no shadow and no label inside it — in the grid, the bag, the checkout summary and the order page.
 3. Under every tile in a grid, one caption row: the shoe's name in letterspaced capitals at the left, its price in tabular figures at the right.
-4. The home page's first screen is one pair: its name at 72px over two lines at the left with its size range, price, colour dots and three lines of description, its square tile filling the right half, and no photograph across the top.
+4. The home page's first screen is one pair: its name at 72px over two lines at the left with its size range, price, colour dots and three lines of description, its 4:3 tile running from the right half off the right edge of the screen, and no photograph across the top.
 5. A shoe's page carries three disclosure rows — Details, Payment options, Delivery & returns — each a label at the left and a + at the right with a hairline between.
 6. The colour dots on a shoe link the other colourways of the same model; the chosen dot carries a thin ring.
 7. The size picker shows stock per size: sold-out sizes struck through and not choosable, last-pair sizes marked, and a stock line under the picker that names them.
-8. Motion: the home headline's words rise, the home tile drifts against the scroll, "See this pair" and "Add to bag" lean to the pointer, the New-in cards tilt, the catalogue count counts up, and a shoe's photograph is looked into under the pointer.
+8. Motion: the home headline's words rise, "See this pair" and "Add to bag" lean to the pointer, the New-in cards tilt, the catalogue count counts up, and a shoe's photograph is looked into under the pointer.
