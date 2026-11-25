@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,6 +30,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	mux.HandleFunc("GET /healthz", health(pool, log))
 	// Feature modules mount here, one line each, e.g.
 	//   catalogue.Register(mux, pool, log)
+	data.Register(mux, pool, log)
 	mux.HandleFunc("/", notFound)
 
 	var h http.Handler = mux
