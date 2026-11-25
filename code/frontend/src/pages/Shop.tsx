@@ -149,7 +149,7 @@ export default function Shop() {
               </button>
             </div>
           ) : (
-            <Grid count={Math.min(shown, total)} max={4}>
+            <Grid count={Math.min(shown, total)} max={3}>
               {matched.slice(0, shown).map((p) => <ProductCard key={p.id} product={p} />)}
             </Grid>
           )}
