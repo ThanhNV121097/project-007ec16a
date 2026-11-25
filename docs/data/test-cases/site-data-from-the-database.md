@@ -480,8 +480,8 @@ Check: manual — the 500 and the id change need a stub; the 200 and 404 halves 
 
 **Scenario**: TC-63 `pages`, `total`, a named `page` and a page past the last (stubbed `fetch`)
 **Given**: The PR's hook tests: `fetch` answering `{items: […100], total: 130, page: 1, limit: 100}` to a `limit=500` request; an answer of `items: []` with `total` 130 for a page past the last.
-**When**: `useCollection("products", { pageSize: 500 })` is read; then `useCollection("products", { page: 3, pageSize: 12 })`; then `useCollection("products", { page: 9, pageSize: 12 })` against the past-the-last answer.
-**Then**: The first has `pages` `2` (it trusts the answer's `limit` 100, not the 500 asked) and `total` `130`; the second has `items` that one page alone and `hasMore` `false`; the third asks once more for the last page (`page=11` of 130 at 12) and its `page` is `11`, `items` that page, with no third request.
+**When**: `useCollection("products", { pageSize: 500 })` is read; then `useCollection("products", { page: 3, pageSize: 12 })`; then `useCollection("products", { page: 15, pageSize: 12 })` against the past-the-last answer.
+**Then**: The first has `pages` `2` (it trusts the answer's `limit` 100, not the 500 asked) and `total` `130`; the second has `items` that one page alone and `hasMore` `false`; the third (page 15, past the last of 11 pages for 130 at 12) asks once more for the last page, `page=11`, and its `page` is `11` with `items` that page, with no third request.
 Traces: SC-32 (DATA-005 AC-12, item 4, D-3)
 Check: manual — it needs an answer shaped by the test; only the PR's stubbed-`fetch` tests give it. The verifier reads them with `run_tests` (frontend).
 
