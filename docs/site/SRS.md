@@ -750,6 +750,8 @@ Every page above is drawn once for a phone width and widens at 1024px, as `desig
 | 3 | The design leaves the message box of the contact form optional; the brief lists "name, phone or email, message" | Keep it optional as designed | Stakeholder |
 | 4 | With a sold-out size and no last-pairs size the design reads "In stock in all {n} sizes." with n counting only the sizes still in stock | Keep the design's wording | Stakeholder |
 | 5 | The design has no screen for an unknown address (for example `/abc`) | Leave it as designed: no page is drawn beyond the header and footer | Stakeholder |
+| 6 | The owner answered "Free delivery" but gave no delivery areas, working days, carrier or same-day dispatch time | Keep the design's suggestions for the standard option (2–4 working days, GHN and GHTK, all provinces, same-day dispatch before 15:00 shown on the shoe page only); the owner corrects them in the Studio | Owner |
+| 7 | The plan item "Free delivery on every order" names the bag line, the promise cell and the payment question but not the shoe page's "Payment options" list (SITE-006) | The same story changes it, because it edits `Product.tsx` for the delivery row | TL |
 
 ## 8. Traceability
 
