@@ -75,7 +75,7 @@ their own (or adidas's, under their dealer agreement). The about page's two scen
 ## Motion — LIVELY, from the kit only
 
 The hero's headline words rise (`SplitHeading`), "See this pair" and "Add to bag" lean to the pointer
-(`data-magnetic`), the New-in cards tilt (`data-tilt`), the catalogue's count counts up
+(`data-magnetic`). The hero tile does not drift: drawn at 110% to hide its edge, it cut off the heel and toe of a shoe photographed almost edge to edge, the New-in cards tilt (`data-tilt`), the catalogue's count counts up
 (`data-count`), each card shows its second picture under the pointer (`ProductImage hover`) and the
 product photograph is looked into under the pointer (`ProductGallery`'s lens). Every section arrives
 through `<Motion />`. Native scrolling; nothing pinned or scrubbed.
@@ -182,8 +182,8 @@ arrangement), so they are not here. The management area is the scaffold's dashbo
 
 ## COMMITMENTS
 
-1. A 1px hairline in --line runs the full content width under the header and between every band of every page; no shaded panel separates two sections. What runs off the edge of the screen (`Bleed.tsx`): the photographs, and the panel where a visitor acts — the bag's and the checkout's total, the order's details, the size chart, the track and contact forms, the catalogue's tools, the delivery and returns figures — on the tiles' own grey.
-2. Every shoe photograph fills a square, square-cornered pale grey tile with no border, no shadow and no label inside it — in the grid, the bag, the checkout summary and the order page.
+1. A 1px hairline in --line runs the full content width under the header and between every band of every page; no shaded panel separates two sections. What runs off the edge of the screen (`Bleed.tsx`) is a photograph, in the first screen of every page: the home tile and a shoe's gallery off the right edge (on a phone the gallery comes first, edge to edge), the order's pair beside its answer, the about page's stockroom off the left, and on every other page the picture beside its title (`HeadPicture.tsx`), a strip under the title on a phone. The catalogue's search and sort sit on one full-width band of the tiles' grey.
+2. Every shoe photograph fills a square, square-cornered pale grey tile with no border, no shadow and no label inside it — in the grid, the bag and the checkout summary. A shoe's gallery and the home and order pictures are 4:3, the same photograph wider.
 3. Under every tile in a grid, one caption row: the shoe's name in letterspaced capitals at the left, its price in tabular figures at the right.
 4. The home page's first screen is one pair: its name at 72px over two lines at the left with its size range, price, colour dots and three lines of description, its 4:3 tile running from the right half off the right edge of the screen, and no photograph across the top.
 5. A shoe's page carries three disclosure rows — Details, Payment options, Delivery & returns — each a label at the left and a + at the right with a hairline between.
