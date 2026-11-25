@@ -682,4 +682,13 @@ Check: interact_page
 | SC-40 | SC-40a, SC-40b, SC-40c |
 | Contract only (not a story criterion) | SC-15e (private fields), SC-15f (undefined list parameters ignored), SC-18c (`product-filters` 500) |
 
-Every case uses an instrument: `fetch_url` for the endpoint cases, `render_url`, `interact_page` and `measure_styles` for the page. None is `manual`. The two places where the instrument may fall short are named in their own `Given`: holding a response for 3 seconds (SC-32, SC-40a) and switching the browser offline (SC-40c); each has an arrangement that still exercises the criterion, and the part that needs the missing instrument is reported UNVERIFIED rather than failed.
+Every case uses an instrument: `fetch_url` for the endpoint cases, `render_url`, `interact_page` and `measure_styles` for the page. None is `manual`. A case that presses something or reads the browser's request log is `interact_page`, not `render_url`: that is SC-22 and SC-34b, and the cases that tick, type or choose. The places where the instrument may fall short are named in their own `Given` or `Then`: timing 200 sequential requests (SC-19, which names the backend test run and a 20-request spot check as what is read instead), holding a response for 3 seconds (SC-32, SC-40a) and switching the browser offline (SC-40c); each has an arrangement that still exercises the criterion, and the part that needs the missing instrument is reported UNVERIFIED rather than failed.
+
+## 10. Revision 1
+
+Changed after the test-case review, and nothing else:
+
+- **SC-22** now `Check: interact_page` (it presses "Show more" and reads the request log for `page=2`); its `Then` is written against that log.
+- **SC-34b** moved from `render_url` to `interact_page` for the same reason: it reads the request log.
+- **SC-19** names what is read when 200 timed sequential requests cannot be issued in one run (§6).
+- **Open point 1** (§4) is written as the gap it is — SRS CAT-001 item 5 against `erd.md` §3.4 — with who decides and the case to add once decided.
