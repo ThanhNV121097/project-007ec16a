@@ -210,7 +210,7 @@ Check: interact_page
 **Scenario**: TC-23 — the change set is `Product.tsx` and one test file, and nothing else
 **Given**: The pull request for this story.
 **When**: Its changed files and the added lines of `Product.tsx` are read (`get_pr`).
-**Then**: The changed files are exactly `code/frontend/src/pages/Product.tsx` and one new file under `code/frontend/src/test/`. No file under `src/data/` or `src/components/` is changed, and neither is `src/App.tsx`, `src/content.json`, `src/theme.css` or `src/index.css`; `content.json` gains no key. The lines added to `Product.tsx` contain no `#hex`, `rgb(`, `hsl(` or `[…]` arbitrary-value class and no new user-visible string (the two strings drawn in the missing view are still `pages.product.missing` and `pages.product.back`, read through `<T k=…>`).
+**Then**: The changed files are exactly `code/frontend/src/pages/Product.tsx` and one new file under `code/frontend/src/test/`. No file under `src/data/` or `src/components/` is changed, and neither is `src/App.tsx`, `src/content.json`, `src/theme.css` or `src/index.css`; `content.json` gains no key. The lines added to `Product.tsx` contain no `#hex`, `rgb(`, `hsl(` or `[…]` arbitrary-value class and no new user-visible string (the heading and the pill of the missing view are still read through the content keys they use today, `pages` → `product` → `missing` and `back`).
 Traces: SC-14 (SITE-014 items 1–4; architecture §5)
 Check: manual — a property of the diff; no running-site instrument can see which files a pull request touches. Read from `get_pr`.
 
