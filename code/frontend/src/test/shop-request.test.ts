@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
-import { bandRanges, DEFAULT_SORT, PAGE_SIZE, readShopQuery, toRequest, type ShopQuery } from "../lib/shop-request";
-=======
 import { bandRanges, DEFAULT_SORT, PAGE_SIZE, readShopQuery, toParams, toRequest, type ShopQuery } from "../lib/shop-request";
->>>>>>> refs/heads/main
 
 /** What the address bar holds, as useTableQuery reads it. */
 function address(search: string, q = "", sort = "") {
@@ -57,8 +53,6 @@ describe("the shop's request", () => {
     expect(request.size).toEqual(["38"]);
   });
 });
-<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
-=======
 
 describe("the query string the API is asked", () => {
   it("asks for the first twelve live shoes in the default order when nothing is set", () => {
@@ -107,4 +101,3 @@ describe("the query string the API is asked", () => {
     expect(params.sort).toBe("-released");
   });
 });
->>>>>>> refs/heads/main
