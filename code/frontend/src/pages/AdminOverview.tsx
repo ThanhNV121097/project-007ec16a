@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { T, useContent } from "../editable";
 import OverviewPage from "../components/admin/OverviewPage";
 import AdminBars from "../components/AdminBars";
-import ProductImage from "../components/ProductImage";
+import AdminLowStock from "../components/AdminLowStock";
 import { useCollection } from "../data";
 import { formatDateTime, formatPrice } from "../lib/format";
 import { fill, type Line, type Order, type Product } from "../lib/shop";
@@ -10,26 +10,6 @@ import { useAdminNav } from "./admin-nav";
 
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/** The shoes down to their last pairs, as a short list of links: the picture, the name, the sizes, the count. */
-function LowList({ rows, sizesText }: { rows: Product[]; sizesText: string }) {
-  return (
-    <ul className="divide-y divide-line">
-      {rows.map((p) => (
-        <li key={p.id}>
-          <Link to={`/admin/products/${p.id}`} className="flex items-center gap-3 py-2.5 hover:bg-wash">
-            <span className="w-10 shrink-0"><ProductImage src={p.image} alt={p.name} aspect="1/1" /></span>
-            <span className="min-w-0 flex-1 text-sm">
-              <span className="block font-medium text-ink">{p.name}</span>
-              <span className="block text-ink-soft">{fill(sizesText, { sizes: (p.sizes_low ?? []).join(", ") })}</span>
-            </span>
-            <span className="shrink-0 text-sm tabular-nums text-ink">{p.stock ?? 0}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 /** The latest orders, each a sentence a person can read at a glance. */
@@ -115,7 +95,7 @@ export default function AdminOverview() {
         { title: useContent("pages.admin.overview.lines_title"), content: <AdminBars kind="rows" rows={byLine} caption={useContent("pages.admin.overview.lines_title")} /> },
         { title: useContent("pages.admin.overview.recent_title"), content: <RecentList rows={orders.slice(0, 5)} products={products} statuses={statuses} /> },
         { title: useContent("pages.admin.overview.low_title"),
-          content: low.length > 0 ? <LowList rows={low} sizesText={sizesText} /> : <T k="pages.admin.overview.low_none" as="p" className="text-sm text-ink-soft" /> },
+          content: low.length > 0 ? <AdminLowStock rows={low} sizesText={sizesText} /> : <T k="pages.admin.overview.low_none" as="p" className="text-sm text-ink-soft" /> },
       ]}
     />
   );
