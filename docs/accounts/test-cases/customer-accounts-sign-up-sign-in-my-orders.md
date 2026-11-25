@@ -418,7 +418,7 @@ Traces: SC-12 (ACC-005 AC-4, item 3)
 Check: fetch_url (see SC-11.1 for the no-keys case)
 
 **Scenario**: SC-12.2 — A session that has ended does not refuse the order: it is placed as a guest
-**Given**: Lan signs in, keeps that cookie, and then signs out (`POST /v1/auth/sign-out`). A second case: Lan's session row is made expired with `set_db_state` (`created_at` 8 days back).
+**Given**: Lan signs in, keeps that cookie, and then signs out (`POST /v1/auth/sign-out`). A second case: Lan's session row is made expired with `set_db_state` (its creation time moved 8 days back, or its expiry moved into the past — the session is 7 days, fixed).
 **When**: `POST /v1/orders` with the old cookie, in each case.
 **Then**: Both answer 201 with the order and a token; `orders.account_id` is NULL for both; neither is in any account's list; the tokens open them.
 Traces: SC-12 (ACC-005 AC-6, item 4; ACC-006 item 6)
