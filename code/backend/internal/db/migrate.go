@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -9,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -102,7 +104,7 @@ func apply(ctx context.Context, conn *pgxpool.Conn, m migration, body string) er
 	if needsNoTransaction(body) {
 		for _, stmt := range splitStatements(body) {
 			if _, err := conn.Exec(ctx, stmt); err != nil {
-				return err
+				return withDetail(err)
 			}
 		}
 		_, err := conn.Exec(ctx, record, m.version, m.name)
@@ -114,7 +116,7 @@ func apply(ctx context.Context, conn *pgxpool.Conn, m migration, body string) er
 	}
 	defer func() { _ = tx.Rollback(ctx) }() // a no-op once committed
 	if _, err := tx.Exec(ctx, body); err != nil {
-		return err
+		return withDetail(err)
 	}
 	if _, err := tx.Exec(ctx, record, m.version, m.name); err != nil {
 		return err
@@ -152,6 +154,18 @@ func listUp(fsys fs.FS) ([]migration, error) {
 }
 
 func needsNoTransaction(body string) bool { return concurrently.MatchString(body) }
+
+// withDetail adds PostgreSQL's DETAIL line to a failed statement's error.
+// pgconn.PgError.Error() leaves it out, and for a duplicate key it is the part
+// that names the id (`Key (id)=(samba) already exists.`): a seed that meets a
+// record already there must say which one.
+func withDetail(err error) error {
+	var pg *pgconn.PgError
+	if errors.As(err, &pg) && pg.Detail != "" {
+		return fmt.Errorf("%w (%s)", err, pg.Detail)
+	}
+	return err
+}
 
 // splitStatements cuts a no-transaction file at its semicolons and drops the
 // pieces that hold nothing but comments. It does not understand $$ bodies,
