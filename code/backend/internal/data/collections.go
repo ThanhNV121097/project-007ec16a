@@ -124,12 +124,10 @@ type Collection struct {
 	// From is the FROM clause, the table aliased t.
 	From    string
 	Columns []Column
-<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
 	// TeamOnly puts the collection's LIST behind a dealer session (admin or
 	// staff): 401 with no session, 403 for a customer. The record route is not
 	// affected.
 	TeamOnly bool
-=======
 	// Search is the condition one typed word must meet, written over the
 	// searched fields only (never a private column); {w} stands for the word,
 	// folded by the database. A record matches when every word meets it.
@@ -138,7 +136,6 @@ type Collection struct {
 	// not sold out"; {s} stands for the sizes as a text array. Empty for every
 	// collection but the shoes.
 	Sizes string
->>>>>>> refs/heads/main
 }
 
 // public returns the columns a caller with no session may read, in output order.
@@ -227,12 +224,12 @@ func build(name, from string, cols ...Column) *Collection {
 	return &Collection{Name: name, From: from, Columns: append(cols, bookkeeping()...)}
 }
 
-<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
 // teamOnly marks a collection whose list only the shop's team may read.
 func teamOnly(c *Collection) *Collection {
 	c.TeamOnly = true
 	return c
-=======
+}
+
 // over is the search condition of a collection whose words are looked for in
 // some of its own columns: the columns are joined by a space (so a word never
 // straddles two of them), folded, and searched with strpos — which reads % and
@@ -243,7 +240,6 @@ func over(columns ...string) string {
 		parts[i] = "t." + c
 	}
 	return "strpos(doi_fold(" + strings.Join(parts, " || ' ' || ") + "), {w}) > 0"
->>>>>>> refs/heads/main
 }
 
 // registry lists the ten collections. The only one with a join is orders: an
@@ -259,14 +255,9 @@ var registry = []*Collection{
 		text("id"), text("topic"), text("question"), text("answer")).
 		searching(over("topic", "question", "answer")),
 	build("lines", "lines t",
-<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
-		text("id"), text("name"), text("blurb"), col("since", Int), text("fit_note")),
-	teamOnly(build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
-=======
 		text("id"), text("name"), text("blurb"), nullable(col("since", Int)), text("fit_note")).
 		searching(over("name", "blurb")),
-	build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
->>>>>>> refs/heads/main
+	teamOnly(build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
 		text("id"), text("number"),
 		Column{Name: "placed_at", Kind: Instant,
 			Select: "to_char(t.placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD\"T\"HH24:MI:SS') || '+07:00'",
@@ -282,14 +273,10 @@ var registry = []*Collection{
 		text("customer"),
 		private("phone"), private("email"), private("address"),
 		text("city"),
-<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
-		private("note"))),
-=======
 		private("note")).
 		// The order number and the customer's name, and nothing else: a phone,
 		// an e-mail, an address or a note is never searched.
-		searching(over("number", "customer")),
->>>>>>> refs/heads/main
+		searching(over("number", "customer"))),
 	build("payments", "payment_methods t",
 		text("id"), text("name"), text("note"), col("online", Bool), text("icon")).
 		searching(over("name", "note")),
