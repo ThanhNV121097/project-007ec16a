@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 
 var (
 	wholeNumber  = regexp.MustCompile(`^-?[0-9]{1,18}$`)
-	decimalNum   = regexp.MustCompile(`^-?[0-9]+(\.[0-9]{1,6})?$`)
+	decimalNum   = regexp.MustCompile(`^-?[0-9]{1,18}(\.[0-9]{1,6})?$`)
 	digitsOnly   = regexp.MustCompile(`^[0-9]+$`)
 	idSlug       = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 	maxIDLength  = 100
@@ -115,9 +116,20 @@ func parseLimit(v string, faults map[string]string) int64 {
 	return int64(n)
 }
 
+// readableText says whether PostgreSQL can hold v as text. It refuses a NUL
+// and any byte sequence that is not UTF-8, and a statement that is handed one
+// fails — which would be answered 500 for what is the caller's typo.
+func readableText(v string) bool {
+	return utf8.ValidString(v) && !strings.ContainsRune(v, 0)
+}
+
 // bindValue turns a filter value into what is bound to its placeholder, or the
-// sentence that says why it cannot be read as the field's kind.
+// sentence that says why it cannot be read as the field's kind. A value
+// PostgreSQL would refuse is refused here, before any statement is sent.
 func bindValue(col Column, v string) (any, string) {
+	if !readableText(v) {
+		return nil, col.Name + " must be plain text."
+	}
 	switch col.Kind {
 	case Int:
 		n, err := strconv.ParseInt(v, 10, 64)
@@ -136,13 +148,14 @@ func bindValue(col Column, v string) (any, string) {
 		}
 		return v == "true", ""
 	case Date:
-		if _, err := time.Parse(dateLayout, v); err != nil {
+		// Go reads year 0000; PostgreSQL has no such year.
+		if d, err := time.Parse(dateLayout, v); err != nil || d.Year() < 1 {
 			return nil, col.Name + " must be a date written YYYY-MM-DD."
 		}
 		return v, ""
 	case Instant:
 		t, err := time.Parse(time.RFC3339, v)
-		if err != nil {
+		if err != nil || t.Year() < 1 {
 			return nil, col.Name + " must be a date and time " + instantUsage + "."
 		}
 		return t, ""
