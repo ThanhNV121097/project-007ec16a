@@ -532,7 +532,7 @@ Behaviour:
 
 | Field | Type | Required | Rule |
 |---|---|---|---|
-| Shoe: sizes, last-pairs sizes, sold-out sizes, pairs in stock | write | no | Counts derived as above |
+| Shoe: pairs for each EU size | write | yes (0 allowed) | The only stock figure typed; last-pairs sizes, sold-out sizes and pairs in stock are derived |
 
 **Requirement ADMIN-016 — The dealer handles an order**
 
