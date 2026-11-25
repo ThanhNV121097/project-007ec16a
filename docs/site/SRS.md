@@ -63,7 +63,7 @@ Behaviour:
 |---|---|---|---|
 | AC-1 | A 1280px-wide window on any customer page | The page loads | The header shows the wordmark and the links Women, Men, Kids, Size chart, Track order in that order, then the search and bag buttons; this holds until the customer-accounts story lands, which adds an "Account" entry (ACC-007) |
 | AC-2 | A 390px-wide window | The page loads | The five links are not shown and a menu button is |
-| AC-3 | The menu is open at 390px | The visitor reads it | It lists the five links, then Size chart, Delivery, Returns and exchange, Track an order, Contact |
+| AC-3 | The menu is open at 390px | The visitor reads it | It lists the five links, then Size chart, Delivery, Return policy, Track an order, Contact |
 | AC-4 | The search line is open | The visitor types `samba og` and presses "Search" | The address becomes `/shop?q=samba%20og` |
 | AC-5 | The search line is open and empty | The visitor presses "Search" | The address becomes `/shop` |
 | AC-6 | The search panel is open at 390px | The visitor reads it | "Start from a line" is shown with one link per line, each to `/shop?line=<line id>` |
