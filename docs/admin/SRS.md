@@ -226,6 +226,9 @@ Behaviour:
 | AC-7 | A session with role "customer" | Each of the above | 403 |
 | AC-8 | No session | `GET /v1/products` | 200 (public read) |
 | AC-9 | A visitor | A write is tried on lines, categories, reviews, orders | 401 for each |
+| AC-10 | A session with role "staff" | Each of the endpoints in AC-1 to AC-6 is called | Allowed: the same answers as for an admin session |
+| AC-11 | A session with role "staff", then one with role "customer" | `GET /v1/admin/staff` and `POST /v1/admin/staff` | 403 for each |
+| AC-12 | No session | `GET /v1/admin/staff` | 401 |
 
 **Failure, boundary and permission behaviour**
 
