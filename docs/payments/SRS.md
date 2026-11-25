@@ -144,7 +144,7 @@ Behaviour:
 
 Behaviour:
 
-1. A VNPay order that is still unpaid 30 minutes after it was placed is cancelled.
+1. An order that is still unpaid 30 minutes after it was placed is cancelled. Every order is paid online, so the rule applies to every unpaid order placed through checkout, whatever its status.
 2. Cancelling puts the order's pairs back on the shelf; the shoes' sold-out and last-pairs lists and "pairs in stock" are brought up to date (ORD-005).
 3. The check runs at least once a minute, so an order is cancelled within 31 minutes of being placed.
 4. Orders that are paid, orders paid on delivery, orders the dealer has already cancelled, and orders already confirmed by the dealer are left alone.
