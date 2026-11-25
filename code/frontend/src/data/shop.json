@@ -1,10 +1,7 @@
 [
   {
     "id": "shop",
-    "free_delivery_from": 2000000,
     "standard_days": "2–4",
-    "express_days": "1",
-    "express_cities": "Hà Nội and TP. Hồ Chí Minh, inner districts",
     "dispatch_cutoff": "15:00",
     "reply_time": "the same working day",
     "rating": 4.8,
