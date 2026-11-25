@@ -67,7 +67,7 @@ Behaviour:
 | AC-4 | A built address | Its signature is recomputed with the same secret | It matches; with another secret it does not |
 | AC-5 | A built address | Its return address is read | It is the shop's `/payment/return` |
 | AC-6 | An order created 10 minutes ago | The address is built | Its payment-page expiry is 20 minutes from now (the order's 30-minute deadline) |
-| AC-7 | The keys are not set | `/checkout` loads | VNPay is not listed |
+| AC-7 | The keys are not set | `/checkout` loads with a pair in the bag | The VNPay row, the line "Online payment is not available right now. Please try again later." in alert style and a disabled "Place order" are shown |
 | AC-8 | The keys are not set | "Pay now" is pressed for a VNPay order | The shop answers 503 |
 | AC-9 | Checkout with VNPay chosen | "Place order" succeeds | The browser goes to a VNPay address whose amount equals the Total shown at checkout |
 
