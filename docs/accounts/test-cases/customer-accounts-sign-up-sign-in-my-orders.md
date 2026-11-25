@@ -395,7 +395,7 @@ Check: fetch_url
 **When**: `POST /v1/orders` with Lan's cookie and typed details `customer` `Gift Receiver`, `phone` `0900 000 111`, `address` `99 Other Road`, `city` `Hue`; then `GET /v1/account`; then `GET /v1/orders/<id>` with the Admin's cookie.
 **Then**: 201 with the order and a token. `GET /v1/account` is unchanged (name `Lan Nguyen`, phone `0912 345 678`, the saved address and city). The dealer view of the order shows `customer` `Gift Receiver`, `phone` `0900 000 111`, `address` `99 Other Road`, `city` `Hue`.
 Traces: SC-11 (ACC-005 AC-2, items 2, 5)
-Check: fetch_url (if the run has no VNPay keys the order is inserted with `account_id` = Lan's id and this case reports UNVERIFIED for the call itself)
+Check: fetch_url (the VNPay keys are a precondition of the run, §0.2; if they are missing the order is inserted with `account_id` = Lan's id and this case reports UNVERIFIED for the call itself, naming the missing keys)
 
 **Scenario**: SC-11.2 — The new order is in the owner's list at once and on a second session, and not in another customer's
 **Given**: The order of SC-11.1 was just placed. Lan signs in a second time (a second cookie). Bao is signed in.
