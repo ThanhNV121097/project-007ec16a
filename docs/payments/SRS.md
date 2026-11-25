@@ -164,6 +164,8 @@ Behaviour:
 | AC-7 | A cancelled VNPay order | "Pay now" is pressed with its token | 409 |
 | AC-8 | Two checks run at the same moment | Both see an order to cancel | The order is cancelled once and its pairs return once |
 | AC-9 | A sample order from the first design, unpaid and placed more than 30 minutes ago | The check runs | It is unchanged |
+| AC-10 | An unpaid VNPay order placed 2 hours ago, which the dealer moved to "shipped" (and the same for "delivered") | The check runs | It is unchanged: status stays shipped (or delivered), unpaid, and its pairs are not returned |
+| AC-11 | An unpaid bank-transfer order placed 2 hours ago (after the later story, PAY-020) | The 30-minute check runs | It is unchanged; only the 24-hour rule of PAY-020 cancels it |
 
 **Failure, boundary and permission behaviour**
 
