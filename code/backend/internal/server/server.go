@@ -41,6 +41,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	h = httpx.CORS(cfg.CORSAllowedOrigins)(h)
 	h = httpx.AccessLog(log)(h)
 	h = httpx.Recover(log)(h)
+	h = httpx.RequestID()(h)
 	return h
 }
 
