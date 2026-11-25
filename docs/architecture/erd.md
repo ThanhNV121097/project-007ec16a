@@ -33,7 +33,7 @@ Aggregate roots: `products` (owns `product_sizes` and `reviews`), `orders` (owns
 |---|---|---|
 | D1 | **Ids.** The ten collection tables keep the **text** ids the JSON and the routes use (`samba-og-w-core-black`, `doi-24817`, `r-01`). Every other table uses `uuid` (`gen_random_uuid()`, built in since PG 13). | The SRS acceptance criteria name the text ids and `/v1/<collection>/<id>` is public. Cost: a slug is a business-visible key — it is never changed after creation (ADMIN-010 item 4), and a CHECK keeps it URL-safe. |
 | D2 | **Four tables are not named after their collection:** `delivery`→`delivery_options`, `payments`→`payment_methods`, `shop`→`shop_terms`, `sizes`→`size_chart`. | `payments` / `sizes` would collide with `payment_attempts` and `product_sizes`; `shop` is a singleton, not a plural. Cost: the generic reader maps collection → table through one allow-list. |
-| D3 | **One count of pairs per shoe and EU size**: `product_sizes.pairs`. A shoe's `sizes`, `sizes_low`, `sizes_out` and `stock` are **derived** through the view `product_stock`, never stored (ORD-005, ADMIN-015 item 1: "there is no second copy of stock"). | Cost: the first data story (S3) must still seed those four fields exactly as the JSON has them (DATA-001 AC-2), so they exist as plain columns on `products` until the orders story (S5) moves them into `product_sizes` and drops them. §9 describes the step. |
+| D3 | **One count of pairs per shoe and EU size**: `product_sizes.pairs`. A shoe's `sizes`, `sizes_low`, `sizes_out` and `stock` are **derived** through the view `product_stock`, never stored (ORD-005, ADMIN-015 item 1: "there is no second copy of stock"). | Cost: the first data story (S3) must still seed those four fields exactly as the JSON has them (DATA-001 AC-2), so they exist as plain columns on `products` until the orders story (S5) moves them into `product_sizes` and drops them. §8 (migration 4) describes the step. |
 | D4 | **An order holds its pairs in `order_items`.** The `orders` collection's `product`, `size` and `qty` fields are the order's first pair (`line_no = 1`), read with a lateral join. | ORD-003 item 5: orders hold several pairs; the 14 sample orders are one-pair orders. Cost: the generic reader needs one special case for `orders`. |
 | D5 | **An order has many access tokens, each stored hashed** (`order_tokens`). | A lookup by number and phone must hand back "the token the order page reads with" (ORD-021) — for a sample order, or after the browser lost its token, there is none to return, and a stored hash cannot be reversed. The lookup mints a new token; so does a repeated submission with the same key (ORD-010 item 3). |
 | D6 | **Search folds text in SQL with one function, `doi_fold(text)`**, and matches words with `strpos`. No extension (`unaccent`, `pg_trgm`) and no stored search column. | Extensions need privileges the project's database role may not have; `strpos` means `%` and `_` need no escaping (CAT-001 AC-8/9); no stored folded column means a renamed line or category can never leave a stale copy. Cost: no index serves `q`, so it scans — acceptable below ~20,000 shoes (§6). |
@@ -44,7 +44,7 @@ Aggregate roots: `products` (owns `product_sizes` and `reviews`), `orders` (owns
 
 ## 2. Diagram
 
-The diagram shows the **final** shape. Section 9 says which story creates which part.
+The diagram shows the **final** shape. Section 8 says which story creates which part.
 
 ```mermaid
 erDiagram
@@ -241,7 +241,7 @@ The API keeps the JSON's field names (DATA-002 item 6). The generic reader (S3) 
 | `orders.payment`, `orders.delivery` | `payment_method_id`, `delivery_option_id` | Text ids of the way to pay and delivery option |
 | `orders.product`, `orders.size`, `orders.qty` | `order_items.product_id/size/qty` of `line_no = 1` | D4 |
 | `products.sizes`, `sizes_low`, `sizes_out`, `stock` | view `product_stock` (after S5) | D3 |
-| A nullable text-typed column (`eta`, `since`-less lines, a shoe's `line`/`category` when unset) | presented as `""` (text) or `null` (number) | The record never changes type: the frontend reads `string` fields. NULL exists only where `''` cannot be stored (a foreign key, a date) |
+| A nullable column the JSON writes as text (`eta`, a shoe's `line` / `category` when unset) or as a number (`since`, `cm`) | presented as `""` for text, `null` for numbers | A field never changes type: the frontend reads `string` fields. NULL exists only where `''` cannot be stored (a foreign key, a date) or `0` would be a sentinel (a number) |
 | `date`, `timestamptz` columns | `released`, `date`, `eta` as `YYYY-MM-DD`; `placed_at` as RFC 3339 with `+07:00` | `services.md` fixes the exact format; the frontend already reads both date forms |
 | Private order fields `phone`, `email`, `address`, `note` | same names | Selected only by dealer/owner read paths, never into a public type (overview §4) |
 
@@ -337,7 +337,6 @@ Applies to `categories`, `lines`, `products`, `reviews`, `shop_terms`, `delivery
 | `image` | `text` | no | `''` | | Side view |
 | `image_back` | `text` | no | `''` | | Front pair — under the pointer on a card, second in the gallery |
 | `image_detail` | `text` | no | `''` | | Back pair |
-| `price_listed`, `source`, `invented` | | | | | Owner-only; see above and §3.1 |
 | **S3 only** `sizes`, `sizes_low`, `sizes_out` | `text[]` | no | `'{}'` | | Seeded exactly as the JSON has them (DATA-001 AC-2). **Dropped by S5** and served from `product_stock` (D3) |
 | **S3 only** `stock` | `integer` | no | `0` | | Same: seeded as in the JSON, dropped by S5. `CHECK`: `>= 0` |
 
@@ -946,7 +945,7 @@ No retention or deletion rule exists in the SRS; personal data is kept until the
 
 ## 8. Migrations
 
-Files are `code/backend/migrations/YYYYMMDDHHMMSS_<name>.up.sql` and `.down.sql`, applied on boot by the runner in `internal/db/migrate.go` (one transaction per file; a file containing `CONCURRENTLY` runs outside a transaction, one idempotent statement at a time). **The server never runs a `.down.sql`**; the backward files exist for local resets and review. Timestamps are chosen by Dev when each story's migration is written; the names below fix order within a story, and stories that touch the same tables are already serialised by the plan (3 → 5 → {6, 7, 14}; 3 → 8 → {9, 13, 14}). A merged migration is never edited: a correction is a new file.
+Files are `code/backend/migrations/YYYYMMDDHHMMSS_<name>.up.sql` and `.down.sql`, applied on boot by the runner in `internal/db/migrate.go` (one transaction per file; a file containing `CONCURRENTLY` runs outside a transaction, one idempotent statement at a time). **The server never runs a `.down.sql`**; the backward files exist for local resets and review. Timestamps are chosen by Dev when each story's migration is written; the names below fix order within a story, and stories that touch the same tables are already serialised by the plan (S3 → S5 → {S6, S7, S14}; S3 → S8 → {S9, S10, S13, S14}). A merged migration is never edited: a correction is a new file.
 
 | # | Story | Change (file name part) | Forward | Backward | Safe on a populated table |
 |---|---|---|---|---|---|
