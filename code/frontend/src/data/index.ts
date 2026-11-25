@@ -279,7 +279,7 @@ function useRemote(name: string, query: Query, off: boolean): Result {
 
 /** Lowercased and stripped of accents, so "Cửa Lò" is found by "cua lo". */
 function fold(v: unknown): string {
-  return String(v ?? "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  return String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 /**
