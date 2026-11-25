@@ -153,6 +153,7 @@
     },
     "search": "Search the shoes",
     "search_go": "Search",
+    "search_lines": "Start from a line",
     "search_placeholder": "Samba, Gazelle, pink, a style code…"
   },
   "orders": {
@@ -183,9 +184,13 @@
     },
     "admin": {
       "categories": {
+        "note": "Who the shoes are for. Each category's picture and line are shown on the home page.",
+        "search": "Search categories",
         "title": "Categories"
       },
       "lines": {
+        "note": "The adidas lines the shop sorts its shoes into. Each line's fit note is shown on the size chart.",
+        "search": "Search lines",
         "title": "Lines"
       },
       "nav": {
@@ -203,6 +208,7 @@
         "payment": "Payment",
         "search": "Search by number or customer",
         "status": "Status",
+        "summary": "{customer} in {city} ordered {qty} × {product}, EU {size}, on {date} — {total}.",
         "title": "Orders"
       },
       "overview": {
@@ -213,9 +219,11 @@
         "lines_title": "Pairs sold by line",
         "low": "Running low",
         "low_none": "Nothing is running low.",
-        "low_note": "shoes down to their last pairs",
+        "low_note": "last pairs left",
+        "low_sizes": "Last pairs in {sizes}",
         "low_title": "Running low",
         "orders_note": "{n} orders",
+        "recent_title": "Latest orders",
         "sales": "Sales this month",
         "stock": "Pairs in stock",
         "stock_note": "across {n} shoes",
@@ -333,7 +341,7 @@
       "new_heading": "New this month",
       "pairs": "{n} in the shop",
       "since": "Since {year}",
-      "title": "Đôi — adidas shoes, delivered"
+      "title": "adidas shoes, delivered"
     },
     "order": {
       "change": "Need to change something?",
@@ -544,8 +552,11 @@
       "too_big": "That is beyond the chart — message us and we will check the pair for you."
     },
     "track": {
+      "contact_cta": "Message us",
       "description": "Find your order with its number and your phone.",
+      "faq_heading": "While you wait",
       "heading": "Track an order",
+      "help": "Most orders arrive in two to four working days. If yours is late or the number is not found, message us with the order number.",
       "lead": "Type the order number from your confirmation message and the phone number you ordered with.",
       "not_found": "No order matches that number and phone. Check both, or message us.",
       "number": "Order number",
