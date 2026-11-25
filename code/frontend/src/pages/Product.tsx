@@ -154,7 +154,7 @@ function Reviews({ item, reviews, w }: { item: Item; reviews: Review[]; w: Produ
           <li key={r.id} data-record={`reviews:${r.id}`} className="flex flex-col gap-3 border-b border-line py-6 sm:flex-row sm:gap-8">
             <div className="sm:w-36 sm:shrink-0">
               <p className="text-sm text-ink">{r.name}</p>
-              <p className="text-xs tabular-nums text-ink-soft">{formatDate(r.date, "medium")}</p>
+              <p className="text-xs tabular-nums text-ink-soft">{formatDate(r.date)}</p>
             </div>
             <div className="min-w-0 flex-1">
               <Rating value={r.rating} size={14} />
