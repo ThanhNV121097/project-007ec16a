@@ -12,11 +12,8 @@ import (
 	"net/http"
 	"time"
 
-<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
-=======
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/catalogue"
->>>>>>> refs/heads/main
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
