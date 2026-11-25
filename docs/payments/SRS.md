@@ -402,7 +402,7 @@ Every other screen this module touches (checkout, order page, "Pay now") is spec
 
 ## 7. Dependencies and assumptions
 
-- **Depends on:** the `orders` module's payment interface (ORD-006) and order token (ORD-008); the `admin` module for the dealer's "mark paid".
+- **Depends on:** the `orders` module's payment interface (ORD-006) and order token (ORD-008); the `admin` module, which shows an order's payment state read-only (ADMIN-016).
 - **Depends on:** the owner supplying `VNPAY_TMN_CODE` and `VNPAY_HASH_SECRET` (sandbox first) in the console, and registering the notice address in VNPay's merchant portal. VNPay's servers cannot reach a deployment on a `.localhost` address, so on one the "paid exactly once" checks are made with signed test notices built with the sandbox secret.
 - **Assumption:** "pay later from the order page" means within the 30 minutes before the order is given up. After that the order is cancelled and the customer places a new one.
 - **Assumption:** VNPay accepts a notice answer of `00` for a payment that failed, as its notice documentation says, so it stops sending it.
