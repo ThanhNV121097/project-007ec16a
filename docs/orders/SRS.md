@@ -280,9 +280,9 @@ Behaviour:
 1. Payments go through one interface that each way to pay plugs into. VNPay is the only way to pay at launch — the owner chose "Online payment" — and there is no cash on delivery. The interface ships with the Checkout story; VNPay plugs into it with the `payments` module.
 2. Step 03 of checkout shows VNPay as its single way to pay, already selected. Cash on delivery, bank transfer (VietQR) and MoMo are not offered: their rows stay in the records, and nothing but VNPay appears at checkout or in the shoe page's "Payment options" until the later story adds bank transfer and MoMo (PAY-022).
 3. Placing an order with a way to pay that is not offered is refused.
-4. The order's answer carries a payment address: empty for cash on delivery; for an online method, the address of that provider's payment page. When it is not empty, the page sends the browser there right after the order is saved.
-5. If the provider cannot give an address at that moment, the order is still saved, the answer's payment address is empty, and the customer lands on the order page where "Pay now" is offered (ORD-007).
-6. An order starts unpaid whatever the way to pay is.
+4. The order's answer carries a payment address: the address of VNPay's payment page. When it is not empty, the page sends the browser there right after the order is saved. Until the VNPay story lands the address is always empty: the order is saved unpaid, the browser goes to `/orders/<id>?placed=1`, the order page says "awaiting payment" and "Pay now" answers 409 "online payment is not available yet".
+5. If VNPay cannot give an address at that moment, the order is still saved, the answer's payment address is empty, and the customer lands on the order page where "Pay now" is offered (ORD-007).
+6. Every order starts unpaid, awaiting payment, and only VNPay's notice marks it paid (PAY-002). Once the VNPay story has landed and VNPay's keys are missing, the shop cannot complete any order: checkout shows "Online payment is not available right now. Please try again later." in alert style under the VNPay row and disables "Place order"; a request to place an order answers 503, creates no order and takes no pair off the shelf; the bag and the typed details are kept.
 
 **Acceptance criteria**
 
