@@ -2211,6 +2211,8 @@ None. I read `erd/_base.md` §2, §3.12, §3.18–3.20, §5 patterns 15–17, §
 
 This story **depends on** migration 7 having made `users` and `sessions` as `erd/_base.md` §3.18–3.19 say. The backend PR therefore ships one test, `TestStaffSchemaAssumptions` (skips without `TEST_DATABASE_URL`), that reads the catalogue and fails loudly if any of these is not true: `uq_users_email` is unique on `email`; `uq_users_one_admin` is a unique partial index `WHERE role = 'admin'`; `ck_users_email_lowercase` and `ck_users_role` exist; `sessions.user_id` references `users` with `ON DELETE CASCADE`; `idx_sessions_user_id` exists; and, when the table `uploads` exists, `uploads.uploaded_by` references `users` with `ON DELETE SET NULL` and `orders.account_id` (when the column exists) the same. No merged migration is edited (convention `migrations`).
 
+**As built (PR #56, merged).** The story shipped **no migration**: `code/backend/migrations/` holds `20261125140000_users_and_sessions` as its last user-table file and nothing named for this story. `TestStaffSchemaAssumptions` is in `internal/admin/staff_db_test.go` and skips without `TEST_DATABASE_URL`. The ERD was checked again against the code: every statement of `internal/auth/accounts.go` is one of access patterns 1–6 of §3 (the list is the `ORDER BY (role <> 'admin'), created_at, id` read; every write carries `role = 'staff'`), so §1–§5 stand unchanged.
+
 ## 7. Arranging test data (no customer sign-up exists until "Customer accounts" lands)
 
 No statement below touches the schema; each is undone by the case that ran it.
