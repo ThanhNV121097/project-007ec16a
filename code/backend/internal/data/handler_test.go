@@ -132,6 +132,9 @@ func TestABadParameterIsA400WithTheEnvelopeAndNoQuery(t *testing.T) {
 		"/v1/orders?phone=0938%20410%20552", "/v1/orders?email=", "/v1/orders?address=x", "/v1/orders?note=x",
 		"/v1/lines?_source=owner", "/v1/products?_invented=x", "/v1/products?price_listed=US%24130",
 		"/v1/products?category=a%00b", "/v1/products?colour=%ff%fe", "/v1/products?released=0000-01-01",
+		"/v1/products?sort=zzz", "/v1/products?sort=price_listed", "/v1/orders?sort=phone", "/v1/products?price_from=abc",
+		"/v1/products?released_to=2026-13-40", "/v1/products?price_ranges=3000000", "/v1/orders?phone_from=1",
+		"/v1/products?q=" + strings.Repeat("a", 101), "/v1/products?q=%00", "/v1/products?size=%ff",
 	} {
 		rec := &recorder{row: fakeRow{total: 1, text: "[]"}}
 		res := request(serve(rec), target)
@@ -154,7 +157,7 @@ func TestABadParameterIsA400WithTheEnvelopeAndNoQuery(t *testing.T) {
 func TestIgnoredParametersSendTheSameStatementAsNone(t *testing.T) {
 	plain := &recorder{row: fakeRow{total: 12, text: "[]"}}
 	request(serve(plain), "/v1/products")
-	for _, q := range []string{"zzz=1", "q=samba", "sort=-price", "price_from=3000000&price_to=3999999", "category=women,kids", "size=40"} {
+	for _, q := range []string{"zzz=1", "Category=women", "category=", "q=%20%20", "sort=", "size=", "price_from=", "price_ranges=%20"} {
 		rec := &recorder{row: fakeRow{total: 12, text: "[]"}}
 		res := request(serve(rec), "/v1/products?"+q)
 		if res.Code != http.StatusOK || rec.sqls[0] != plain.sqls[0] || len(rec.args[0]) != 2 {
@@ -182,8 +185,17 @@ func TestPublicSQLNamesNoPrivateColumn(t *testing.T) {
 		request(h, "/v1/"+c.Name)
 		request(h, "/v1/"+c.Name+"?page=2&limit=3")
 		request(h, "/v1/"+c.Name+"/some-id")
-		if len(rec.sqls) != 3 {
-			t.Fatalf("%s: %d statements, want 3", c.Name, len(rec.sqls))
+		// The query language: words, sort, sizes, any-of, ranges, a union of ranges.
+		request(h, "/v1/"+c.Name+"?q=nam%20samba&sort=-id&size=38,40&price_from=1&price_to=9&price_ranges=..5,6..&id=a,b&category=a,b")
+		request(h, "/v1/"+c.Name+"?q=%27%29%3B%20DROP%20TABLE%20products%3B%20--")
+		if len(rec.sqls) != 5 {
+			t.Fatalf("%s: %d statements, want 5", c.Name, len(rec.sqls))
+		}
+		// search_text is read by a search and never selected.
+		for _, sql := range rec.sqls {
+			if strings.Contains(c.selectList(), "search_text") || strings.Contains(sql, "DROP") {
+				t.Errorf("%s: the select list names search_text, or a word reached the SQL: %s", c.Name, sql)
+			}
 		}
 		for _, sql := range rec.sqls {
 			for _, name := range forbidden(c.Name) {

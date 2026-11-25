@@ -1,5 +1,11 @@
 import { useEffect, useSyncExternalStore } from "react";
+<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
 import { ApiError, api } from "./api";
+=======
+import {
+  getMe, postSignIn, postSignOut, type Answer, type Role,
+} from "./mock/dealer-sign-in-and-protected-admin-area";
+>>>>>>> refs/heads/main
 
 /**
  * WHO IS SIGNED IN, as the shop's server says — and nothing else.
@@ -20,6 +26,7 @@ import { ApiError, api } from "./api";
  *   signIn(email, password)  resolves "ok", "wrong", "limited" or "unreachable".
  *   signOut()             ends the session on the server and here.
  *
+<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
  * The three calls go to `/v1/auth/*` through src/lib/api.ts, which sends the
  * session cookie with every request.
  */
@@ -31,6 +38,16 @@ export interface Session {
   email: string;
   name: string;
   /** What the server says this account is. */
+=======
+ * The three calls go through the mock for now; the backend story points them
+ * at `/v1/auth/*` through src/lib/api.ts (credentials: "include") and changes
+ * nothing else in this file.
+ */
+export interface Session {
+  email: string;
+  name: string;
+  /** What the server says this account is: the shop's team is admin and staff. */
+>>>>>>> refs/heads/main
   role: Role;
 }
 
@@ -73,12 +90,21 @@ function toSession(body: unknown): Session | null {
   return { email: v.email, name: v.name, role: v.role };
 }
 
+<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
 /** Asks the server who is signed in. Any failure, a 401 or an unreachable server, is nobody. */
+=======
+/** Asks the server who is signed in. An unreachable server is nobody. */
+>>>>>>> refs/heads/main
 async function check(): Promise<void> {
   const asked = epoch;
   let found: Session | null = null;
   try {
+<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
     found = toSession(await api.get<unknown>("auth/me"));
+=======
+    const answer = await getMe();
+    if (answer.status === 200) found = toSession(answer.body);
+>>>>>>> refs/heads/main
   } catch {
     found = null;
   }
@@ -108,12 +134,19 @@ export function useSession(): Session | null {
   return useAuth().session;
 }
 
+<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
 /** The word the form acts on for a sign-in the server refused or could not answer. */
 function verdict(e: unknown): SignInResult {
   if (e instanceof ApiError) {
     if (e.status === 429) return "limited";
     if (e.status === 401 || e.status === 422) return "wrong";
   }
+=======
+/** The server's verdict on one sign-in attempt, as the word the form acts on. */
+function verdict(answer: Answer): SignInResult {
+  if (answer.status === 429) return "limited";
+  if (answer.status === 401 || answer.status === 422) return "wrong";
+>>>>>>> refs/heads/main
   return "unreachable";
 }
 
@@ -122,6 +155,7 @@ function verdict(e: unknown): SignInResult {
  * answer; on any refusal nothing changes.
  */
 export async function signIn(email: string, password: string): Promise<SignInResult> {
+<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
   let body: unknown;
   try {
     body = await api.post<unknown>("auth/sign-in", { email: email.trim(), password });
@@ -130,6 +164,16 @@ export async function signIn(email: string, password: string): Promise<SignInRes
   }
   const session = toSession(body);
   if (!session) return "unreachable";
+=======
+  let answer: Answer;
+  try {
+    answer = await postSignIn(email.trim(), password);
+  } catch {
+    return "unreachable";
+  }
+  const session = answer.status === 200 ? toSession(answer.body) : null;
+  if (!session) return verdict(answer);
+>>>>>>> refs/heads/main
   epoch += 1;
   set({ phase: "ready", session });
   return "ok";
@@ -144,7 +188,11 @@ export async function signOut(): Promise<void> {
   epoch += 1;
   set({ phase: "ready", session: null });
   try {
+<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
     await api.post("auth/sign-out");
+=======
+    await postSignOut();
+>>>>>>> refs/heads/main
   } catch {
     // Nothing more can be done from here.
   }

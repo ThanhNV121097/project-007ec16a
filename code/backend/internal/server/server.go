@@ -12,7 +12,11 @@ import (
 	"net/http"
 	"time"
 
+<<<<<<< refs/heads/feature/dealer-sign-in-and-protected-admin-area-be-v2
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
+=======
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/catalogue"
+>>>>>>> refs/heads/main
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
@@ -34,6 +38,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	svc := auth.New(pool, log)
 	svc.Register(mux)
 	data.Register(mux, pool, log)
+	catalogue.Register(mux, pool, log)
 	mux.HandleFunc("/", notFound)
 
 	// The chain, outermost first: Recover, AccessLog, CORS, Resolve (who is
