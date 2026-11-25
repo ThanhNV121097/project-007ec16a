@@ -494,11 +494,13 @@ Behaviour:
 
 Behaviour:
 
-1. The shop keeps a count of pairs for each size (`orders` module, ORD-005). Saving a shoe with its sizes, last-pairs list and sold-out list sets the counts so they agree with those lists: a size in the sold-out list has 0 pairs; a size in the last-pairs list keeps its count if it is 1 or 2 and otherwise gets 2; any other size keeps its count if it is 3 or more and otherwise gets 3; a size taken off the shoe's sizes loses its count; a size added gets the count its list implies.
-2. "Pairs in stock" is the sum of the counts after the save. A number typed into that field that differs is replaced by the sum, and the form shows the saved value.
-3. A size in both the sold-out and last-pairs lists is treated as sold out.
-4. Saving a shoe without touching its stock fields leaves its counts alone.
-5. The lists are the dealer's control of stock; the form has no field for exact pairs per size (open question 3).
+1. The shop keeps one count of pairs for each size of each shoe (`orders` module, ORD-005). In the shoe form's stock tab, staff type a plain count for each EU size the shoe lists; 0 is allowed, a whole number only. Saving the shoe writes those counts. There is no second copy of stock: these are the counts an order takes its pairs from.
+2. The shoe's last-pairs list (`sizes_low`: sizes with 1 or 2 pairs), its sold-out list (`sizes_out`: sizes with 0 pairs) and its "pairs in stock" (the sum of the counts) are derived from the counts on every save and every order. They are not typed: the form shows them read-only. A size with 3 or more pairs is in neither list.
+3. A size taken off the shoe's sizes loses its count. A size added needs a count (0 is allowed); an empty count is refused with 422 naming that size.
+4. On the shoe's admin page each size's count can be changed on its own, without opening the whole form: the new number saves by itself when the field loses focus or Enter is pressed; the row says "Saving…", then "Saved." or "We could not save. Please try again."; and the shoe's lists and total redraw from the shop's answer. The new number is stored as that size's count in one transaction that also carries the count the person last saw. If an order has taken pairs of that size since, the save is refused with 409, the row shows the current count with "Pairs were just taken by an order. Check the number and save again." and nothing is overwritten silently. The name of the endpoint is TL's technical design.
+5. Admin and staff sessions may both do all of this; a customer session gets 403 and no session gets 401 (ADMIN-004).
+6. A shoe that staff create with counts for three sizes appears in `/shop` with those sizes available; the shoe page and the size filter follow the counts (SITE-005, CAT-001 item 6).
+7. The shoes that came with the first design are placeholders: staff may set them to draft at any time, and delete them when no order refers to them (ADMIN-014).
 
 **Acceptance criteria**
 
