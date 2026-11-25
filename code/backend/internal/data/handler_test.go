@@ -118,6 +118,7 @@ func TestABadParameterIsA400WithTheEnvelopeAndNoQuery(t *testing.T) {
 		"/v1/products?limit=0", "/v1/products?limit=-1", "/v1/products?limit=abc", "/v1/products?limit=1.5",
 		"/v1/orders?phone=0938%20410%20552", "/v1/orders?email=", "/v1/orders?address=x", "/v1/orders?note=x",
 		"/v1/lines?_source=owner", "/v1/products?_invented=x", "/v1/products?price_listed=US%24130",
+		"/v1/products?category=a%00b", "/v1/products?colour=%ff%fe", "/v1/products?released=0000-01-01",
 	} {
 		rec := &recorder{row: fakeRow{total: 1, text: "[]"}}
 		res := request(serve(rec), target)
