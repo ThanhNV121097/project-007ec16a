@@ -24,6 +24,7 @@ export function useAdminNav(): NavGroup[] {
         { to: "/admin/reviews", label: useContent("pages.admin.nav.reviews") },
       ],
     },
+    { items: [{ to: "/admin/staff", label: useContent("pages.admin.nav.staff"), roles: ["admin"] }] },
   ];
 }
 
