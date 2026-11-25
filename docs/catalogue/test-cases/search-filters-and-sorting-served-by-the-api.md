@@ -372,6 +372,9 @@ Check: fetch_url
 **Given**: The seed plus FX-10K (10,000 live shoes), the backend running with its normal database.
 **When**: 200 sequential `GET /v1/products?q=samba%20og&category=women&sort=-price` requests (one at a time, each after the previous answer), each timed from request to full response.
 **Then**: Every answer is 200 with `total` equal to the same number and 12 items. The 95th percentile of the 200 durations (the 190th value of the sorted durations) is 500 ms or less. FX-10K is deleted afterwards.
+**What is read if the instrument cannot issue and time 200 sequential requests in one run** (each `fetch_url` call is one request, so a loop of 200 may be out of reach). The case is then read from these, in this order, and the report names which one it used:
+1. **The backend's own test run** — `run_tests` on the backend. The story's backend carries a Go test that inserts FX-10K into `TEST_DATABASE_URL`, issues the same 200 sequential requests against the list handler, asserts every answer is 200 with 12 items and the same `total`, and asserts the 190th sorted duration is 500 ms or less. The case passes when that test's output shows it ran and passed; it fails when the test fails or does not exist; a run in which the test is skipped (no database in the run) is not a pass and is reported UNVERIFIED with that reason.
+2. **A spot check with `fetch_url`** against the running API with FX-10K inserted: 20 sequential requests of the same URL, each timed. If more than one of the 20 takes over 500 ms (the 19th sorted value is over 500 ms), the case fails. If all but at most one are within 500 ms, the figures are reported as evidence but the case is UNVERIFIED, because 20 requests are not the 200 the requirement names.
 Traces: SC-19 (CAT-001 Performance, SRS §6)
 Check: fetch_url
 
