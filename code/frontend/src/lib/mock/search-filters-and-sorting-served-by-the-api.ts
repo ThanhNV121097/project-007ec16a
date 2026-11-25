@@ -14,7 +14,7 @@ import type { Page, PriceRange, ProductFilters, ProductsRequest, Sort } from "..
  * values keep the records' order, `total` is every match.
  */
 function fold(v: unknown): string {
-  return String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/đ/g, "d");
+  return String(v ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replaceAll("đ", "d");
 }
 
 function table<T>(name: string): T[] {
