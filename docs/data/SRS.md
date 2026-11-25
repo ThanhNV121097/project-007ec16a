@@ -66,7 +66,9 @@ Behaviour:
 | AC-5 | The seeded database | Every reference field is checked | Each names an existing record; none is empty or dangling |
 | AC-6 | A record was changed after seeding | The server restarts and the migrations run again | The changed value is still there and the collection's count is unchanged |
 | AC-7 | The seeded database | The shoes are listed in stored order | They come back in the order of the file: `samba-og-w-core-black` first |
-| AC-8 | The record `shop` | It is read back | `free_delivery_from` is 2000000 and `exchange_days` is 14 |
+| AC-8 | The record `shop` | It is read back | It has no `free_delivery_from`, `express_days`, `express_cities`, `exchange_days` or `refund_days`; `standard_days` and `dispatch_cutoff` are as in the file |
+| AC-9 | The `delivery` collection | It is read back | It holds one record, `standard`, with fee 0, and no `express` record |
+| AC-10 | The sample orders | They are read back | Each has delivery `standard`, fee 0 and a total equal to the sum of its pairs; `doi-24815` is 5890000, `doi-24810` is 3290000 and `doi-24806` is 3090000 |
 
 **Failure, boundary and permission behaviour**
 
