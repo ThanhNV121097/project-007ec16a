@@ -86,8 +86,8 @@ export default function Shop() {
 
   return (
     <>
-      <section className="grid gap-6 pb-8 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
-        <div className="flex flex-col justify-end gap-3 lg:col-span-6">
+      <section className="flex flex-col gap-6 pb-8 pt-8 lg:flex-row lg:gap-8 lg:pt-10">
+        <div className="flex flex-col justify-end gap-3 lg:shrink-0 lg:grow-0 lg:basis-1/2">
           <h1 className="min-w-0 text-[length:var(--size-h1)] leading-[1.02] text-ink">{title}</h1>
           <p data-testid="shop-count" className="text-sm text-ink-soft">
             <span data-count="" className="tabular-nums text-ink">{total}</span>{" "}<T k="pages.shop.count" />
