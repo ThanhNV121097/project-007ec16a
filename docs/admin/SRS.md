@@ -810,6 +810,7 @@ Behaviour:
 | Shoe `/admin/products/:id` | Record page | ADMIN-010, ADMIN-011, ADMIN-012, ADMIN-015 | default (tabs); saved ("Saved."); record not here; one size's count saving, saved, refused (409), failed |
 | Order `/admin/orders/:id` | Record page with the summary sentence | ADMIN-011, ADMIN-016 | default (tabs Order, Delivery, Customer); saved; record not here |
 | Order — pairs list of a multi-pair order | Not drawn in the approved design; required by the plan item's multi-pair orders | ADMIN-016 | multi-pair |
+| Staff `/admin/staff` | Not drawn in the approved design: a new page defined by the plan item "Staff accounts managed by the owner", built from the admin's own list, dialogs and notices | ADMIN-030, ADMIN-031 | default (list); loading; load failed; add dialog with field errors; reset password; switch-off and removal questions; refusal ("The admin account cannot be switched off, changed or removed."); could not save |
 
 ## 6. Non-functional requirements
 
