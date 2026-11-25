@@ -77,6 +77,10 @@
 
   --page: 1200px;
   --gutter: clamp(20px, 5.5vw, 72px);
+  /* How far a photograph or a working panel reaches past the page's measure
+     to run off the edge of the screen: the gutter, plus the margin beside
+     the 1200px column once the screen is wider than it. <Bleed> reads it. */
+  --bleed: max(var(--gutter), calc((100vw - var(--page)) / 2 + var(--gutter)));
   --header-h: 64px;
   /* What a page keeps clear at its foot below 1024px while ContactDock
      floats there: the 56px buttons, their 16px offset and a margin. */
