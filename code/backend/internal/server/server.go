@@ -33,11 +33,8 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	// Feature modules mount here, one line each, e.g.
 	//   catalogue.Register(mux, pool, log)
 	data.Register(mux, pool, log)
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
-	orders.Register(mux, pool, log, orders.Options{})
-=======
 	catalogue.Register(mux, pool, log)
->>>>>>> refs/heads/main
+	orders.Register(mux, pool, log, orders.Options{})
 	mux.HandleFunc("/", notFound)
 
 	var h http.Handler = httpx.CleanPaths(mux)
