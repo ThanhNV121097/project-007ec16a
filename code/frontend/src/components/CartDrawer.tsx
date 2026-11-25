@@ -79,7 +79,8 @@ export default function CartDrawer({ open, onClose, checkout, title = "Your bag"
                 <span className="text-lg tabular-nums">{formatPrice(total)}</span>
               </div>
               <Link to={checkout} onClick={onClose}
-                className="block rounded bg-accent px-5 py-3 text-center text-accent-ink hover:opacity-90">{pay}</Link>
+                data-testid="drawer-checkout"
+                className="block rounded-[var(--radius-pill)] bg-ink px-5 py-3.5 text-center text-xs font-medium uppercase tracking-[0.14em] text-ground hover:opacity-85">{pay}</Link>
             </div>
           )}
         </Dialog.Content>
