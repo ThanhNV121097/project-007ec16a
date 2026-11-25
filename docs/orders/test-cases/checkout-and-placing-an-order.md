@@ -108,7 +108,7 @@ Traces: SC-6 (ORD-001 AC-11; ORD-010 AC-6, item 4)
 Check: interact_page
 
 **Scenario**: TC-10 — an empty bag says so and offers up to four live new shoes
-**Given**: A fresh browser with no `agentteam:cart` entry; 1280×800. `GET /api/v1/products?is_new=true&limit=100` read first (the live new shoes; five at the seed). Part (b): PRICE-style arrangement `UPDATE products SET status = 'draft' WHERE id = 'samba-og-w-core-black'`, put back afterwards.
+**Given**: A fresh browser with no `agentteam:cart` entry; 1280×800. `GET /api/v1/products?is_new=true&limit=100` read first (the live new shoes; five at the seed). Part (b): `UPDATE products SET status = 'draft' WHERE id = 'samba-og-w-core-black'` (a live new shoe becomes a draft), put back afterwards.
 **When**: `/checkout` loads (a) with five live new shoes, (b) after the draft change.
 **Then**: The heading reads `Nothing to check out yet.`; the line `Pick a pair — the size chart is one tap from every shoe.` is visible; a `Keep shopping` pill is a link to `/shop`; a row headed `New this month` shows exactly 4 shoe tiles in (a) (up to four, though five are new), each one a live new shoe from the API list; in (b) the draft shoe's name appears nowhere on the page and 4 tiles still show (the other new shoes). No form, no `[data-testid='place-order']` exists.
 Traces: SC-7 (ORD-001 AC-12)
