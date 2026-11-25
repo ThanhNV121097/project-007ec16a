@@ -159,7 +159,7 @@ export function inBand(price: number, band: string): boolean {
 /** The five steps an order walks, in order. */
 export const ORDER_STEPS: readonly OrderStatus[] = ["placed", "confirmed", "packed", "shipped", "delivered"];
 
-/** Puts values into a sentence from content.json: "{n}-day exchange". */
+/** Puts values into a sentence from content.json: "{days} working days". */
 export function fill(sentence: string, values: Record<string, string | number>): string {
   return sentence.replace(/\{(\w+)\}/g, (all, key: string) => (key in values ? String(values[key]) : all));
 }
