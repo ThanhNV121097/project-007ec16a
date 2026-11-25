@@ -105,6 +105,8 @@ Behaviour:
 | AC-4 | The footer | The visitor reads "The shop" | It lists About Đôi (`/about`), Your bag (`/cart`), Dealer sign-in (`/admin/sign-in`) |
 | AC-5 | The footer | The visitor reads the legal line | It states Đôi is an independent dealer and that adidas marks belong to adidas AG |
 | AC-6 | Any customer page except the footer | The page is searched for a link to `/admin` | The only such link is "Dealer sign-in" in the footer (the header, menu and body have none) |
+| AC-7 | The site holds photo credits | The footer is read | One line begins "Photos:" and lists each photographer once, linking to the photo's own page where it has one, with the licence in brackets |
+| AC-8 | The site holds no photo credits | The footer is read | No credits line is drawn |
 
 **Failure, boundary and permission behaviour**
 
