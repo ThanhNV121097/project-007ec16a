@@ -437,7 +437,7 @@ Behaviour:
 
 **Requirement SITE-010 — Return policy page**
 
-*As a* visitor, *I want to* read how to exchange a size or return a pair, *so that* I am not afraid to guess my size online.
+*As a* visitor, *I want to* read the shop's return policy plainly, *so that* I check my size before I order instead of guessing.
 
 Behaviour:
 
