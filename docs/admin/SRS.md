@@ -488,9 +488,9 @@ Behaviour:
 |---|---|---|---|
 | Orders' references to shoes; shoes' references to lines and categories | read | yes | Block deletes |
 
-**Requirement ADMIN-015 — Stock stays one story when the dealer saves a shoe**
+**Requirement ADMIN-015 — Staff set the pairs for each size; the lists and the total follow**
 
-*As the* dealer, *I want* the sizes I mark in stock, on last pairs or sold out to be the ones customers see, *so that* the shoe page and the shelf agree.
+*As an* admin or a staff member, *I want to* type how many pairs each size has and change one size's count on its own, *so that* the shoe page, the size filter and the shelf all show the pairs I really have.
 
 Behaviour:
 
