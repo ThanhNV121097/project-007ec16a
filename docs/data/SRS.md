@@ -59,7 +59,7 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | The ten JSON files before the change | The migrations have run on an empty database | Each collection holds exactly as many records as its file did |
+| AC-1 | The ten JSON files before the change | The migrations have run on an empty database | Each collection holds exactly as many records as its file did, apart from the rows item 3 leaves out |
 | AC-2 | The shoe `samba-og-w-core-black` (price 3290000, sizes `["36","36 2/3",…,"41 1/3"]`, last-pairs `["37 1/3","40"]`, sold-out `["41 1/3"]`, stock 18) | The record is read back | Every field equals the file's value, including the three lists in the same order |
 | AC-3 | The size row `eu-35-1-2` with cm 21.6 | The record is read back | `cm` is the number `21.6` |
 | AC-4 | The order `doi-24817` (total 3090000, paid true, eta `2026-11-26`) | The record is read back by the database owner | Every field equals the file's value, including the private ones |
