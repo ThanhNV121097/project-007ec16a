@@ -70,6 +70,7 @@ Behaviour:
 | AC-7 | The keys are not set | `/checkout` loads with a pair in the bag | The VNPay row, the line "Online payment is not available right now. Please try again later." in alert style and a disabled "Place order" are shown |
 | AC-8 | The keys are not set | "Pay now" is pressed for a VNPay order | The shop answers 503 |
 | AC-9 | Checkout with VNPay chosen | "Place order" succeeds | The browser goes to a VNPay address whose amount equals the Total shown at checkout |
+| AC-10 | The keys are not set | A request to place an order is sent | 503; no order exists and no pair left the shelf |
 
 **Failure, boundary and permission behaviour**
 
