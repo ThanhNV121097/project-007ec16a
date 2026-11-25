@@ -105,7 +105,7 @@ function DetailRows({ item, line, cat, terms, payments, w }: {
   item: Item; line?: Line; cat?: Category; terms?: ShopTerms; payments: PaymentMethod[]; w: ProductWords;
 }) {
   const s = w.spec;
-  const values = { days: terms?.standard_days ?? "", cutoff: terms?.dispatch_cutoff ?? "", n: terms?.exchange_days ?? "", refund: terms?.refund_days ?? "" };
+  const values = { days: terms?.standard_days ?? "", cutoff: terms?.dispatch_cutoff ?? "" };
   return (
     <Disclosure rows={[
       { label: <T k="pages.product.details" />, content: (
