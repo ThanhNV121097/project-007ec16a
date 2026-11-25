@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/admin"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/catalogue"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
@@ -34,6 +35,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	//   catalogue.Register(mux, pool, log)
 	svc := auth.New(pool, log)
 	svc.Register(mux)
+	admin.RegisterStaff(mux, pool, log)
 	data.Register(mux, pool, log)
 	catalogue.Register(mux, pool, log)
 	mux.HandleFunc("/", notFound)
