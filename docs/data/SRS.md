@@ -148,6 +148,7 @@ Behaviour:
 | AC-2 | The shop's terms record | `GET /v1/shop/shop` | 200 and a record with `standard_days` and `dispatch_cutoff` and no `free_delivery_from` |
 | AC-3 | No shoe has the id `nope` | `GET /v1/products/nope` | 404 |
 | AC-4 | The record's list-endpoint copy and its record-endpoint copy | Both are read | They are equal field for field |
+| AC-5 | The delivery records | `GET /v1/delivery/standard` and `GET /v1/delivery/express` | 200 with `fee` 0, and 404 |
 
 **Failure, boundary and permission behaviour**
 
