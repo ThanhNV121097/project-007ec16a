@@ -17,6 +17,8 @@ func TestUnlistedCollectionsAndWritesAnswerNotFound(t *testing.T) {
 		{http.MethodGet, "/v1/nothing/x"},
 		{http.MethodGet, "/api/v1/products"},
 		{http.MethodPost, "/v1/products"},
+		{http.MethodPost, "/v1/product-filters"},
+		{http.MethodDelete, "/v1/product-filters"},
 		{http.MethodDelete, "/v1/products/samba"},
 	} {
 		rec := get(h, c.method, c.path)

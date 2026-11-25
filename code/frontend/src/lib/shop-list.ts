@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
+<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
 import { getProductFilters, listProducts } from "./mock/search-filters-and-sorting-served-by-the-api";
+=======
+import { getProductFilters, listProducts } from "./search-filters-and-sorting-served-by-the-api";
+>>>>>>> refs/heads/main
 import type { Product } from "./shop";
 import { toRequest, type ProductFilters, type ShopQuery } from "./shop-request";
 
 /**
  * THE SHOP'S READS: a page of live shoes that match what the visitor set, a
  * page at a time, and the colours and sizes the rail lists. This file is the
+<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
  * only door to the answers — the backend step points `listProducts` and
  * `getProductFilters` at the API and nothing in a component changes.
+=======
+ * only door to the answers: `listProducts` and `getProductFilters` ask the API
+ * and nothing in a component knows it.
+>>>>>>> refs/heads/main
  */
 interface Answer {
   key: string;
@@ -28,6 +37,7 @@ const NO_SHOES: Product[] = [];
 /**
  * `items` are the pages loaded so far and `total` is the API's total, the
  * count the visitor reads. A new query starts again at its first page; the
+<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
  * answer or the failure of an older query that arrives late is dropped, so
  * the newest request is what shows.
  *
@@ -41,14 +51,25 @@ const NO_SHOES: Product[] = [];
  * `retry()` asks for the page that failed — never another, never one already
  * shown — and a first page that failed is asked for again the same way.
  * `loading` with `items` on screen is "more is on its way".
+=======
+ * answer to an older query that arrives late is dropped, so the newest
+ * request is what shows. While a new query is on its way the last answer
+ * stays on screen, and a query that failed shows no list at all.
+ * `total` is null until the first answer is in: nothing is claimed empty
+ * before then.
+>>>>>>> refs/heads/main
  */
 export function useShopList(query: ShopQuery) {
   const key = JSON.stringify(query);
   const [paging, setPaging] = useState({ key, pages: 1 });
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
+<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
   const [attempt, setAttempt] = useState(0);
   // A new query starts at its first page, and stays there if the visitor comes back to an old one.
+=======
+  // A new query starts at its first page, and coming back to an old one does too.
+>>>>>>> refs/heads/main
   if (paging.key !== key) setPaging({ key, pages: 1 });
   const pages = paging.key === key ? paging.pages : 1;
 
@@ -71,6 +92,7 @@ export function useShopList(query: ShopQuery) {
     return () => {
       current = false;
     };
+<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
   }, [key, pages, attempt]);
 
   const error = failure?.key === key && failure.pages === pages ? failure.error : null;
@@ -84,15 +106,34 @@ export function useShopList(query: ShopQuery) {
     setFailure(null);
     setAttempt((n) => n + 1);
   }, []);
+=======
+  }, [key, pages]);
+
+  const error = failure?.key === key && failure.pages === pages ? failure.error : null;
+  const settled = answer?.key === key && answer.pages === pages;
+  const shown = error && answer?.key !== key ? null : answer;
+  const loading = !settled && !error;
+  const loadMore = useCallback(() => {
+    if (loading || answer?.key !== key) return;
+    setPaging({ key, pages: answer.pages + 1 });
+  }, [loading, answer, key]);
+>>>>>>> refs/heads/main
 
   return {
     items: shown?.items ?? NO_SHOES,
     total: shown ? shown.total : null,
+<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
     hasMore: shown !== null && shown.items.length < shown.total,
     loading,
     error,
     loadMore,
     retry,
+=======
+    hasMore: shown?.key === key && shown.items.length < shown.total,
+    loading,
+    error,
+    loadMore,
+>>>>>>> refs/heads/main
   };
 }
 

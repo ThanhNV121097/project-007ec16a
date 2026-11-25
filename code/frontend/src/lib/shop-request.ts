@@ -37,7 +37,11 @@ export interface PriceRange {
 
 /**
  * One page of live shoes. A union of price bands is a list of ranges here;
+<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
  * how a request carries it over the wire is the technical design's decision.
+=======
+ * `toParams` writes it the way the API reads it.
+>>>>>>> refs/heads/main
  */
 export interface ProductsRequest {
   status: "live";
@@ -109,3 +113,34 @@ export function toRequest(query: ShopQuery, page: number): ProductsRequest {
     price: bandRanges(query.price),
   };
 }
+<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
+=======
+
+/** One range as the API reads it: `from..to`, an end left out left empty. */
+function rangeText(r: PriceRange): string {
+  return `${r.from ?? ""}..${r.to ?? ""}`;
+}
+
+/**
+ * The query string of `GET /v1/products` for a request: `status=live`, the
+ * page and the limit, the sort (always, the default included), the words when
+ * there are any, each list as `a,b` (any of) when it is not empty, and the
+ * ticked price bands as one `price_ranges=from..to,from..to` — a union, which
+ * a single `price_from` / `price_to` pair cannot say. `size` is the EU-size
+ * filter on the API; the page size is `limit`, so the two never meet.
+ */
+export function toParams(req: ProductsRequest): Record<string, string> {
+  const params: Record<string, string> = {
+    status: req.status,
+    page: String(req.page),
+    limit: String(req.limit),
+    sort: req.sort,
+  };
+  if (req.q) params.q = req.q;
+  for (const key of ["category", "line", "colour", "size"] as const) {
+    if (req[key].length > 0) params[key] = req[key].join(",");
+  }
+  if (req.price.length > 0) params.price_ranges = req.price.map(rangeText).join(",");
+  return params;
+}
+>>>>>>> refs/heads/main
