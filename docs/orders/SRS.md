@@ -251,8 +251,7 @@ Behaviour:
 | AC-5 | A shoe's counts are 3, 2, 0 and 5 | Its stock is read | "Pairs in stock" is 10 |
 | AC-6 | The shoe from AC-5 | An order for 2 pairs of the size with 5 is saved | Pairs in stock is 8 |
 | AC-7 | The seeded shoes | Every shoe is read after seeding | Each size in its sold-out list has 0 pairs, each in its last-pairs list has 1 or 2, every other listed size has at least 3, and the lists are the same as in the design |
-| AC-8 | A last-pairs size | The home page's pair of that shoe loads | "In stock in {n} sizes" counts only sizes not sold out |
-| AC-9 | An order is refused (ORD-004) | The lists are read | They are unchanged |
+| AC-8 | An order is refused (ORD-004) | The lists are read | They are unchanged |
 
 **Failure, boundary and permission behaviour**
 
