@@ -73,6 +73,18 @@ This story has **no mock module of its own**. PR #40 adds fault knobs to **plan 
 | `useShopList` returns `{items, total: number \| null, hasMore, loading, error, loadMore, retry}` | S3's `useCollection` returns `{items, total, pages, page, hasMore, loading, error, loadMore}`. The shop does not go through `useCollection` (item 4 §6) | Sound, and the right shape for the page: `total` is `null` until the query's first answer, so "0 matching" is never claimed for a list that has not come; `pages` and `page` are drawn nowhere. The story's §3 says the shop needs "the data story's hook"; what it needs from S3 is `api.ts` (its `ApiError`, its one retry, its 15 s limit), which `listProducts` reaches through `api.get` | None |
 | `useProductFilters` turns a failed read into "no options" | `GET /v1/product-filters` can fail like any read | Accepted, see decision T6 | None |
 
+### 3.1 Revision after the UI's fix 1 (PR #40 head `f45c569`, re-reviewed: approved for testing)
+
+Verify's first run found a direct open of `/shop` drawing the empty state, because item 4's UI-stage mock read the shoes from `src/data`'s store, which only other pages fill. Fix 1 rewrote **the mock's reading**, not the contract, and added one test file. Read and judged:
+
+| What fix 1 does | What the contract does | Judgment | Frontend change at the swap |
+|---|---|---|---|
+| The mock's `listProducts` and `getProductFilters` read every live shoe through `api.get("products", { status: "live", page, limit: 100 })`, a page after another, on every call, and narrow, sort and slice them in the browser; the lines' and categories' names are read the same way, only when `q` is set | The real list is **one request** of `limit=12` that the database narrows (item 4 §3); the options are one `GET /v1/product-filters` | **Departure — a stand-in, and it must not survive.** It is the right stand-in for the UI stage because it fails the way the real client does (a failed page rejects, so a refused database, a 502 and an offline browser are "could not load", never an empty list — K1 already holds for the mock). But it sends no `limit=12`, reads the whole catalogue per visit, and its page size is the ceiling, so none of §2.1's request counts can be read from a build that still holds it | None beyond the swap already listed: `shop-list.ts` is the mock's only importer and changes two imports; the mock is deleted (§5 K6) |
+| New `src/test/shop-mock.test.ts` tests that mock (a failed read rejects; a direct open lists the catalogue) | After the swap there is no mock to test; the same facts are item 4's `shop-request` and `shop-list` tests against `api.get` | **Companion of the mock — deleted with it.** Left behind, it imports a file that no longer exists and fails the suite and CI lint | Deleted at the catch-up of #40 (§5 K6, §6) |
+| The mock's `doi:mock` knobs (`shop-slow`, `shop-error`, `shop-more-error`) are unchanged by fix 1 | T7 (§4.2): the product carries no switch for delay or failure | Unchanged ruling; still deleted with the mock | None |
+
+Two consequences, so nobody finds them later. **Run local must serve a build with the mock gone** (item 4's backend merged and #40 caught up, §6): only then does the page send `limit=12&status=live&page=n`, which SC-24, SC-26 and SC-27 read from the network log. And **no contract of this file changes**: the §2 table of answers, the §2.1 request counts, T1–T8 and K1–K5 stand as merged.
+
 ## 4. Decisions
 
 ### 4.1 The four the story leaves to TL (story §8)
@@ -113,7 +125,7 @@ Item 4's backend (PR #49) replaces the mock with the real client. The loading an
 | K3 | `useShopList`'s logic from #40 survives the swap: only the answers of the current query are returned, `retry()` re-asks the same `(query, page)`, paging resets with the query, a stale failure is ignored. Only the two imports change | SC-11, SC-23, SC-26, SC-27, SC-30 |
 | K4 | `getProductFilters()` may still resolve to "no options" when its read fails (T6); `listProducts` may not | The rail must not grow an error the story did not ask for; the list must |
 | K5 | The lines are read with `pageSize: 20`, the header's, so `/shop` makes one request for them (item 4's T3) | Item 4's SC-22; the line stays in #40's `Shop.tsx` after the catch-up |
-| K6 | The mock file, with the `doi:mock` knobs, is deleted; no code reads `doi:mock`; the `vi.mock` path in `src/test/shop-list.test.tsx` points at the new client | T7: the product carries no switch for failure or delay |
+| K6 | The mock file, with the `doi:mock` knobs, **and its test `src/test/shop-mock.test.ts` (added by fix 1, §3.1)** are deleted; no code reads `doi:mock`; the `vi.mock` path in `src/test/shop-list.test.tsx` points at the new client | T7: the product carries no switch for failure or delay; a test of a deleted file fails the suite |
 
 ## 6. Ordering: how the two pull requests meet
 
@@ -125,7 +137,8 @@ Story §3 says: build only after item 4 has merged. The facts that make that con
 
 | File | In #40 | On `main` after #49 | Resolution |
 |---|---|---|---|
-| `src/lib/mock/search-filters-and-sorting-served-by-the-api.ts` | fault knobs added | deleted | Stays deleted; the knobs go with it |
+| `src/lib/mock/search-filters-and-sorting-served-by-the-api.ts` | fault knobs added; after fix 1 it reads the live shoes through `api.get` (§3.1) | deleted | Stays deleted; the knobs and the stand-in reading go with it |
+| `src/test/shop-mock.test.ts` | tests that mock (fix 1) | does not exist | Deleted with the mock; not carried into the caught-up branch |
 | `src/lib/shop-list.ts` | current-query-only answer, `retry()`, paging reset | imports the new client | #49's two imports, #40's logic |
 | `src/test/shop-list.test.tsx` | five new cases | `vi.mock` of the new client's path | #40's cases, #49's path |
 | `src/pages/Shop.tsx` | the page rewired for the states | lines read with `pageSize: 20` | #40's page, with `pageSize: 20` |
@@ -163,6 +176,6 @@ Story §3 says: build only after item 4 has merged. The facts that make that con
 |---|---|
 | Dev, backend step of this story | **There is no backend work**: no route, handler, migration or fixture. The step has nothing to implement; the orchestrator may close it without a pull request |
 | Dev, item 4's backend (PR #49) | K1–K6 (§5). The mock and its `doi:mock` knobs are deleted there; nothing of #40 is needed to merge it |
-| Dev, the catch-up of #40 | The table of §6. Only imports, the mock's deletion, `pageSize: 20` and the `vi.mock` path differ; do not carry the knobs |
+| Dev, the catch-up of #40 | The table of §6. Only imports, the mock's deletion **and its test `shop-mock.test.ts`'s**, `pageSize: 20` and the `vi.mock` path differ; do not carry the knobs, the stand-in reading of the shoes or the test of either |
 | Test lead | Count requests by §2.1 (a failing read is two requests, because of `api.ts`'s one retry); a failed list is the same view for every rejection (§2); the shop's one way to the empty state is `total` 0; fault, delay and offline come from interception, never from the product |
 | UI follow-ups from the review of PR #40 (not backend, not blocking) | "Clear all" sits between Price and the Size pills (SC-3 lists it last; the test cases do not pin the place); keyboard focus after "Try again" falls to the page when its button unmounts; a failure for `(query, page 1)` shows at once if the visitor returns to that query before another read settles (clearing the failure when the effect starts fixes it); `filtering` counts any unknown parameter; a long sort label can wrap at 320px beside "Filter (n)". Dev may take them in the catch-up or leave them; none changes a contract here |
