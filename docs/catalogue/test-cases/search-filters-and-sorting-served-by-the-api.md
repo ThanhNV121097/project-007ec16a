@@ -271,7 +271,7 @@ Check: fetch_url
 **Scenario**: SC-15a — an unknown sort field is a 400 naming `sort`
 **Given**: The seed.
 **When**: `GET /v1/products?sort=zzz`, then `?sort=-zzz`, then `GET /v1/reviews?sort=price`, then `GET /v1/lines?sort=price`.
-**Then**: Each answers 400 `bad_request` with `errors.sort` a non-empty sentence, and no `items`.
+**Then**: Each answers 400 `bad_request` whose `errors` object has the key `sort` with a non-empty sentence, and no `items`.
 Traces: SC-15 (CAT-001 Invalid input)
 Check: fetch_url
 
