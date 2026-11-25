@@ -73,7 +73,7 @@ Where the contract's `Order` shape differs from the mock, the contract wins (ser
 
 ### Conflicts with merged decisions
 
-None. I read `services/_base.md` §2.3–2.8, §3.2–3.5, §3.10, §3.17, the S3 services file §1–§4, and `overview.md` §6: each already says `delivery` is `standard`, fee 0, and `cod` is never offered.
+None. I read `services/_base.md` §2.3–2.8, §3.2–3.5, §3.10, §3.17, the S3 services file §1–§4, and `overview.md` §8 (rows 2 and 5): each already says `delivery` is `standard`, fee 0, and `cod` is never offered.
 
 ## 7. Rollout and ordering
 
