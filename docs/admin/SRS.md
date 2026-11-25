@@ -852,3 +852,4 @@ Behaviour:
 | Dealer sign-in and protected admin area | ADMIN-001, ADMIN-002, ADMIN-003, ADMIN-004 | `test-cases/dealer-sign-in-and-protected-admin-area.md` |
 | Manage shoes, lines, categories, reviews and orders | ADMIN-010, ADMIN-011, ADMIN-012, ADMIN-013, ADMIN-014, ADMIN-015, ADMIN-016 | `test-cases/manage-shoes-lines-categories-reviews-and-orders.md` |
 | Dealer dashboard figures and charts | ADMIN-020, ADMIN-021 | `test-cases/dealer-dashboard-figures-and-charts.md` |
+| Staff accounts managed by the owner | ADMIN-030, ADMIN-031 | `test-cases/staff-accounts-managed-by-the-owner.md` |
