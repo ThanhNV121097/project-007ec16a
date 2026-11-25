@@ -66,9 +66,9 @@ Behaviour:
 |---|---|---|---|
 | AC-1 | One pair in the bag; 1280px | `/checkout` loads | The heading "Checkout", the three steps 01–03, "Your details travel over a secure connection.", and the five fields with their labels are shown |
 | AC-2 | The same at 390px | `/checkout` loads | The three-step line is not shown; the form is a single column |
-| AC-3 | Two delivery options on record | The page loads | Two rows; Standard selected; each shows `<name> · <arrives in>`, its note and its fee |
-| AC-4 | Threshold 2.000.000 ₫; pairs total 3.090.000 ₫ | The page loads | Standard shows "Free" and Express shows `50.000 ₫` |
-| AC-5 | Pairs total 1.500.000 ₫ | The page loads | Standard shows `30.000 ₫` |
+| AC-3 | The delivery record `standard` | The page loads | Exactly one delivery row, "Free delivery", is shown, selected and not a choice, with the standard option's arrival time and "Free" at the right |
+| AC-4 | Pairs total 3.090.000 ₫ | The page loads | The delivery row shows "Free" and no row named Express exists |
+| AC-5 | Pairs total 1.500.000 ₫ (under 2.000.000 ₫) | The page loads | The delivery row shows "Free"; Delivery reads "Free" and Total reads `1.500.000 ₫` |
 | AC-6 | The bag line was added at 3.000.000 ₫ and the shoe now costs 3.090.000 ₫ | The page loads | The summary line shows `3.090.000 ₫` |
 | AC-7 | One pair at 3.090.000 ₫, standard free | The page loads | Subtotal `3.090.000 ₫`, Delivery "Free", Total `3.090.000 ₫` |
 | AC-8 | Express chosen, one pair at 3.090.000 ₫ | The visitor presses the Express row | Delivery reads `50.000 ₫` and Total reads `3.140.000 ₫` |
