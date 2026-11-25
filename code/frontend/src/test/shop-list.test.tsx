@@ -75,6 +75,19 @@ describe("the shop's list", () => {
     expect(result.current.items.map((p) => p.id)).toEqual(["w"]);
   });
 
+  it("starts an earlier query again from its first page", async () => {
+    const { result, rerender } = setup();
+    await act(async () => calls[0].resolve(page(["a"], 30)));
+    act(() => result.current.loadMore());
+    await act(async () => calls[1].resolve(page(["b"], 30, 2)));
+    rerender({ q: { ...base, category: ["men"] } });
+    await act(async () => calls[calls.length - 1].resolve(page(["m"], 1)));
+    rerender({ q: base });
+    expect(calls[calls.length - 1].req).toMatchObject({ page: 1, category: [] });
+    await act(async () => calls[calls.length - 1].resolve(page(["a"], 30)));
+    expect(result.current.items.map((p) => p.id)).toEqual(["a"]);
+  });
+
   it("shows no list and no total for a request that failed", async () => {
     const { result } = setup();
     await act(async () => calls[0].reject(new Error("500")));
