@@ -3,6 +3,7 @@ import { usePageMeta } from "../seo";
 import { useRecord } from "../data";
 import { formatPrice } from "../lib/format";
 import { fill, type ShopTerms } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import FaqRows from "../components/FaqRows";
 import Icon from "../components/Icon";
 import OutlinePill from "../components/OutlinePill";
@@ -32,15 +33,14 @@ export default function Returns() {
         <T k="pages.returns.heading" as="h1" className="max-w-[12ch] text-[length:var(--size-h1)] leading-[1.02] text-ink lg:col-span-6" />
         <T k="pages.returns.lead" as="p" className="max-w-[44ch] self-end text-sm leading-relaxed text-ink-soft lg:col-span-5 lg:col-start-8" />
       </section>
-      <Rule />
-      <section className="grid border-b border-line sm:grid-cols-3">
+      <Bleed as="section" side="both" ground className="grid sm:grid-cols-3">
         {figures.map((f, i) => (
           <div key={i} className={`py-10 ${i > 0 ? "border-t border-line sm:border-l sm:border-t-0 sm:pl-8" : "sm:pr-8"}`}>
             <p data-count={i < 2 ? "" : undefined} className="text-[length:var(--size-h1)] leading-none tabular-nums tracking-tight text-ink">{f.big}</p>
             <p className="mt-4 max-w-[28ch] text-sm leading-relaxed text-ink-soft">{f.line}</p>
           </div>
         ))}
-      </section>
+      </Bleed>
       <section className="grid gap-8 py-12 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <T k="pages.returns.steps_heading" as="h2" className="text-[length:var(--size-h2)] leading-[1.1] text-ink" />
