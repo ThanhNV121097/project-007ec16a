@@ -11,7 +11,7 @@ vi.mock("../lib/order-page-and-pay-now", async (original) => ({
   openPayment: vi.fn(),
 }));
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Order from "../pages/Order";
 import { openPayment, requestPayment, vietnamTime, type PublicOrder } from "../lib/order-page-and-pay-now";
@@ -270,7 +270,9 @@ describe("Pay now", () => {
     fireEvent.click(screen.getByTestId("pay-now"));
     await waitFor(() => expect(openPayment).toHaveBeenCalledWith("https://pay.example.test/x"));
     expect(screen.getByTestId("pay-now")).toBeDisabled();
-    window.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }));
+    act(() => {
+      window.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }));
+    });
     await waitFor(() => expect(screen.getByTestId("pay-now")).toBeEnabled());
     expect(screen.getByTestId("pay-now")).toHaveTextContent("Pay now");
   });
