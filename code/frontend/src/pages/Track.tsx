@@ -76,7 +76,7 @@ export default function Track() {
                   <li key={o.id} className="border-b border-line">
                     <Link to={`/orders/${o.id}`} className="flex items-center justify-between gap-4 py-3 text-sm text-ink hover:underline">
                       <span className="tabular-nums">{o.number}</span>
-                      <span className="text-xs tabular-nums text-ink-soft">{formatDate(o.placed_at, "medium")}</span>
+                      <span className="text-xs tabular-nums text-ink-soft">{formatDate(o.placed_at)}</span>
                     </Link>
                   </li>
                 ))}
