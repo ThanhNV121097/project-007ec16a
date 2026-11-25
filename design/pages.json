@@ -1,0 +1,12 @@
+[
+  { "path": "/", "name": "Home" },
+  { "path": "/shop", "name": "Shop" },
+  { "path": "/shop/:id", "name": "Product", "example": "/shop/linen-overshirt" },
+  { "path": "/about", "name": "About" },
+  { "path": "/contact", "name": "Contact" },
+  { "path": "/admin/sign-in", "name": "Sign in" },
+  { "path": "/admin", "name": "Overview", "auth": true, "dashboard": true },
+  { "path": "/admin/products", "name": "Products", "auth": true, "dashboard": true },
+  { "path": "/admin/products/:id", "name": "Product", "example": "/admin/products/linen-overshirt", "auth": true, "dashboard": true },
+  { "path": "/admin/kinds", "name": "Kinds", "auth": true, "dashboard": true }
+]

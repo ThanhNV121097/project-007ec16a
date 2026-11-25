@@ -1,0 +1,165 @@
+{
+  "site": {
+    "name": "Sample & Co.",
+    "logo": "",
+    "description": "Clothes and a few things for the house, made to be worn and used for years.",
+    "locale": "vi-VN"
+  },
+  "nav": {
+    "links": [
+      {
+        "label": "Shop",
+        "href": "/shop"
+      },
+      {
+        "label": "About",
+        "href": "/about"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact"
+      }
+    ],
+    "cta": {
+      "label": "Shop",
+      "href": "/shop"
+    },
+    "menu": {
+      "open": "Open menu",
+      "close": "Close menu"
+    }
+  },
+  "hero": {
+    "eyebrow": "",
+    "headline": "",
+    "sub": "",
+    "cta": {
+      "label": "",
+      "href": "/shop"
+    }
+  },
+  "footer": {
+    "line": "Sample & Co. — clothes and things for the house. Orders by message.",
+    "admin": "Shop sign-in"
+  },
+  "credits": {
+    "label": "Photos"
+  },
+  "contact": {
+    "heading": "Ask us anything",
+    "phone": "",
+    "zalo": "",
+    "email": "",
+    "address": "",
+    "hours": "",
+    "dock": {
+      "call": "Call us",
+      "zalo": "Message us on Zalo"
+    },
+    "form": {
+      "name": "Your name",
+      "reply_to": "Phone or email",
+      "message": "Your message",
+      "send": "Send",
+      "sending": "Sending…",
+      "sent": "Thank you — we have your message and will answer soon.",
+      "offline": "This form is not connected yet — call or message us instead.",
+      "fields": {}
+    }
+  },
+  "pages": {
+    "home": {
+      "title": "Sample & Co.",
+      "description": "Clothes and a few things for the house, made to be worn and used for years.",
+      "eyebrow": "This season",
+      "lead_cta": "See it",
+      "more": "Looking for more?",
+      "more_cta": "The whole shop",
+      "statement": "A small shop for things you keep: cut plainly, made well, and mended when they need it.",
+      "statement_cta": "About the shop"
+    },
+    "shop": {
+      "title": "Shop",
+      "description": "Everything in the shop, by kind.",
+      "heading": "Shop",
+      "count": "things",
+      "filter_kind": "Kind",
+      "clear": "Show everything",
+      "empty": "Nothing in the shop matches that.",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "product": {
+      "back": "Back to the shop",
+      "missing": "That is not in the shop any more.",
+      "colour": "Colour",
+      "size": "Size",
+      "ask": "Ask about this",
+      "details": "Details",
+      "care": "Care",
+      "delivery": "Delivery and returns",
+      "delivery_text": "Sent within two working days. If it is not right, send it back within fourteen days, unworn, and we refund it.",
+      "spec_kind": "Kind",
+      "spec_material": "Made of",
+      "spec_sizes": "Sizes",
+      "spec_colours": "Colours",
+      "related": "Looking for more?"
+    },
+    "about": {
+      "title": "About",
+      "description": "Who makes the things in the shop, and how.",
+      "statement": "From one rail of shirts to a shop for things you keep.",
+      "first": "Everything here is made in small runs by workshops we visit. When a run sells out we make it again or we do not — nothing is marked down to clear a shelf.",
+      "second": "We would rather sell you one shirt you wear for ten years than three you replace. Bring anything back and we will mend it.",
+      "cta": "See the shop"
+    },
+    "contact": {
+      "title": "Contact",
+      "description": "How to reach the shop.",
+      "lead": "Message us about a size, an order or a repair. We answer the same day.",
+      "about": "You are asking about",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Find us",
+      "hours": "Open"
+    },
+    "admin": {
+      "nav": {
+        "overview": "Overview",
+        "catalogue": "Catalogue",
+        "products": "Products",
+        "kinds": "Kinds"
+      },
+      "overview": {
+        "title": "Overview",
+        "products": "Products",
+        "drafts": "still in draft",
+        "kinds": "Kinds",
+        "low": "Running low",
+        "low_note": "under ten left",
+        "worth": "Stock on the shelf",
+        "worth_note": "at the prices shown",
+        "low_title": "Running low",
+        "low_none": "Nothing is running low.",
+        "col_product": "Product",
+        "col_kind": "Kind",
+        "col_stock": "In stock"
+      },
+      "products": {
+        "title": "Products",
+        "search": "Search by name",
+        "status": "Status",
+        "live": "Live",
+        "draft": "Draft"
+      },
+      "kinds": {
+        "title": "Kinds"
+      },
+      "signin": {
+        "title": "Welcome back",
+        "description": "Sign in to run the shop.",
+        "note": "Ask the shop's owner for an account."
+      }
+    }
+  }
+}

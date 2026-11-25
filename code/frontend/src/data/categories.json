@@ -1,0 +1,30 @@
+[
+  {
+    "id": "shirts",
+    "name": "Shirts",
+    "blurb": "Linen and cotton, cut long in the body.",
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "knitwear",
+    "name": "Knitwear",
+    "blurb": "Wool and cotton, knitted in small runs.",
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "outerwear",
+    "name": "Outerwear",
+    "blurb": "Canvas and wool for the cool months.",
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "table",
+    "name": "For the table",
+    "blurb": "Ceramics and linen, made to be used daily.",
+    "_source": "assumed",
+    "_sample": true
+  }
+]

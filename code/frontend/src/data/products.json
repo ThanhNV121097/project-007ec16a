@@ -1,0 +1,309 @@
+[
+  {
+    "id": "linen-overshirt",
+    "name": "Linen Overshirt",
+    "category": "shirts",
+    "price": 890000,
+    "stock": 14,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "natural",
+      "navy",
+      "olive"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "material": "Washed linen, 100%",
+    "care": "Wash cool, dry flat, iron while damp.",
+    "description": "A long-bodied shirt in washed linen, cut to wear open over a tee or buttoned on its own.",
+    "featured": true,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "oxford-shirt",
+    "name": "Oxford Shirt",
+    "category": "shirts",
+    "price": 690000,
+    "stock": 22,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "white",
+      "lightblue"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "material": "Oxford cotton, 100%",
+    "care": "Wash at 30°, hang to dry.",
+    "description": "The plain button-down, in a heavier oxford that softens with every wash.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "poplin-shirt",
+    "name": "Poplin Shirt",
+    "category": "shirts",
+    "price": 640000,
+    "stock": 8,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "white",
+      "black"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L"
+    ],
+    "material": "Cotton poplin",
+    "care": "Wash at 30°, iron warm.",
+    "description": "A crisp shirt for under a jacket, with a collar that stands on its own.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "merino-crew",
+    "name": "Merino Crew",
+    "category": "knitwear",
+    "price": 1290000,
+    "stock": 11,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "charcoal",
+      "oatmeal",
+      "navy"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "material": "Merino wool, 100%",
+    "care": "Hand wash cold, dry flat. It will pill a little at first; that stops.",
+    "description": "A fine crew-neck in merino, light enough for indoors and warm enough for outside.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "cotton-cardigan",
+    "name": "Cotton Cardigan",
+    "category": "knitwear",
+    "price": 1090000,
+    "stock": 6,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "cream",
+      "navy"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L"
+    ],
+    "material": "Cotton, knitted",
+    "care": "Wash cool in a bag, dry flat.",
+    "description": "A heavy cotton cardigan with horn buttons, the weight of a light jacket.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "fisherman-rib",
+    "name": "Fisherman Rib",
+    "category": "knitwear",
+    "price": 1490000,
+    "stock": 4,
+    "status": "draft",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "ecru"
+    ],
+    "sizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "material": "Lambswool",
+    "care": "Hand wash cold, dry flat.",
+    "description": "A thick ribbed jumper that takes a winter to break in and then lasts.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "canvas-chore-coat",
+    "name": "Canvas Chore Coat",
+    "category": "outerwear",
+    "price": 1690000,
+    "stock": 9,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "tan",
+      "navy",
+      "black"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "material": "Cotton canvas, 12oz",
+    "care": "Wash rarely. Brush off dry dirt; wash cool when it needs it.",
+    "description": "Three patch pockets and a boxy cut, in a canvas that fades where you wear it.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "wool-overcoat",
+    "name": "Wool Overcoat",
+    "category": "outerwear",
+    "price": 3900000,
+    "stock": 3,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "charcoal",
+      "camel"
+    ],
+    "sizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "material": "Wool, 80%; nylon, 20%",
+    "care": "Dry clean once a season. Brush between wears.",
+    "description": "A single-breasted coat to the knee, half-lined, with room for a jumper.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "waxed-jacket",
+    "name": "Waxed Jacket",
+    "category": "outerwear",
+    "price": 2400000,
+    "stock": 7,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "olive",
+      "navy"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "material": "Waxed cotton",
+    "care": "Never wash. Wipe with cold water; rewax once a year.",
+    "description": "A short waxed jacket with a corduroy collar. It keeps the rain off and looks better worn.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "stoneware-bowl",
+    "name": "Stoneware Bowl",
+    "category": "table",
+    "price": 240000,
+    "stock": 30,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "white",
+      "gray"
+    ],
+    "sizes": [],
+    "material": "Stoneware, glazed",
+    "care": "Dishwasher safe. Not for the hob.",
+    "description": "A deep bowl for noodles or soup, thrown by hand so no two are quite the same.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "linen-napkins",
+    "name": "Linen Napkins, set of four",
+    "category": "table",
+    "price": 420000,
+    "stock": 18,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "natural",
+      "white"
+    ],
+    "sizes": [],
+    "material": "Linen, 100%",
+    "care": "Wash at 40°. Do not bother ironing.",
+    "description": "Four heavy linen napkins that soften with washing and never need pressing.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  },
+  {
+    "id": "glazed-mug",
+    "name": "Glazed Mug",
+    "category": "table",
+    "price": 190000,
+    "stock": 2,
+    "status": "live",
+    "image": "",
+    "image_back": "",
+    "image_detail": "",
+    "colours": [
+      "white",
+      "darkgreen"
+    ],
+    "sizes": [],
+    "material": "Stoneware, glazed",
+    "care": "Dishwasher safe.",
+    "description": "A straight-sided mug that holds a proper cup and sits well in the hand.",
+    "featured": false,
+    "_source": "assumed",
+    "_sample": true
+  }
+]

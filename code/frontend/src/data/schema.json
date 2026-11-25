@@ -1,0 +1,125 @@
+{
+  "collections": {
+    "products": {
+      "label": "Products",
+      "fields": [
+        {
+          "key": "image",
+          "label": "Photograph",
+          "type": "image",
+          "section": "Basics"
+        },
+        {
+          "key": "name",
+          "label": "Name",
+          "type": "text",
+          "required": true,
+          "section": "Basics"
+        },
+        {
+          "key": "category",
+          "label": "Kind",
+          "type": "ref:categories",
+          "section": "Basics"
+        },
+        {
+          "key": "price",
+          "label": "Price",
+          "type": "price",
+          "currency": "VND",
+          "section": "Basics"
+        },
+        {
+          "key": "stock",
+          "label": "In stock",
+          "type": "number",
+          "section": "Basics"
+        },
+        {
+          "key": "status",
+          "label": "Status",
+          "type": "text",
+          "options": [
+            [
+              "draft",
+              "Draft"
+            ],
+            [
+              "live",
+              "Live"
+            ]
+          ],
+          "section": "Basics"
+        },
+        {
+          "key": "featured",
+          "label": "Opens the home page",
+          "type": "bool",
+          "hint": "One product at a time is shown at full size on the home page.",
+          "section": "Basics"
+        },
+        {
+          "key": "description",
+          "label": "Description",
+          "type": "longtext",
+          "section": "Basics"
+        },
+        {
+          "key": "colours",
+          "label": "Colours",
+          "type": "list",
+          "hint": "A colour's plain name: navy, olive, cream.",
+          "section": "Details"
+        },
+        {
+          "key": "sizes",
+          "label": "Sizes",
+          "type": "list",
+          "section": "Details"
+        },
+        {
+          "key": "material",
+          "label": "Made of",
+          "type": "text",
+          "section": "Details"
+        },
+        {
+          "key": "care",
+          "label": "Care",
+          "type": "longtext",
+          "section": "Details"
+        },
+        {
+          "key": "image_back",
+          "label": "A second picture",
+          "type": "image",
+          "section": "More pictures",
+          "hint": "The back, or the thing in use."
+        },
+        {
+          "key": "image_detail",
+          "label": "A detail",
+          "type": "image",
+          "section": "More pictures",
+          "hint": "A close picture of the fabric or the finish."
+        }
+      ]
+    },
+    "categories": {
+      "label": "Kinds",
+      "fields": [
+        {
+          "key": "name",
+          "label": "Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "blurb",
+          "label": "One line about it",
+          "type": "longtext"
+        }
+      ]
+    }
+  }
+}

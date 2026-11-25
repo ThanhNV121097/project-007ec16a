@@ -1,0 +1,26 @@
+[
+  {
+    "name": "From the home page to the whole shop",
+    "steps": [
+      { "action": "open", "path": "/" },
+      { "action": "click", "selector": "[data-testid='home-more']" },
+      { "action": "expect", "selector": "[data-testid='shop-count']" }
+    ]
+  },
+  {
+    "name": "Open one thing and read about it",
+    "steps": [
+      { "action": "open", "path": "/shop" },
+      { "action": "click", "selector": "[data-testid='card-linen-overshirt']" },
+      { "action": "expect", "selector": "[data-testid='product-name']", "text": "Linen Overshirt" }
+    ]
+  },
+  {
+    "name": "Ask the shop about one thing",
+    "steps": [
+      { "action": "open", "path": "/shop/linen-overshirt" },
+      { "action": "click", "selector": "[data-testid='product-ask']" },
+      { "action": "expect", "selector": "[data-testid='contact-heading']" }
+    ]
+  }
+]
