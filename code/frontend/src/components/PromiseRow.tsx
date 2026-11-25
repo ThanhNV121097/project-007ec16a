@@ -29,7 +29,7 @@ export default function PromiseRow({ compact = false }: { compact?: boolean }) {
           <Icon name={c.icon} size={20} className="mt-0.5 shrink-0 text-ink" />
           <div className="min-w-0">
             <p className="text-sm text-ink">{c.title}</p>
-            <p className="mt-1 text-xs leading-relaxed text-ink-soft">{c.line}</p>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">{c.line}</p>
           </div>
         </li>
       ))}
