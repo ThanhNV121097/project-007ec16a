@@ -27,6 +27,7 @@ type env struct {
 	svc    *auth.Service
 	h      http.Handler
 	admin  *http.Cookie
+	mu     sync.Mutex
 	bodies strings.Builder
 }
 
@@ -64,7 +65,9 @@ func (e *env) do(method, path, body string, cookie *http.Cookie) *httptest.Respo
 	}
 	rec := httptest.NewRecorder()
 	e.h.ServeHTTP(rec, req)
+	e.mu.Lock()
 	e.bodies.WriteString(rec.Body.String())
+	e.mu.Unlock()
 	return rec
 }
 
@@ -121,7 +124,7 @@ func TestAStaffAccountLivesAndDiesAgainstPostgres(t *testing.T) {
 	}
 
 	lan := e.add(" Lan Tran ", "Lan@Example.com", "lan-password-1")
-	mai := e.add("Mai Le", "mai@example.com", "lan-password-1")
+	e.add("Mai Le", "mai@example.com", "lan-password-1")
 	if lan["email"] != "lan@example.com" || lan["name"] != "Lan Tran" || lan["role"] != "staff" || lan["is_active"] != true {
 		t.Fatalf("the new account: %v", lan)
 	}
@@ -266,7 +269,6 @@ func TestAStaffAccountLivesAndDiesAgainstPostgres(t *testing.T) {
 	if n := e.leftover(); n != 0 {
 		t.Errorf("%d sessions belong to switched-off or removed accounts", n)
 	}
-	_ = mai
 
 	if all := e.bodies.String(); strings.Contains(all, "argon2") || strings.Contains(all, "password_hash") {
 		t.Error("a hash reached a response")
