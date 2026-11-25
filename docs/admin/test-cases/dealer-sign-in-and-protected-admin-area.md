@@ -147,7 +147,7 @@ Check: manual — a property of a code path: no HTTP response shows that a hash 
 
 **Scenario**: TC-15 — a blank email or password is 422 and is not a failed try
 **Given**: The admin exists; `DELETE FROM rate_limits` runs before and after.
-**When**: `POST /api/v1/auth/sign-in` with (a) `{"email":"","password":"x"}`; (b) `{"email":"   ","password":"x"}`; (c) `{"email":"` the admin's email `","password":""}`; (d) `{"email":"","password":""}`; then six more requests like (a); then the admin's right credentials.
+**When**: `POST /api/v1/auth/sign-in` with (a) `{"email":"","password":"x"}`; (b) `{"email":"   ","password":"x"}`; (c) `{"email":"<A_EMAIL>","password":""}`; (d) `{"email":"","password":""}`; then six more requests like (a); then the admin's right credentials.
 **Then**: (a) and (b) answer 422 `invalid` with `errors.email` exactly `An email address is needed` and no `errors.password`; (c) answers 422 with `errors.password` (a non-empty sentence) and no `errors.email`; (d) answers 422 with both keys. Each has `message` a non-empty sentence. After the six extra blank-email requests the right credentials answer 200, not 429; `SELECT count(*) FROM rate_limits` is 0 where the verifier's SQL returns rows.
 Traces: SC-8 (services §3.7 `invalid`)
 Check: fetch_url
