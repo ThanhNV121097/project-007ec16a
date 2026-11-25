@@ -100,7 +100,7 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | Any customer page | The visitor scrolls to the end | The band shows the wordmark and the line "Đôi — genuine adidas, chosen online and delivered across Vietnam, with a size chart on every pair and a free first size exchange." |
+| AC-1 | Any customer page | The visitor scrolls to the end | The band shows the wordmark and the line "Đôi — genuine adidas, chosen online and delivered across Vietnam, with a size chart on every pair." |
 | AC-2 | The footer | The visitor reads the "Shop" column | It lists All shoes (`/shop`), Women, Men, Kids (`/shop?category=<id>`), Gifts (`/shop?price=under-3m`) |
 | AC-3 | The footer | The visitor reads the "Help" column | It lists Size chart, Delivery, Returns and exchange, Track an order, Contact, linking to `/size-chart`, `/shipping`, `/returns`, `/track`, `/contact` |
 | AC-4 | The footer | The visitor reads "The shop" | It lists About Đôi (`/about`), Your bag (`/cart`), Dealer sign-in (`/admin/sign-in`) |
