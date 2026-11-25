@@ -328,10 +328,10 @@ Behaviour:
 | AC-5 | A line of quantity 2 at 3.090.000 ₫ | The bag page loads | The line shows "3.090.000 ₫ each" and the line total `6.180.000 ₫`; the heading shows "2 in your bag" |
 | AC-6 | A line of quantity 5 | The visitor looks at the stepper on the bag page | The plus button is disabled |
 | AC-7 | A line of quantity 1 | The visitor looks at the stepper | The minus button is disabled |
-| AC-8 | Free-delivery threshold 2.000.000 ₫; subtotal 3.090.000 ₫ | The bag page loads | Delivery reads "Free" and Total reads `3.090.000 ₫` |
-| AC-9 | Threshold 2.000.000 ₫, standard fee 30.000 ₫; subtotal 1.500.000 ₫ | The bag page loads | Delivery reads `30.000 ₫` and Total reads `1.530.000 ₫` |
-| AC-10 | A non-empty bag | The visitor reads under the "Check out" button | The line "Pay by cash on delivery, bank transfer, VNPay or MoMo at the next step." is shown |
-| AC-11 | An empty bag | `/cart` loads | The heading "Your bag is empty.", the line "Pick a pair — the size chart is one tap from every shoe, and the first size exchange is free.", a "Keep shopping" pill and the "New this month" row are shown |
+| AC-8 | A subtotal of 3.090.000 ₫ | The bag page loads | Delivery reads "Free" and Total reads `3.090.000 ₫` |
+| AC-9 | A subtotal of 1.500.000 ₫ (under 2.000.000 ₫) | The bag page loads | Delivery reads "Free", not `0 ₫`, and Total reads `1.500.000 ₫` |
+| AC-10 | A non-empty bag | The visitor reads under the "Check out" button | The line "You pay online with VNPay — card, domestic ATM card or QR — at the next step." is shown, and the page mentions neither cash on delivery, nor bank transfer, nor MoMo |
+| AC-11 | An empty bag | `/cart` loads | The heading "Your bag is empty.", the line "Pick a pair — the size chart is one tap from every shoe.", a "Keep shopping" pill and the "New this month" row are shown |
 | AC-12 | A non-empty bag at 390px | The visitor reads a line | The "Remove" text is hidden and the remove button is still present |
 | AC-13 | A non-empty bag | The visitor presses "Keep shopping" | The address is `/shop` |
 
