@@ -11,6 +11,7 @@ import Icon from "../components/Icon";
 import ProductCard from "../components/ProductCard";
 import Rule from "../components/Rule";
 import Select from "../components/Select";
+import { sizeColumns } from "../components/SizePicker";
 
 /** "36 2/3" as a number, so sizes sort the way a foot grows. */
 function sizeValue(s: string): number {
@@ -124,12 +125,12 @@ export default function Shop() {
           />
           <div className="mt-6 border-b border-line pb-5">
             <T k="pages.shop.filter_size" as="p" className="pb-3 text-xs uppercase tracking-wider text-ink-soft" />
-            <div className="flex flex-wrap gap-1.5">
+            <div className={`grid gap-1.5 ${sizeColumns(allSizes.length, 4)}`}>
               {allSizes.map((s) => {
                 const on = sizes.includes(s);
                 return (
                   <button key={s} type="button" aria-pressed={on} onClick={() => toggleSize(s)} data-testid={`filter-size-${sizeKey(s)}`}
-                    className={`w-16 whitespace-nowrap rounded-[var(--radius-pill)] border px-1 py-1.5 text-xs tabular-nums ${on ? "border-ink bg-ink text-ground" : "border-line text-ink hover:border-ink"}`}>
+                    className={`whitespace-nowrap rounded-[var(--radius-pill)] border px-1 py-1.5 text-[0.8125rem] tabular-nums ${on ? "border-ink bg-ink text-ground" : "border-line text-ink hover:border-ink"}`}>
                     {s}
                   </button>
                 );
@@ -148,7 +149,7 @@ export default function Shop() {
               </button>
             </div>
           ) : (
-            <Grid count={Math.min(shown, total)} max={3}>
+            <Grid count={Math.min(shown, total)} max={4}>
               {matched.slice(0, shown).map((p) => <ProductCard key={p.id} product={p} />)}
             </Grid>
           )}
