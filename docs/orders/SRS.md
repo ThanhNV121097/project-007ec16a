@@ -153,6 +153,8 @@ Behaviour:
 5. An order can hold several pairs; the orders already on record, which hold one shoe each, keep working and show as orders of one pair.
 6. The answer holds the order (without phone, email, address or note), an order token only the answer carries, and a payment address — empty only while VNPay is not yet implemented or cannot give one (ORD-006).
 7. The order token cannot be guessed (at least 128 bits of randomness) and opens only this order.
+8. The delivery is always `standard`. A request that names any other delivery option is refused with 422 naming `delivery`; a delivery fee sent in the request is ignored. The stored fee is 0 either way.
+9. An order placed by a signed-in customer is linked to that customer's account; an order placed as a guest is linked to none (ACC-005).
 
 **Acceptance criteria**
 
