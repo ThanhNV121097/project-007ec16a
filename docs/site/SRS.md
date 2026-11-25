@@ -55,7 +55,7 @@ Behaviour:
 3. The search button opens a search line under the header (1024px and up) or a full-screen panel (below 1024px). The input shows the placeholder "Samba, Gazelle, pink, a style code…", has focus on opening, and sits beside a "Search" button. The full-screen panel also shows "Start from a line" and one link per line, each to the shop narrowed to that line.
 4. Submitting words goes to the shop with those words as the search; submitting nothing goes to the shop unfiltered. The panel closes on submit.
 5. The bag button opens the bag drawer (SITE-007). A badge shows the number of pairs in the bag when it is more than zero and is absent at zero.
-6. The menu button (below 1024px) opens a full-screen menu: the five links at large size, a hairline, then the help links Size chart, Delivery, Returns and exchange, Track an order, Contact.
+6. The menu button (below 1024px) opens a full-screen menu: the five links at large size, a hairline, then the help links Size chart, Delivery, Return policy, Track an order, Contact.
 
 **Acceptance criteria**
 
