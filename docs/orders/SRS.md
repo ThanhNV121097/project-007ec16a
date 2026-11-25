@@ -93,8 +93,8 @@ Behaviour:
 |---|---|---|---|
 | Bag lines: shoe id, size, quantity | read | yes | From the browser |
 | Shoe: current price | read | yes | From the shop |
-| Delivery options: name, days, note, fee | read | yes | |
-| Shop terms: free-delivery threshold | read | yes | |
+| Delivery option "standard": name, days, note | read | yes | Its fee is always 0, drawn as "Free" |
+| Ways to pay the shop can complete | read | yes | VNPay only (ORD-006) |
 
 **Requirement ORD-002 — Details are checked before and after the order is sent**
 
