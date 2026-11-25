@@ -42,7 +42,7 @@ func TestTheAdminAccountIs409BeforeTheBodyIsRead(t *testing.T) {
 
 func TestACustomersIdAnUnknownIdAndANonUUIDAreOneAnswer(t *testing.T) {
 	h := newHarness()
-	ids := []string{customerID, unknownID, "not-a-uuid", strings.ToUpper(staffID), "{" + staffID + "}", strings.ReplaceAll(staffID, "-", "")}
+	ids := []string{customerID, unknownID, "not-a-uuid", strings.ToUpper(unknownID), "{" + staffID + "}", strings.ReplaceAll(staffID, "-", "")}
 	for _, method := range []string{http.MethodPut, http.MethodDelete} {
 		var first string
 		for i, id := range ids {
@@ -92,7 +92,7 @@ func TestUpdateAppliesExactlyTheFieldsSent(t *testing.T) {
 	if strings.Join(h.store.writes, ",") != "password" || !strings.HasPrefix(hash, "$argon2id$") || strings.Contains(hash, "another-long-one") {
 		t.Errorf("password alone: %v %q", h.store.writes, hash)
 	}
-	if body, _ := v["password"]; body != nil || strings.Contains(strings.ToLower(strings.Join(keys(v), ",")), "hash") {
+	if _, has := v["password"]; has || strings.Contains(strings.ToLower(strings.Join(keys(v), ",")), "hash") {
 		t.Errorf("a secret key in the account: %v", v)
 	}
 	h, v = put(`{}`)
