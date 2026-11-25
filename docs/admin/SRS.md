@@ -664,7 +664,7 @@ Behaviour:
 | AC-3 | Shoes with 73 pairs over 3 shoes | The page loads | "Pairs in stock" reads 73 with "across 3 shoes" |
 | AC-4 | Two shoes running low | The page loads | "Running low" reads 2 with "last pairs left" |
 | AC-5 | The four figures | Each is pressed | They open `/admin/orders`, `/admin/orders?status=confirmed`, `/admin/products`, `/admin/products` |
-| AC-6 | 2 waiting, 5 low, 13 orders, `47.810.000 ₫` | The page loads | "Today" reads "2 orders are waiting to be packed and 5 shoes are down to their last pairs. This month so far: 13 orders, 47.810.000 ₫." |
+| AC-6 | 2 waiting, 5 low, 13 orders, `47.660.000 ₫` | The page loads | "Today" reads "2 orders are waiting to be packed and 5 shoes are down to their last pairs. This month so far: 13 orders, 47.660.000 ₫." |
 | AC-7 | The seeded orders | The 14-day chart is read | 14 columns labelled 12 to 25, each with its amount as text; 16 and 20 are short pale columns |
 | AC-8 | The seeded orders | "Pairs sold by line" is read | Samba 8, Gazelle 2, Megaride 2, Handball Spezial 1, Adizero 1, each with a bar and its count |
 | AC-9 | The seeded orders | "Latest orders" is read | Five rows, the first `DOI-24816 · Trang · Handball Spezial Earth Strata · EU 37 1/3` with `Placed · 25/11/2026, 08:40 · 3.290.000 ₫` |
