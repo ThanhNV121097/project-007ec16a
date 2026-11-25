@@ -71,14 +71,14 @@ Check: manual — a server-side render of the real hook is a vitest call; no lis
 **Scenario**: TC-06 — pressing a colour dot whose answer takes 2 seconds shows neither the missing text nor the previous shoe (desktop)
 **Given**: A 1280×800 window on `/shop/samba-og-w-crystal-white`, already drawn (its name, price `3.090.000 ₫` and three colour dots are on the page). Then arrangement H(2, shoe) is set for `samba-og-w-wonder-quartz` only.
 **When**: The colour dot `a[aria-label='Samba OG Wonder Quartz']` is pressed and readings are taken at once and at 0.5 s, 1 s and 1.5 s, then at 2.5 s.
-**Then**: In the readings before the answer `location.pathname` is `/shop/samba-og-w-wonder-quartz`; `MISSING` is not on the page; the text `Samba OG Crystal White` and the price `3.090.000 ₫` are not in `main` (the previous shoe is not shown under the new address); `[data-testid='product-name']` does not exist; `main`'s trimmed text is empty. In the reading at 2.5 s `[data-testid='product-name']` reads `Samba OG Wonder Quartz` and `MISSING` is still not on the page.
+**Then**: In the readings before the answer the address path is `/shop/samba-og-w-wonder-quartz`; `MISSING` is not on the page; the text `Samba OG Crystal White` and the price `3.090.000 ₫` are not in `main` (the previous shoe is not shown under the new address); `[data-testid='product-name']` does not exist; `main`'s trimmed text is empty. In the reading at 2.5 s `[data-testid='product-name']` reads `Samba OG Wonder Quartz` and `MISSING` is still not on the page.
 Traces: SC-4 (SITE-014 AC-1; SITE-005 AC-6)
 Check: interact_page
 
 **Scenario**: TC-07 — opening a related pair whose answer takes 2 seconds, on a phone, behaves the same
 **Given**: A 390×844 window on `/shop/samba-og-w-crystal-white`, drawn. The first card under "Looking for more?" is read: its `href` (`/shop/<id>`) and its shoe's name. Arrangement H(2, shoe) is then set for that card's id only.
 **When**: The card is scrolled into view and pressed; readings are taken at once and at 0.5 s, 1 s and 1.5 s, then at 2.5 s.
-**Then**: Before the answer `location.pathname` is the card's `href`; `MISSING` is not on the page; `Samba OG Crystal White` is not in `main`; `main`'s trimmed text is empty. At 2.5 s `[data-testid='product-name']` reads the card's shoe name and `MISSING` is not on the page.
+**Then**: Before the answer the address path is the card's `href`; `MISSING` is not on the page; `Samba OG Crystal White` is not in `main`; `main`'s trimmed text is empty. At 2.5 s `[data-testid='product-name']` reads the card's shoe name and `MISSING` is not on the page.
 Traces: SC-4 (SITE-014 AC-1; story §3 "The record must be the one the address names")
 Check: interact_page
 
@@ -135,7 +135,7 @@ Check: render_url
 **Scenario**: TC-14 — the missing view holds one pill to `/shop`, no shoe parts, and the pill works
 **Given**: A 1280×800 window on `/shop/not-a-shoe` after its 404 has been answered and the missing view is on the page.
 **When**: `main` is read, then the pill (`main a` with the text `All shoes`) is pressed.
-**Then**: Before pressing: `main` holds exactly one `a` whose text is `All shoes` (a count of 1), its `href` attribute is exactly `/shop`; there is no price (no text matching `\d[\d.]*\s?₫`), no `[data-testid^='size-']`, no `[data-testid='add-to-bag']`, no `section#reviews`, no "Looking for more?" and no "What buyers said" in `main`. After pressing: `location.pathname` is `/shop` and the shop page's own heading is on the page.
+**Then**: Before pressing: `main` holds exactly one `a` whose text is `All shoes` (a count of 1), its `href` attribute is exactly `/shop`; there is no price (no text matching `\d[\d.]*\s?₫`), no `[data-testid^='size-']`, no `[data-testid='add-to-bag']`, no `section#reviews`, no "Looking for more?" and no "What buyers said" in `main`. After pressing: the address path is `/shop` and the shop page's own heading is on the page.
 Traces: SC-9 (SITE-014 AC-2; SITE-005 not-found row)
 Check: interact_page
 
@@ -160,7 +160,7 @@ Check: interact_page
 **Scenario**: TC-17 — with the shop unreachable the page stays empty and never says the pair is gone (desktop and phone)
 **Given**: Arrangement U (the API stopped; the gateway answers 502 to every `/api/…` request). A 1280×800 window, then the same case at 390×844.
 **When**: `/shop/samba-og-w-crystal-white` is opened and readings are taken at the first paint and at 1 s, 2 s, 3 s, 4 s and 6 s (the data module may retry a failed read once before it gives up; the readings span both).
-**Then**: In every reading, at both widths, `MISSING` is not in the whole page's text; no `a` with the text `PILL` exists in `main`; no `h1`, `[data-testid='product-name']`, `[data-testid^='size-']` or `[data-testid='add-to-bag']` exists; `main`'s trimmed text is empty; `header` and `footer` exist and have text. The page does not redirect (`location.pathname` is still `/shop/samba-og-w-crystal-white`).
+**Then**: In every reading, at both widths, `MISSING` is not in the whole page's text; no `a` with the text `PILL` exists in `main`; no `h1`, `[data-testid='product-name']`, `[data-testid^='size-']` or `[data-testid='add-to-bag']` exists; `main`'s trimmed text is empty; `header` and `footer` exist and have text. The page does not redirect (the address path is still `/shop/samba-og-w-crystal-white`).
 Traces: SC-11 (SITE-014 AC-4)
 Check: interact_page
 
@@ -185,14 +185,14 @@ Check: interact_page
 **Scenario**: TC-20 — after a 404, opening a live shoe draws it with no missing view, even while that shoe's answer is slow
 **Given**: A 1280×800 window. Arrangement H(2, shoe) for `samba-og-w-crystal-white` is set after the first step below.
 **When**: `/shop/not-a-shoe` is opened and its missing view is seen; its pill `All shoes` is pressed (`/shop` opens); the card of `Samba OG Crystal White` is pressed; readings are taken at once and at 0.5 s, 1 s and 1.5 s after the card is pressed, then at 2.5 s.
-**Then**: Before the answer `location.pathname` is `/shop/samba-og-w-crystal-white`, `MISSING` is not on the page and `main`'s trimmed text is empty (the earlier 404 has left nothing behind). At 2.5 s `[data-testid='product-name']` reads `Samba OG Crystal White` and `MISSING` is not on the page.
+**Then**: Before the answer the address path is `/shop/samba-og-w-crystal-white`, `MISSING` is not on the page and `main`'s trimmed text is empty (the earlier 404 has left nothing behind). At 2.5 s `[data-testid='product-name']` reads `Samba OG Crystal White` and `MISSING` is not on the page.
 Traces: SC-13 (SITE-014 AC-1, AC-2)
 Check: interact_page
 
 **Scenario**: TC-21 — after a drawn shoe, an unknown id in the same page shows nothing, then the missing view only after its answer
 **Given**: A 1280×800 window on `/shop/samba-og-w-crystal-white`, drawn (ambiguity 5). Arrangement H(2, shoe) is set for `not-a-shoe` (404 after 2 s).
 **When**: The address is changed inside the page, with no reload, to `/shop/not-a-shoe` (a history push and a `popstate` event); readings are taken at once and at 0.5 s, 1 s and 1.5 s, then at 2.5 s.
-**Then**: Before the answer `location.pathname` is `/shop/not-a-shoe`, `MISSING` is not on the page, the text `Samba OG Crystal White` and the price `3.090.000 ₫` are not in `main`, `[data-testid='product-name']` does not exist and `main`'s trimmed text is empty. At 2.5 s `main` holds the `h1` `That pair is not in the shop any more.` and the pill `All shoes`, and no shoe part.
+**Then**: Before the answer the address path is `/shop/not-a-shoe`, `MISSING` is not on the page, the text `Samba OG Crystal White` and the price `3.090.000 ₫` are not in `main`, `[data-testid='product-name']` does not exist and `main`'s trimmed text is empty. At 2.5 s `main` holds the `h1` `That pair is not in the shop any more.` and the pill `All shoes`, and no shoe part.
 Traces: SC-13 (SITE-014 AC-1, AC-2)
 Check: interact_page
 
