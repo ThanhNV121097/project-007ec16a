@@ -2,6 +2,17 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { sizeKey } from "../lib/shop";
 
+const SIZE_COLS: Record<number, string> = { 3: "grid-cols-3", 4: "grid-cols-4", 5: "grid-cols-4 sm:grid-cols-5" };
+
+/** The column count that leaves no lone pill in the last row: 9 → 5 + 4, 8 → 4 + 4, 6 → 3 + 3. */
+export function sizeColumns(count: number, max = 5): string {
+  for (let c = max; c >= 3; c--) {
+    const rest = count % c;
+    if (rest === 0 || rest >= c - 1) return SIZE_COLS[c];
+  }
+  return SIZE_COLS[4];
+}
+
 /**
  * THE SIZES, WITH THE STOCK IN THEM. Every EU size the pair is made in, as
  * pills that hold the choice: a sold-out size is struck through and cannot
@@ -24,7 +35,7 @@ export default function SizePicker({ sizes, low = [], out = [], value, onChange,
         <p id="size-label" className="text-xs uppercase tracking-wider text-ink-soft">{label}</p>
         <Link to="/size-chart" className="text-xs text-ink underline underline-offset-4 hover:no-underline">{chart}</Link>
       </div>
-      <div role="radiogroup" aria-labelledby="size-label" className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+      <div role="radiogroup" aria-labelledby="size-label" className={`grid gap-2 ${sizeColumns(sizes.length)}`}>
         {sizes.map((s) => {
           const on = s === value;
           const gone = out.includes(s);
