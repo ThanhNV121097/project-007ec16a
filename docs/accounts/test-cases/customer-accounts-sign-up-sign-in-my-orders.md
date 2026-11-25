@@ -1053,11 +1053,11 @@ Traces: SC-39 (Accessibility NFR; ACC-001 and ACC-002 "forms work with Enter and
 Check: interact_page
 
 **Scenario**: SC-39.4 — The pages' buttons are at least 44px high
-**Given**: `/account/sign-up`, `/account/sign-in` and `/account` (with twelve orders so `Show more` is drawn, and with the orders failing so `Try again` is drawn in a second run) at 390px.
-**When**: The computed height of `Create account`, `Sign in`, `Save details`, `Add order`, `Show more`, `Try again` and `Sign out` is read.
-**Then**: Each is at least 44px high.
+**Given**: A 390×844 window, operated with `interact_page` because four of the buttons exist only for a signed-in customer in a particular state. Three runs. Run 1: `/account/sign-up` and `/account/sign-in` loaded signed out (no state needed). Run 2: Lan signed in through the page's own form, with twelve linked orders (see Twelve orders) so `Show more` is drawn; `/account` loaded. Run 3: Lan signed in, `orders` renamed to `orders_x` with `set_db_state` before `/account` is loaded (the orders call then answers 500, as in SC-29.2) so `Try again` is drawn; the table is renamed back afterwards.
+**When**: In each run the rendered height of every button on the page is read through `interact_page`'s inspection of the page (the element's computed `height` or bounding-box height): run 1 — `main form button[type=submit]` on each page (`Create account`, then `Sign in`); run 2 — `Save details`, `Add order`, `Show more` and `Sign out`; run 3 — `Try again`.
+**Then**: Each of the seven buttons (`Create account`, `Sign in`, `Save details`, `Add order`, `Show more`, `Try again`, `Sign out`) is at least 44px high.
 Traces: SC-39 ("the page's buttons are at least 44px high")
-Check: measure_styles
+Check: interact_page
 
 **Scenario**: SC-40.1 — A customer on `/admin` sees only the team-only message
 **Given**: Lan has just signed up (customer session).
