@@ -88,7 +88,7 @@ func (s *service) read(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		s.internal(w, "read order", err)
+		s.internal(w, r, "read order", err)
 		return
 	}
 	noStore(w)
