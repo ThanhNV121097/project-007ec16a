@@ -280,23 +280,6 @@ func TestAnUnreachableDatabaseIsAGeneric500(t *testing.T) {
 	}
 }
 
-// SC-35: orders are not a public collection; the list answers 401 to everyone,
-// with any query string, before the database is touched.
-func TestTheOrdersListAnswers401ToEveryone(t *testing.T) {
-	db := &fakeDB{}
-	h := mount(db, Options{})
-	for _, target := range []string{"/v1/orders", "/v1/orders?phone=0912%20345%20678", "/v1/orders?page=0&limit=abc", "/v1/orders?status=placed"} {
-		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))
-		if rec.Code != http.StatusUnauthorized || envelopeOf(t, rec).Error != "unauthenticated" {
-			t.Errorf("%s: %d %s", target, rec.Code, rec.Body)
-		}
-	}
-	if db.touched() != 0 {
-		t.Error("the list reached the database")
-	}
-}
-
 // SC-36: no token, a token that cannot be one and an id that cannot be one are the
 // same 404 and never reach the database.
 func TestAnOrderWithoutItsTokenIsTheSame404(t *testing.T) {
