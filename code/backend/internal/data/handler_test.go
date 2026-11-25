@@ -206,7 +206,7 @@ func TestARecordIsAnswered404WhenThereIsNone(t *testing.T) {
 }
 
 func TestAnIDThatCannotBeOneNeverReachesTheDatabase(t *testing.T) {
-	for _, id := range []string{"Samba", "a%20b", "a%2Fb", "..", strings.Repeat("a", 101), "-x"} {
+	for _, id := range []string{"Samba", "a%20b", "a%2Fb", "a..b%00", strings.Repeat("a", 101), "-x"} {
 		rec := &recorder{row: fakeRow{text: `{}`}}
 		res := request(serve(rec), "/v1/products/"+id)
 		if res.Code != http.StatusNotFound || len(rec.sqls) != 0 {
