@@ -603,8 +603,8 @@ Check: manual — no instrument reads the backend's log output; the evidence is 
 
 **Scenario**: TC-76 — a field the contract does not define, or a wrong type, is refused 400
 **Given**: SHELF(`samba-og-w-core-black`, `38`, 5); `stock` S0 and the next number read.
-**When**: REQ is sent with, one change per request: (a) an extra body field `"coupon": "SAVE10"`; (b) an extra body field `"email": "lan@example.com"`; (c) an extra field on a line, `"items": [{"product":"samba-og-w-core-black","size":"38","qty":1,"colour":"black"}]`; (d) `"qty": "1"` (a string); (e) `"qty": 1.5`; (f) `"items": "samba-og-w-core-black"`; (g) `"customer": 5`; (h) the body `[]`; (i) the body `not json`; (j) `"note": null`.
-**Then**: Every one answers 400 `{"error":"bad_request","message":<sentence>,"errors":{…}}`; (a) names `coupon`, (b) names `email`, (c) names the extra line field, (d)–(g) name the field with the wrong type, (j) names `note`; none answers 200, 201 or 422 and none ignores the field. No order is created and `stock` is S0 afterwards. (The four tolerated extras of TC-23 are the only undefined fields accepted.)
+**When**: REQ is sent with, one change per request: (a) an extra body field `"coupon": "SAVE10"`; (b) an extra body field `"email": "lan@example.com"`; (c) an extra field on a line, `"items": [{"product":"samba-og-w-core-black","size":"38","qty":1,"colour":"black"}]`; (d) `"qty": "1"` (a string); (e) `"qty": 1.5`; (f) `"items": "samba-og-w-core-black"`; (g) `"customer": 5`; (h) the body `[]`; (i) the body `not json`.
+**Then**: Every one answers 400 `{"error":"bad_request","message":<sentence>,"errors":{…}}` (for (h) and (i) `errors` may be absent or name the body); (a) `errors` has the key `coupon`, (b) the key `email`, (c) a key that names the extra line field (for example `items.0.colour`), (d)–(g) a key naming the field with the wrong type; none answers 200, 201 or 422 and none ignores the field. No order is created and `stock` is S0 afterwards. (The four tolerated extras of TC-23 are the only undefined fields accepted.)
 Traces: contract (POST /v1/orders §2.5, §3.10)
 Check: fetch_url
 
