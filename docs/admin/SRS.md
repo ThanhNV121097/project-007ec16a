@@ -210,7 +210,7 @@ Behaviour:
 
 Behaviour:
 
-1. These answer 401 with no session and 403 with a session whose role is "customer": creating, changing and deleting shoes, lines, categories, reviews and orders; uploading a picture; listing orders; reading an order without its customer token; the overview; and every other endpoint added for the dealer.
+1. These answer 401 with no session and 403 with a session whose role is "customer": creating, changing and deleting shoes, lines, categories, reviews and orders; uploading a picture; listing orders; reading an order without its customer token; the overview; and every other endpoint added for the dealer. A session of role "admin" or "staff" is let through. The account endpoints (`/v1/admin/staff`, ADMIN-030 and ADMIN-031) are for role "admin" only: 401 with no session, 403 for staff and for customers.
 2. A visitor's reads of public collections (shoes, lines, categories, reviews, shop terms, delivery options, ways to pay, questions, size rows) stay open, within ADMIN-013.
 
 **Acceptance criteria**
