@@ -166,7 +166,7 @@ Behaviour:
 | AC-7 | An order placed on Monday 10:00 Vietnam time, standard | It is saved | Its expected date is Friday of that week |
 | AC-8 | An order placed on Monday 16:00 Vietnam time, standard | It is saved | Its expected date is the next Monday (counting begins on Tuesday) |
 | AC-9 | An order placed on Monday 10:00, express | It is saved | Its expected date is Tuesday |
-| AC-10 | An order placed on a Saturday, standard | It is saved | Counting begins Monday; the expected date is Thursday |
+| AC-10 | An order placed on a Saturday, standard | It is saved | Counting begins on the following Monday; the expected date is the Friday of that week |
 | AC-11 | An order with two shoes | It is read back | Two pairs with their sizes, quantities and unit prices |
 | AC-12 | The seeded order `doi-24817` | It is read by the dealer | It shows as one pair of `samba-og-w-crystal-white`, EU 39 1/3 |
 | AC-13 | The shoe's price changes after the order | The order is read | The pair's unit price and the total are as sold |
