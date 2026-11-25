@@ -108,7 +108,7 @@ Behaviour:
 Behaviour:
 
 1. Signing in gives the browser a session that cannot be read by the page's scripts, is sent only to this site, and expires 7 days after sign-in. `GET /v1/auth/me` answers the signed-in person's email, name and role ("admin", "staff" or "customer"), or 401.
-2. The name is the part of the email before `@`, with its words capitalised; the role is "admin".
+2. The name is the account's own name when it has one (a staff member's, given by the admin; a customer's, given at sign-up); otherwise — the admin account, made from the owner's settings — the part of the email before `@`, with its words capitalised. The role is "admin", "staff" or "customer".
 3. Every `/admin` page (except `/admin/sign-in`) works from the shop's answer to `/v1/auth/me`, not from anything stored in the browser. While that answer is awaited the page draws nothing of the area and does not redirect.
 4. With no session, `/admin/*` goes to `/admin/sign-in`. A reload of an admin page with a session stays on that page.
 5. A value placed in the browser's local storage by hand (for example under the old key `agentteam:session`) does not make a visitor signed in and does not open any page; the dealer's endpoints still answer 401.
