@@ -301,7 +301,7 @@ Behaviour:
 | Shoe details: line, category, style code, colourway, upper, lining, sole, fit, care | read | no | Empty values are not drawn |
 | Payment methods: name, note, icon | read | yes | Those the shop offers at checkout (VNPay) |
 | Reviews: customer name, stars, date, size bought, fit, text, status | read | no | Live reviews only; three newest |
-| Shop terms | read | yes | Standard days, same-day cut-off, exchange days, refund days |
+| Shop terms | read | yes | Standard days, same-day cut-off |
 
 **Requirement SITE-007 — Bag: drawer and bag page**
 
