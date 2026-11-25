@@ -339,7 +339,7 @@ The same classes are used inline for the header's search "Go" (`py-1.5`), the ca
 |---|---|---|
 | Default | Ink fill, ground text | `bg-ink`, `text-ground` |
 | Hover | Opacity 85% | — |
-| Disabled (while sending / paying) | Opacity 60%; label becomes the progress word ("Sending…", "Paying…") | — |
+| Disabled (while sending / placing) | Opacity 60%; label becomes the progress sentence ("Sending…", "Placing your order…") | — |
 
 **Accessibility** — native `button`/`link`; the disabled state uses the `disabled` attribute.
 
