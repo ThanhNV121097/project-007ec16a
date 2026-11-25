@@ -185,6 +185,9 @@ Behaviour:
 | AC-8 | An unknown email and a wrong password | Their answers are compared | Same status and same body |
 | AC-9 | 15 minutes after the fifth failure | The right password is tried | It signs in |
 | AC-10 | The settings example file | It is read | It names `ADMIN_EMAIL` and `ADMIN_PASSWORD` with no value |
+| AC-11 | A staff row in the users table | It signs in with its password | Sign-in succeeds and `/v1/auth/me` says role `staff` |
+| AC-12 | A customer row in the users table | It signs in with its password | Sign-in succeeds and `/v1/auth/me` says role `customer` |
+| AC-13 | A staff account switched off | Its right password is sent | The same status and body as a wrong password (AC-8) |
 
 **Failure, boundary and permission behaviour**
 
