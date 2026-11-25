@@ -84,7 +84,7 @@ Behaviour:
 | Case | Condition | Expected behaviour |
 |---|---|---|
 | Absent data | The bag is empty | AC-12 |
-| Boundary | Pairs total exactly the threshold (2.000.000 ₫) | Standard shows "Free" |
+| Boundary | Pairs total under, at or over 2.000.000 ₫ | The delivery row shows "Free" and Total equals the pairs total in every case |
 | Not applicable | Roles | Not applicable: checkout is open to any visitor |
 
 **Data touched**
