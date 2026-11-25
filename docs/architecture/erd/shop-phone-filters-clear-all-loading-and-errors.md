@@ -46,6 +46,6 @@ No migration is added and none is edited (a merged migration is never edited).
 
 | Who | What they must know |
 |---|---|
-| Dev, backend step of this story | **There is no backend work**: no table, no endpoint, no migration, no mock module of this story's own to delete. The step has nothing to implement; the orchestrator may close it without a pull request. The fault knobs PR #40 adds to item 4's mock are deleted with that mock in item 4's backend step (services file §3, §5) |
+| Dev, backend step of this story | **There is no backend work**: no table, no endpoint, no migration, no mock module of this story's own to delete. The step has nothing to implement; the orchestrator may close it without a pull request. The fault knobs PR #40 adds to item 4's mock, the mock's stand-in reading of the shoes through `api.get` (UI fix 1) and its test `src/test/shop-mock.test.ts` are deleted with that mock in item 4's backend step and the catch-up of #40 (services file §3, §3.1, §5 K6). Still no schema consequence |
 | Test lead | Fixtures (30 live shoes, a one-colour and one-size catalogue, a draft shoe, 60 live shoes for the dealer's page size) are built with SQL in a test database, never the seed. The shoe sizes are written in whichever form `main` holds; no column is added for any fixture |
 | Plan item 4's backend | Nothing to add to its schema. Its statements are the ones this story's states are read from |
