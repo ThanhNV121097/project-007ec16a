@@ -1120,7 +1120,7 @@ Every role the SRS names is covered, allowed and denied: visitor (SC-6.2, SC-7.7
 
 ## 17. Checks that are not plain observations, and findings
 
-**Manual (2 of 144 cases):**
+**Manual (two cases only):**
 - SC-1.5 — the password and hash are never logged. No instrument reads the backend's log output.
 - SC-17.5 — `go build` / `go vet` / `go test ./...` with no database. None of the five instruments runs a build; CI's backend job and `run_tests` do.
 
