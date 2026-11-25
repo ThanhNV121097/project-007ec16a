@@ -21,7 +21,7 @@ export default function AuthLayout({ title, lead, art, children }: { title: stri
   const alt = useContent(ART[art].alt);
   return (
     <>
-      <section className="grid gap-x-8 gap-y-10 pb-12 pt-8 lg:grid-cols-12 lg:pt-10">
+      <section className="grid gap-x-8 gap-y-10 pb-12 pt-8 lg:min-h-[calc(100svh-var(--header-h)-9rem)] lg:grid-cols-12 lg:pt-10">
         <div className="min-w-0 lg:col-span-6">
           <h1 className="wrap-anywhere text-[length:var(--size-h1)] leading-[1.02] text-ink">{title}</h1>
           {lead && <p className="mt-5 max-w-[42ch] text-sm leading-relaxed text-ink-soft">{lead}</p>}
