@@ -21,10 +21,29 @@ function table<T>(name: string): T[] {
   return (collections()[name] ?? []) as unknown as T[];
 }
 
-function later<T>(value: T): Promise<T> {
+function later<T>(value: T, ms = 0): Promise<T> {
   return new Promise((resolve) => {
-    setTimeout(() => resolve(value), 0);
+    setTimeout(() => resolve(value), ms);
   });
+}
+
+/**
+ * The answers the UI stage can come back with that are not a list: slow,
+ * failed, or failed on page 2 only. Set by the browser's own storage
+ * (`doi:mock` = shop-slow | shop-error | shop-more-error), never by a control
+ * on the page; an offline browser fails like a 5xx. The real API's failures
+ * replace all of this.
+ */
+function trouble(page: number): "slow" | "failed" | null {
+  let flag: string | null = null;
+  try {
+    flag = window.localStorage.getItem("doi:mock");
+  } catch {
+    flag = null;
+  }
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  if (offline || flag === "shop-error" || (flag === "shop-more-error" && page > 1)) return "failed";
+  return flag === "shop-slow" ? "slow" : null;
 }
 
 function inAny(list: readonly string[], value: string | undefined): boolean {
@@ -65,9 +84,11 @@ const ORDER: Record<Sort, (a: Product, b: Product) => number> = {
 
 /** `GET /v1/products?status=live&limit=12&page=n&...` */
 export function listProducts(req: ProductsRequest): Promise<Page<Product>> {
+  const bad = trouble(req.page);
+  if (bad === "failed") return later(null).then(() => Promise.reject(new Error("The shoes could not be read")));
   const hits = table<Product>("products").filter((p) => matches(p, req)).sort(ORDER[req.sort]);
   const start = (req.page - 1) * req.limit;
-  return later({ items: hits.slice(start, start + req.limit), total: hits.length, page: req.page, limit: req.limit });
+  return later({ items: hits.slice(start, start + req.limit), total: hits.length, page: req.page, limit: req.limit }, bad === "slow" ? 3000 : 0);
 }
 
 /** "36 2/3" as a number, so sizes sort the way a foot grows. */
