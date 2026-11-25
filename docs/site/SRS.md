@@ -277,7 +277,7 @@ Behaviour:
 |---|---|---|---|
 | AC-1 | A shoe whose Lining is empty | The visitor opens "Details" | The list has no "Lining" row; the other filled rows are shown |
 | AC-2 | The shop has four ways to pay on record and offers VNPay at checkout | The visitor opens "Payment options" | One entry is listed, `VNPay — ATM, Visa, Mastercard. <note>` with its icon; cash on delivery, bank transfer and MoMo are not listed |
-| AC-3 | Terms: standard "2–4" days, cut-off 15:00, exchange 14, refund 7 | The visitor opens "Delivery & returns" | The text reads "Free standard delivery in 2–4 working days, sent the same day if you order before 15:00. Exchange the size within 14 days, or return it unworn within 7 days for a refund." |
+| AC-3 | Terms: standard "2–4" days, cut-off 15:00 | The visitor opens "Delivery & return policy" | The text reads "Free standard delivery in 2–4 working days, sent the same day if you order before 15:00. Exchanges are not accepted." |
 | AC-4 | The same row | The visitor reads its links | "Delivery" goes to `/shipping` and "Returns and exchange" goes to `/returns` |
 | AC-5 | The shoe has five live reviews | The page loads | Exactly three reviews are listed, the newest first |
 | AC-6 | A review by "Phương", dated 2026-11-21, 5 stars, size 38, fit "true" | The page loads | The row shows `Phương`, `21/11/2026`, five stars, the review text and "Bought EU 38 · True to size" |
