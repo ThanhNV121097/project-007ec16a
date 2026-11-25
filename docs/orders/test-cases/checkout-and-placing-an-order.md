@@ -524,7 +524,7 @@ Traces: SC-34 (ORD-010 AC-3)
 Check: interact_page
 
 **Scenario**: TC-66 — the same key from two tabs at once makes one order
-**Given**: SHELF(`samba-og-w-core-black`, `38`, 5); `stock` S0 read; RESET.
+**Given**: SHELF(`samba-og-w-core-black`, `38`, 10); `stock` S0 read; RESET.
 **When**: Two identical REQs with the same `Idempotency-Key: tc-twotabs-0001` are sent in one parallel batch; the batch is repeated with five new keys.
 **Then**: In every pair both answers carry the same `order.id`; exactly one answers 201 and the other 200 with `Idempotent-Replayed: true`; the numbers used are `DOI-24818` … `DOI-24823` with no gap or repeat; `stock` is S0 − 6.
 Traces: SC-34 (ORD-010 "Conflict" row)
