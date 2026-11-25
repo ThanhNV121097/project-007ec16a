@@ -30,10 +30,10 @@ export default function AdminSignIn() {
             <T k="pages.admin.signin.description" as="p" className="mt-2 text-sm leading-relaxed text-ink-soft" />
           </div>
           <ul className="flex flex-col gap-3 border-y border-line py-4">
-            {inside.map((line, i) => (
+            {inside.map((_, i) => (
               <li key={i} className="flex gap-3 text-sm text-ink">
                 <Icon name={INSIDE_ICONS[i] ?? "check"} size={18} className="mt-0.5 text-ink-soft" />
-                <T k={`pages.admin.signin.inside.${i}.text`} className="leading-relaxed">{line.text}</T>
+                <T k={`pages.admin.signin.inside.${i}.text`} className="leading-relaxed" />
               </li>
             ))}
           </ul>
