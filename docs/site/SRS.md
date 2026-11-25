@@ -686,8 +686,9 @@ Behaviour:
 | AC-3 | A bag worth 1.500.000 ₫ and a bag worth 3.090.000 ₫ | The bag page, the checkout summary and the order page of each are read | Delivery reads "Free" on each, never `0 ₫`, and Total equals the sum of the pairs |
 | AC-4 | The sample orders | They are read | Each has delivery `standard`, fee 0 and a total equal to the sum of its pairs; DOI-24815 is 5.890.000 ₫, DOI-24810 3.290.000 ₫, DOI-24806 3.090.000 ₫ |
 | AC-5 | The Delivery page | It is read | It shows "Free" as the only cost and no express, no cities and no cut-off (SITE-009 AC-1 to AC-5) |
-| AC-6 | The shop's questions of topic "payment" | They are read | One row, "How do I pay?", answers "Online through VNPay, by card, domestic ATM card or QR."; no row mentions cash on delivery |
+| AC-6 | The shop's questions of topic "payment" | They are read | The row "Can I pay cash on delivery?" is gone and a row "How do I pay?" answers "Online through VNPay, by card, domestic ATM card or QR."; the row "Are the shoes genuine?" is unchanged; no row mentions cash on delivery |
 | AC-7 | Every customer page | Its text is searched | The words "cash on delivery" and "pay on delivery" and any express delivery option appear nowhere |
+| AC-8 | The shop's questions, ways to pay and reviews | They are read | `f-delivery-time` has no "Express"; the `vnpay` note has no "marked paid at once"; `f-orders-number` has no "text message"; the review r-04 has no "Express" |
 
 **Failure, boundary and permission behaviour**
 
