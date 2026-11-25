@@ -50,7 +50,7 @@ export default function PhotoCredits({ className = "" }: { className?: string })
   const label = useContent<string | undefined>("credits.label");
   if (shown.length === 0) return null;
   return (
-    <p className={`text-xs leading-relaxed text-ink-soft ${className}`}>
+    <p className={className || "text-xs leading-relaxed text-ink-soft"}>
       {label && (
         <>
           <T k="credits.label" />:{" "}
@@ -61,7 +61,7 @@ export default function PhotoCredits({ className = "" }: { className?: string })
           {i > 0 && " · "}
           {isWebPage(c.page) ? (
             <a href={c.page} target="_blank" rel="noreferrer"
-              className="underline decoration-line underline-offset-2 transition-colors hover:text-ink hover:decoration-current">
+              className="underline decoration-current underline-offset-2 transition-opacity hover:opacity-80">
               {c.author || c.source}
             </a>
           ) : (
