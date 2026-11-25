@@ -665,7 +665,7 @@ Check: fetch_url
 
 **Scenario**: C-2 — a body that is not JSON, or JSON of the wrong shape, is 400
 **Given**: The session is ADMIN.
-**When**: ADMIN sends `POST /v1/admin/staff` with the body `not json`; with `[]`; with `"text"`; with `{"name":5,"email":"a@b.co","password":"long-enough-pass"}`; with `{"name":"Ok","email":["a@b.co"],"password":"long-enough-pass"}`; with `{"name":"Ok","email":"a@b.co","password":null}`; and an empty body.
+**When**: ADMIN sends `POST /v1/admin/staff` with the body `not json`; with `[]`; with `"text"`; with `{"name":5,"email":"a@b.co","password":"long-enough-pass"}`; with `{"name":"Ok","email":["a@b.co"],"password":"long-enough-pass"}`; with `{"name":"Ok","email":"a@b.co","password":12345678901}`; and an empty body.
 **Then**: Every answer is 400 `{"error":"bad_request","message":<non-empty>}` (with `errors` naming the field for the wrong-typed ones); none is 422, 500 or 201; the team's `total` is unchanged.
 Traces: contract (§3.26 `bad_request`; §2.5)
 Check: fetch_url
