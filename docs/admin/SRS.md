@@ -155,7 +155,7 @@ Behaviour:
 
 | Field | Type | Required | Rule |
 |---|---|---|---|
-| Session: dealer, created time, expiry | write | yes | 7 days; ended by sign-out |
+| Session: account, role, created time, expiry | write | yes | 7 days; ended by sign-out |
 
 **Requirement ADMIN-003 — The dealer account and protection against guessing**
 
