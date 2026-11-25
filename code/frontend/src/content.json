@@ -72,7 +72,7 @@
       },
       {
         "href": "/returns",
-        "label": "Returns and exchange"
+        "label": "Return policy"
       },
       {
         "href": "/track",
@@ -85,7 +85,7 @@
     ],
     "help_heading": "Help",
     "independent": "Đôi is an independent dealer. adidas, Samba, Gazelle, Handball Spezial, Adizero and Megaride are trademarks of adidas AG; this shop is not adidas and is not run by adidas.",
-    "line": "Đôi — genuine adidas, chosen online and delivered across Vietnam, with a size chart on every pair and a free first size exchange.",
+    "line": "Đôi — genuine adidas, chosen online and delivered across Vietnam, with a size chart on every pair.",
     "shop": [
       {
         "href": "/shop",
@@ -157,7 +157,7 @@
     "search_placeholder": "Samba, Gazelle, pink, a style code…"
   },
   "orders": {
-    "cancelled": "This order was cancelled. Nothing was charged; money paid online is back within three working days.",
+    "cancelled": "This order was cancelled. If you have a question about it, message us.",
     "steps": {
       "confirmed": "Confirmed",
       "delivered": "Delivered",
@@ -272,7 +272,7 @@
       "description": "The pairs in your bag, delivery and the total, before you check out.",
       "each": "{price} each",
       "empty_heading": "Your bag is empty.",
-      "empty_line": "Pick a pair — the size chart is one tap from every shoe, and the first size exchange is free.",
+      "empty_line": "Pick a pair — the size chart is one tap from every shoe.",
       "free": "Free",
       "head_alt": "Gift boxes ready to wrap",
       "heading": "Your bag",
@@ -306,7 +306,7 @@
       "step_delivery": "Delivery",
       "step_payment": "Payment",
       "summary": "Your order",
-      "terms": "By placing the order you accept the delivery and returns terms on this site.",
+      "terms": "By placing the order you accept the delivery information and that exchanges are not accepted.",
       "title": "Checkout"
     },
     "contact": {
@@ -330,7 +330,7 @@
         },
         {
           "href": "/returns",
-          "label": "Returns and size exchange"
+          "label": "Return policy"
         },
         {
           "href": "/track",
@@ -366,7 +366,7 @@
       "change_text": "Send us the order number and what to change; the address or the size can change until the order is packed.",
       "description": "Where your order is, what is in it and when it arrives.",
       "details": "Delivery and payment",
-      "done": "Delivered. If the size is not right, the exchange is free the first time.",
+      "done": "Delivered. If your delivery is wrong or damaged, message us.",
       "due": "to pay on delivery",
       "eta": "Expected by {date}.",
       "headline": {
@@ -393,8 +393,8 @@
       "title": "Your order",
       "track_cta": "Track an order",
       "wrong": "Wrong size?",
-      "wrong_link": "How exchanges work",
-      "wrong_text": "Exchange it within the exchange window; the first exchange is free."
+      "wrong_link": "Return policy",
+      "wrong_text": "Exchanges are not accepted. For a wrong or damaged delivery, or any question, message us."
     },
     "product": {
       "add": "Add to bag",
@@ -403,9 +403,9 @@
       "bought": "Bought EU {size} · {fit}",
       "choose": "Choose a size first.",
       "colour": "Colour",
-      "delivery": "Delivery \u0026 returns",
+      "delivery": "Delivery \u0026 return policy",
       "delivery_link": "Delivery",
-      "delivery_text": "Free standard delivery in {days} working days, sent the same day if you order before {cutoff}. Exchange the size within {n} days, or return it unworn within {refund} days for a refund.",
+      "delivery_text": "Free standard delivery in {days} working days, sent the same day if you order before {cutoff}. Exchanges are not accepted.",
       "description": "Pictures, sizes in stock, details, delivery and what buyers said about this adidas pair.",
       "details": "Details",
       "fit": {
@@ -422,7 +422,7 @@
       "payments": "Payment options",
       "related": "Looking for more?",
       "related_cta": "More",
-      "returns_link": "Returns and exchange",
+      "returns_link": "Return policy",
       "review_count": "{n} reviews",
       "reviews": "What buyers said",
       "size": "Size (EU)",
@@ -445,48 +445,51 @@
       "title": "A pair at Đôi"
     },
     "returns": {
-      "contact_cta": "Start an exchange",
-      "description": "How to exchange a size or return a pair for a refund.",
-      "faq_heading": "Questions about returns",
-      "figures": {
-        "exchange": "Days to exchange a size, counted from delivery.",
-        "free": "For your first size exchange: we pay the courier both ways.",
-        "refund": "Days to return an unworn pair for a refund."
-      },
+      "contact_cta": "Contact us",
+      "description": "Exchanges are not accepted. Check the size chart before you order, or contact us with a question.",
+      "faq_heading": "Questions about exchanges",
+      "figures": [
+        {
+          "big": "No",
+          "line": "Exchanges are not accepted."
+        },
+        {
+          "big": "Size",
+          "line": "Check the size chart before you order."
+        },
+        {
+          "big": "Ask",
+          "line": "Call us, message us on Zalo or use the contact form."
+        }
+      ],
       "head_alt": "Hands packing a cardboard box to send",
-      "heading": "Returns and size exchange",
-      "lead": "Buying shoes online means guessing a size once. If the guess is wrong, this is how we put it right.",
+      "heading": "No exchanges",
+      "lead": "Exchanges are not accepted. Please check your size on the size chart before you order, and contact us if you have a question.",
       "rules": [
         {
-          "text": "Worn indoors only, with clean soles."
+          "text": "Exchanges are not accepted."
         },
         {
-          "text": "In the original box, with its tags and paper."
-        },
-        {
-          "text": "Within the exchange or return window, counted from the day it arrived."
-        },
-        {
-          "text": "Reduced pairs can be exchanged for another size but not refunded."
+          "text": "Contact us with any question about an order, or to report a wrong or damaged delivery."
         }
       ],
-      "rules_heading": "What we ask",
+      "rules_heading": "In short",
       "steps": [
         {
-          "text": "Send the order number and the size you want through the contact form.",
-          "title": "Message us"
+          "text": "Measure your foot and find your size on the size chart before you order.",
+          "title": "Check your size"
         },
         {
-          "text": "Put it back in its box; the courier collects it and brings the new size.",
-          "title": "Hand over the pair"
+          "text": "Not sure about a size or a pair? Call us, message us on Zalo or send the contact form.",
+          "title": "Ask before you order"
         },
         {
-          "text": "A refund goes back to your bank account or wallet within three working days.",
-          "title": "Wear the right size"
+          "text": "If your delivery is wrong or damaged, contact us with your order number.",
+          "title": "Report a problem"
         }
       ],
-      "steps_heading": "How to exchange",
-      "title": "Returns and exchange"
+      "steps_heading": "What you can do",
+      "title": "Return policy"
     },
     "shipping": {
       "columns": {
@@ -587,7 +590,7 @@
       "placeholder": "DOI-24817",
       "steps": {
         "confirmed": "Paid, or confirmed by phone for cash on delivery; the pair is set aside for you.",
-        "delivered": "In your hands. The size exchange window starts today.",
+        "delivered": "In your hands. If anything is wrong with the delivery, message us.",
         "packed": "Boxed with its tags and our receipt, waiting for the courier.",
         "placed": "We have the order and are checking the pair against it.",
         "shipped": "With GHN or GHTK; the tracking number is on the order's page."
@@ -603,13 +606,13 @@
     "cod_title": "Cash on delivery",
     "delivery_line": "{days} working days, anywhere in Vietnam.",
     "delivery_title": "Free delivery",
-    "exchange_line": "The first exchange is on us, both ways.",
-    "exchange_title": "{n}-day size exchange",
+    "exchange_line": "Check the size chart before you order.",
+    "exchange_title": "No exchanges",
     "genuine_line": "Every pair boxed, tagged and sent with our receipt.",
     "genuine_title": "Genuine adidas"
   },
   "site": {
-    "description": "Đôi is an independent online dealer of genuine adidas shoes for men, women and kids, with free delivery and a 14-day size exchange.",
+    "description": "Đôi is an independent online dealer of genuine adidas shoes for men, women and kids, with free delivery and a size chart.",
     "locale": "vi-VN",
     "logo": "",
     "name": "Đôi"
