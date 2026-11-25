@@ -31,7 +31,7 @@ The read this story depends on is a primary-key lookup: `SELECT <public columns>
 
 ### Conflicts with merged decisions
 
-None. I read `erd/_base.md` §3.4 and §3.1, `erd/site-data-from-the-database.md` §4 and its decision C1, and `services/_base.md` §2.2–2.3. One interaction is recorded in `services/product-page-waits-for-the-shoe-before-saying-it-i.md` §5 (the draft case waits for ADMIN-013's visitor rule); it is an ordering fact, not a change to any table.
+None. I read `erd/_base.md` §3.4 and §3.1, `erd/site-data-from-the-database.md` §7 (decision C1), and `services/_base.md` §2.2–2.3. One interaction is recorded in `services/product-page-waits-for-the-shoe-before-saying-it-i.md` §5 (the draft case waits for ADMIN-013's visitor rule); it is an ordering fact, not a change to any table.
 
 ## 4. Migration plan
 
