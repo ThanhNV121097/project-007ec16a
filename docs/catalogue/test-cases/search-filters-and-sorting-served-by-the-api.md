@@ -153,7 +153,7 @@ Check: fetch_url
 **Given**: The seed.
 **When**: `GET /v1/products?rating_from=4.8&limit=100` and `GET /v1/products?released_from=2026-11-01&released_to=2026-11-14&limit=100`; and `GET /v1/reviews?date_from=2026-11-20&limit=100` and `GET /v1/reviews?date_from=2026-11-20&date_to=2026-11-20&limit=100`.
 **Then**: The first returns exactly the shoes of the unfiltered list whose `rating` is 4.8 or more (on the seed's stored values: `samba-og-w-core-black`, `samba-og-w-crystal-white`, `gazelle-indoor-solar-gold`, `adizero-evo-sl-charcoal`, `megaride-bones-halo-green`, `samba-og-kids-wonder-mauve`, `samba-og-kids-cloud-white`). The second returns exactly `samba-og-w-core-black` (2026-11-03), `samba-og-w-crystal-white` (2026-11-10) and `samba-og-kids-wonder-mauve` (2026-11-14, the end date is included) — `total` 3. The third returns reviews `r-01`, `r-08`, `r-14`, `r-22`, `r-25`, `r-28`, `r-31` (`total` 7). The fourth returns only `r-28` (`total` 1).
-Traces: SC-6 (CAT-001 item 4); SC-14
+Traces: SC-6 (CAT-001 item 4, numbers and dates compare as numbers and dates)
 Check: fetch_url
 
 **Scenario**: SC-7a — `sort=price` rises and `sort=-price` falls
