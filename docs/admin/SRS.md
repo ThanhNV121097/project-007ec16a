@@ -802,7 +802,7 @@ Behaviour:
 |---|---|---|---|
 | Sign-in `/admin/sign-in` | Sign in (split screen) | ADMIN-001, ADMIN-002 | default; "An email address is needed"; already signed in ("Signed in as … Continue") |
 | Sign-in — signing in, wrong credentials, cannot reach, too many tries | Not drawn in the approved design; required by the plan item | ADMIN-001, ADMIN-003 | signing in; wrong credentials; cannot reach the server; too many tries |
-| Area gate (every `/admin/*` page) | Not drawn: nothing is shown while the shop answers `/v1/auth/me` | ADMIN-002 | checking (nothing drawn); signed out (redirect) |
+| Area gate (every `/admin/*` page) | Not drawn: nothing is shown while the shop answers `/v1/auth/me` | ADMIN-002 | checking (nothing drawn); signed out (redirect); signed-in customer ("This area is for the shop's team" with a link home) |
 | Overview `/admin` | Overview | ADMIN-020, ADMIN-021 | default (figures, five panels); "Nothing is running low." |
 | Overview — loading, load failed | Not drawn in the approved design; required by the plan item | ADMIN-021 | loading; error |
 | Lists: Shoes, Lines, Categories, Reviews, Orders | Lists, with the Add / Edit dialog and the delete question | ADMIN-010, ADMIN-011, ADMIN-012, ADMIN-014 | default; empty ("Nothing here yet"); filtered empty ("Nothing matches those filters"); dialog open; delete question |
