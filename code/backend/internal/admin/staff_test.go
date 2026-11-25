@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -197,12 +198,9 @@ func TestCreateNamesEveryFieldAtFaultIncludingATakenEmail(t *testing.T) {
 }
 
 func TestCreateRaceOnTheUniqueIndexIsTheSame422(t *testing.T) {
-	h := newHarness()
-	h.store.users = h.store.users[:3]
 	// The pre-check passes and the INSERT then loses: the store says so.
-	racing := &raceStore{fakeStore: h.store}
 	mux := http.NewServeMux()
-	(&staffHandler{store: racing, log: quiet()}).mount(mux)
+	(&staffHandler{store: raceStore{newFakeStore()}, log: quiet()}).mount(mux)
 	req := httptest.NewRequest(http.MethodPost, "/v1/admin/staff", strings.NewReader(`{"name":"x","email":"new@example.com","password":"long-enough-1"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -216,7 +214,11 @@ func TestCreateRaceOnTheUniqueIndexIsTheSame422(t *testing.T) {
 // raceStore reports no account at the pre-check and a taken email at the insert.
 type raceStore struct{ *fakeStore }
 
-func (raceStore) emailTaken(context_ any, _ string) (bool, error) { return false, nil }
+func (raceStore) emailTaken(context.Context, string) (bool, error) { return false, nil }
+
+func (raceStore) create(context.Context, string, string, string) (auth.User, error) {
+	return auth.User{}, auth.ErrEmailTaken
+}
 
 func TestCreateRefusesWhatTheContractDoesNotDefine(t *testing.T) {
 	h := newHarness()
