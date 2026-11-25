@@ -252,7 +252,7 @@ func TestPlacingSavesTheOrderAtTheShopsPrices(t *testing.T) {
 		t.Errorf("after the price change: %v", again)
 	}
 
-	// The orders list stays closed.
+	// An order's token is no session: the team's list stays closed to it.
 	if rec := fetch(h, "/v1/orders", a.Token); rec.Code != 401 {
 		t.Errorf("GET /v1/orders: %d", rec.Code)
 	}
