@@ -681,7 +681,7 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | The site after this story | `code/frontend/src` is searched | There is no `free_delivery_from`, no `express_days`, no `express_cities`, no express delivery option, no delivery fee of 30000 or 50000, and no offer of cash on delivery |
+| AC-1 | The site after this story | `code/frontend/src` is searched | There is no `free_delivery_from`, no `express_days`, no `express_cities`, no express delivery option, no delivery fee of 30000 or 50000, and no customer-facing text or logic that offers cash on delivery (the `cod` rows of the ways-to-pay records stay in the data and are never offered) |
 | AC-2 | The seeded delivery records | They are read | There is exactly one, `standard`, with fee 0 |
 | AC-3 | A bag worth 1.500.000 ₫ and a bag worth 3.090.000 ₫ | The bag page, the checkout summary and the order page of each are read | Delivery reads "Free" on each, never `0 ₫`, and Total equals the sum of the pairs |
 | AC-4 | The sample orders | They are read | Each has delivery `standard`, fee 0 and a total equal to the sum of its pairs; DOI-24815 is 5.890.000 ₫, DOI-24810 3.290.000 ₫, DOI-24806 3.090.000 ₫ |
