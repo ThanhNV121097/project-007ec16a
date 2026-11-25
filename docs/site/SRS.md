@@ -403,7 +403,7 @@ Behaviour:
 Behaviour:
 
 1. `/shipping` shows the heading "Delivery", a lead ("Every pair leaves boxed, tagged and tracked, and delivery is free on every order."), and a picture.
-2. Three large figures sit on a hairline: "Free" with "Standard delivery on every order over {price} — that is every pair in the shop."; the standard working days (for example "2–4") with "Working days by standard delivery, anywhere in Vietnam."; the express working days (for example "1") with "Working day by express in {cities}." The price is the free-delivery threshold; cities are the express cities, both from the shop's terms.
+2. Two large figures sit on a hairline: "Free" with "Delivery on every order, whatever it comes to — that is every pair in the shop."; and the standard working days (for example "2–4") with "Working days by standard delivery, anywhere in Vietnam." The days come from the shop's terms. There is no third (express) figure.
 3. "Options and fees" is headed with the line "Orders placed before {cutoff} on a working day leave the same day." and a table with columns Option, Arrives, Where, Fee, one row per delivery option (name, time, where and how, fee right-aligned). The standard row shows "Free over {price}" under its fee.
 4. "Questions about delivery" lists the shop's questions of topic "shipping" as closed rows opening onto answers, beside a "Track an order" pill to `/track`.
 
