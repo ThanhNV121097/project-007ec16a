@@ -183,7 +183,7 @@ Behaviour:
 | AC-7 | 5 live shoes cost less than 3.000.000 ₫ | The home page loads | The Gifts tile reads "5 in the shop" and links to `/shop?price=under-3m` |
 | AC-8 | A category's stored name is changed to "Ladies" | The home page loads | The tile reads "Ladies" (the name is not typed into the page) |
 | AC-9 | A line has no "first made" year | The home page loads | Its row shows no "Since" text |
-| AC-10 | The shop terms say standard delivery takes "2–4" days and exchange takes 14 days | The home page loads | The promises read "2–4 working days, anywhere in Vietnam." and "14-day size exchange" |
+| AC-10 | The shop terms say standard delivery takes "2–4" days | The home page loads | The four promises read "Free delivery" with "2–4 working days, anywhere in Vietnam.", "No exchanges", "Pay online" and "Genuine adidas"; none mentions cash on delivery, a fee, a threshold or a number of exchange days |
 | AC-11 | A draft shoe exists | The home page loads | The draft shoe appears in no section and in no count |
 
 **Failure, boundary and permission behaviour**
