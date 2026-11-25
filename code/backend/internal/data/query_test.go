@@ -125,6 +125,41 @@ func TestAValueThatDoesNotReadAsItsKindIsAFault(t *testing.T) {
 	}
 }
 
+// A value PostgreSQL cannot hold — a NUL, bytes that are not UTF-8, the year
+// 0000, a number of a hundred digits — would fail the statement and be answered
+// 500. It is the caller's typo, so it is a fault at the boundary.
+func TestAValuePostgreSQLWouldRefuseIsAFaultNotAnError(t *testing.T) {
+	for _, c := range []struct{ collection, query, field string }{
+		{"products", "category=a%00b", "category"},
+		{"products", "status=%00", "status"},
+		{"products", "colour=%ff%fe", "colour"},
+		{"products", "sizes_low=40%00", "sizes_low"},
+		{"reviews", "product=%c3%28", "product"},
+		{"products", "id=%80", "id"},
+		{"products", "released=0000-01-01", "released"},
+		{"reviews", "date=0000-12-31", "date"},
+		{"orders", "eta=0000-01-01", "eta"},
+		{"orders", "placed_at=0000-01-01T00:00:00%2B07:00", "placed_at"},
+		{"products", "rating=" + strings.Repeat("9", 19), "rating"},
+		{"products", "price=" + strings.Repeat("9", 19), "price"},
+	} {
+		req, faults := parse(t, c.collection, c.query)
+		if faults[c.field] == "" || len(req.filters) != 0 {
+			t.Errorf("%s?%s: got %v", c.collection, c.query, faults)
+		}
+	}
+	// The year 0001 and ordinary accented text are fine.
+	for _, c := range []struct{ collection, query string }{
+		{"products", "released=0001-01-01"},
+		{"products", "colourway=C%E1%BB%ADa%20L%C3%B2"},
+		{"orders", "placed_at=0001-01-01T00:00:00Z"},
+	} {
+		if req, faults := parse(t, c.collection, c.query); faults != nil || len(req.filters) != 1 {
+			t.Errorf("%s?%s: got %d filters, %v", c.collection, c.query, len(req.filters), faults)
+		}
+	}
+}
+
 func TestTheFirstOfARepeatedNameIsUsed(t *testing.T) {
 	req, _ := parse(t, "products", "category=women&category=men")
 	if len(req.filters) != 1 || req.filters[0].arg != "women" {
