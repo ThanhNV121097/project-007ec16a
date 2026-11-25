@@ -264,7 +264,7 @@ Behaviour:
 
 1. Under the buy box three closed rows open on tap: "Details", "Payment options", "Delivery & return policy". Opening one shows its content; a row with nothing to show is not drawn.
 2. "Details" lists, label and value: Line, For, Style code, Colourway, Upper, Lining, Sole, Fit, Care. A row whose value is empty is left out.
-3. "Payment options" lists every way to pay the shop has on record, each with its icon, its name followed by a full stop, and its note.
+3. "Payment options" lists the ways to pay the shop offers at checkout (ORD-006): VNPay alone at launch, with its icon, its name followed by a full stop, and its note. The records of cash on delivery, bank transfer and MoMo stay on record and are not listed.
 4. "Delivery & returns" reads "Free standard delivery in {days} working days, sent the same day if you order before {cutoff}. Exchange the size within {n} days, or return it unworn within {refund} days for a refund." with the shop's terms filled in, then links "Delivery" (`/shipping`) and "Returns and exchange" (`/returns`).
 5. When the shoe has at least one live review, a section headed "What buyers said" shows the shoe's rating as a large number, its stars, "{n} reviews", and the line saying what most reviewers found about fit ("Most say it runs large." / "Most say it runs small." / "Most say it is true to size."). To its right up to three of the newest live reviews are listed: customer name, date, stars, review text, and "Bought EU {size} · {fit}" where fit reads "Runs small", "True to size" or "Runs large".
 6. A shoe with no live review shows no reviews section.
