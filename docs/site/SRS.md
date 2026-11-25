@@ -102,7 +102,7 @@ Behaviour:
 |---|---|---|---|
 | AC-1 | Any customer page | The visitor scrolls to the end | The band shows the wordmark and the line "Đôi — genuine adidas, chosen online and delivered across Vietnam, with a size chart on every pair." |
 | AC-2 | The footer | The visitor reads the "Shop" column | It lists All shoes (`/shop`), Women, Men, Kids (`/shop?category=<id>`), Gifts (`/shop?price=under-3m`) |
-| AC-3 | The footer | The visitor reads the "Help" column | It lists Size chart, Delivery, Returns and exchange, Track an order, Contact, linking to `/size-chart`, `/shipping`, `/returns`, `/track`, `/contact` |
+| AC-3 | The footer | The visitor reads the "Help" column | It lists Size chart, Delivery, Return policy, Track an order, Contact, linking to `/size-chart`, `/shipping`, `/returns`, `/track`, `/contact` |
 | AC-4 | The footer | The visitor reads "The shop" | It lists About Đôi (`/about`), Your bag (`/cart`), Dealer sign-in (`/admin/sign-in`) |
 | AC-5 | The footer | The visitor reads the legal line | It states Đôi is an independent dealer and that adidas marks belong to adidas AG |
 | AC-6 | Any customer page except the footer | The page is searched for a link to `/admin` | The only such link is "Dealer sign-in" in the footer (the header, menu and body have none) |
