@@ -57,7 +57,7 @@ Check: interact_page
 **Scenario**: TC-04 — on a phone the empty wait is empty, scrolls sideways by nothing, and keeps the dock the page has everywhere
 **Given**: A 390×844 window. Arrangement H(10, shoe) for `samba-og-w-crystal-white` (hold 10 s, see "How these cases are observed"). `/shop` has been opened once in the same window and `[data-contact-dock]` read there (present or absent, and its `display`).
 **When**: `/shop/samba-og-w-crystal-white` is opened and, 2 s later, `main`, `[data-contact-dock]` and the document are measured.
-**Then**: `main`'s computed height is `0px`. the page's `scrollWidth` (read on the root `html` element) is at most 390. `[data-contact-dock]` is present with the same computed `display` as it had on `/shop` at 390 wide (and absent if it was absent there). `header` and `footer` both have a computed height greater than 0.
+**Then**: `main`'s computed height is `0px`. The page's `scrollWidth` (read on the root `html` element) is at most 390. `[data-contact-dock]` is present with the same computed `display` as it had on `/shop` at 390 wide (and absent if it was absent there). `header` and `footer` both have a computed height greater than 0.
 Traces: SC-2 (SITE-014 items 1 and 3; story §5 "Phone first")
 Check: measure_styles
 
