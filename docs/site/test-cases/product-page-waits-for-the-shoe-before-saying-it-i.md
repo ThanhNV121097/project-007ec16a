@@ -292,7 +292,7 @@ Check: fetch_url
 | SC-15 | TC-25, TC-26 |
 | contract (GET /v1/products/{id}) | TC-13, TC-27, TC-28, TC-29, TC-30 |
 
-Thirty cases: 21 `interact_page`, 3 `fetch_url` only... see the counts below.
+Thirty cases, counted by instrument:
 
 - `interact_page`: TC-01, TC-02, TC-03, TC-06, TC-07, TC-08, TC-09, TC-11, TC-12, TC-14, TC-16, TC-17, TC-19, TC-20, TC-21, TC-22 (16)
 - `render_url`: TC-10, TC-13 (2)
