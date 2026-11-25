@@ -111,7 +111,7 @@ Check: interact_page
 **When**: The computed `color` of the menu item "Remove" is read, then that of "Reset password" and "Switch off".
 **Then**: The colour of "Remove" differs from the colour of both other items (the danger tone), and "Remove" is the last item.
 Traces: SC-3 (ADMIN-031 item 1)
-Check: measure_styles
+Check: interact_page
 
 **Scenario**: SC-4 — while the list is awaited the page says so and draws no table
 **Given**: The browser signs in as the admin; the answer to `GET /api/v1/admin/staff` is delayed 3 seconds.
