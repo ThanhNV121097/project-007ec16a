@@ -81,6 +81,22 @@ function expectMissing() {
   expect(screen.queryByTestId("size-38")).toBeNull();
 }
 
+/**
+ * A page that stays mounted while the address changes, as it does for a colour
+ * dot or a related pair. The hook's answer is set first, then the address is
+ * opened; a search suffix opens the same shoe again, which is how the page is
+ * drawn again when the answer for its address arrives.
+ */
+function open(first: string) {
+  const router = createMemoryRouter([{ path: "/shop/:id", element: <Product /> }], { initialEntries: [first] });
+  const view = render(<RouterProvider router={router} />);
+  const go = async (to: string, answer: Answer) => {
+    hook.answer = answer;
+    await act(async () => { await router.navigate(to); });
+  };
+  return { ...view, go };
+}
+
 beforeEach(() => {
   hook.answer = notFound;
 });
@@ -143,47 +159,38 @@ describe("one address does not leak into the next", () => {
 
   it("follows a colour dot to a shoe whose answer is slow, then draws it", async () => {
     hook.answer = arrived(SHOE);
-    const router = createMemoryRouter([{ path: "/shop/:id", element: <Product /> }], { initialEntries: [`/shop/${SHOE.id}`] });
-    const { container } = render(<RouterProvider router={router} />);
+    const { container, go } = open(`/shop/${SHOE.id}`);
     expectShoe(SHOE.name);
 
     // The hook still holds the first shoe while the second one's request is in flight.
-    hook.answer = { ...arrived(SHOE), loading: true };
-    await act(async () => { await router.navigate(`/shop/${OTHER.id}`); });
+    await go(`/shop/${OTHER.id}`, { ...arrived(SHOE), loading: true });
     expectNothing(container);
 
-    hook.answer = arrived(OTHER);
-    await act(async () => { await router.navigate(`/shop/${OTHER.id}?again`); });
+    await go(`/shop/${OTHER.id}?answered`, arrived(OTHER));
     expectShoe(OTHER.name);
   });
 
   it("draws a live shoe after a 404, and the missing view only after the answer for a later unknown id", async () => {
     hook.answer = notFound;
-    const router = createMemoryRouter([{ path: "/shop/:id", element: <Product /> }], { initialEntries: ["/shop/not-a-shoe"] });
-    const { container } = render(<RouterProvider router={router} />);
+    const { container, go } = open("/shop/not-a-shoe");
     expectMissing();
 
-    hook.answer = arrived(SHOE);
-    await act(async () => { await router.navigate(`/shop/${SHOE.id}`); });
+    await go(`/shop/${SHOE.id}`, arrived(SHOE));
     expectShoe(SHOE.name);
 
-    hook.answer = waiting;
-    await act(async () => { await router.navigate("/shop/not-a-shoe"); });
+    await go("/shop/not-a-shoe", waiting);
     expectNothing(container);
 
-    hook.answer = notFound;
-    await act(async () => { await router.navigate("/shop/not-a-shoe?again"); });
+    await go("/shop/not-a-shoe?answered", notFound);
     expectMissing();
   });
 
   it("draws a shoe after the shop could not be reached", async () => {
     hook.answer = failed;
-    const router = createMemoryRouter([{ path: "/shop/:id", element: <Product /> }], { initialEntries: [`/shop/${SHOE.id}`] });
-    const { container } = render(<RouterProvider router={router} />);
+    const { container, go } = open(`/shop/${SHOE.id}`);
     expectNothing(container);
 
-    hook.answer = arrived(OTHER);
-    await act(async () => { await router.navigate(`/shop/${OTHER.id}`); });
+    await go(`/shop/${OTHER.id}`, arrived(OTHER));
     expectShoe(OTHER.name);
   });
 });
