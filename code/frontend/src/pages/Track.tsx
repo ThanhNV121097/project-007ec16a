@@ -6,7 +6,7 @@ import { useCollection } from "../data";
 import { formatDate } from "../lib/format";
 import { usePlacedOrders } from "../lib/mock/orders";
 import { digitsOf, ORDER_STEPS, type Order } from "../lib/shop";
-import Bleed from "../components/Bleed";
+import HeadPicture from "../components/HeadPicture";
 import Disclosure from "../components/Disclosure";
 import FaqRows from "../components/FaqRows";
 import OutlinePill from "../components/OutlinePill";
@@ -28,6 +28,7 @@ export default function Track() {
   const placed = usePlacedOrders();
   const notFound = useContent("pages.track.not_found");
   const placeholder = useContent("pages.track.placeholder");
+  const headAlt = useContent("pages.track.head_alt");
   const steps = useContent<Record<string, string>>("pages.track.steps");
   const labels = useContent<Record<string, string>>("orders.steps");
   const [number, setNumber] = useState("");
@@ -49,11 +50,14 @@ export default function Track() {
 
   return (
     <>
-      <section className="grid gap-12 pb-12 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
-        <div className="lg:col-span-6">
+      <section className="grid gap-x-8 gap-y-10 pb-12 pt-8 lg:grid-cols-12 lg:pt-10">
+        <div className="flex flex-col justify-end lg:col-span-6">
           <T k="pages.track.heading" as="h1" className="max-w-[10ch] text-[length:var(--size-h1)] leading-[1.02] text-ink" />
           <T k="pages.track.lead" as="p" className="mt-5 max-w-[42ch] text-sm leading-relaxed text-ink-soft" />
-          <form onSubmit={submit} noValidate className="mt-8 flex max-w-md flex-col gap-4">
+        </div>
+        <HeadPicture src="/images/head-track.jpg" alt={headAlt} className="lg:col-span-5 lg:col-start-8" />
+        <div className="lg:col-span-6">
+          <form onSubmit={submit} noValidate className="flex max-w-md flex-col gap-4">
             <div><label htmlFor="order-number" className={LABEL}><T k="pages.track.number" /></label>
               <input id="order-number" value={number} onChange={(e) => setNumber(e.target.value)} placeholder={placeholder} className={FIELD} /></div>
             <div><label htmlFor="order-phone" className={LABEL}><T k="pages.track.phone" /></label>
@@ -65,7 +69,7 @@ export default function Track() {
             </button>
           </form>
         </div>
-        <Bleed side="right" ground className="py-8 lg:col-span-5 lg:col-start-8">
+        <div className="lg:col-span-5 lg:col-start-8">
           <T k="pages.track.steps_heading" as="h2" className="mb-5 text-lg text-ink" />
           <Disclosure rows={ORDER_STEPS.map((s) => ({ label: labels?.[s] ?? s, content: <p className="max-w-[48ch] leading-relaxed">{steps?.[s]}</p> }))} />
           <div className="mt-10"><PromiseRow compact /></div>
@@ -84,7 +88,7 @@ export default function Track() {
               </ul>
             </div>
           )}
-        </Bleed>
+        </div>
       </section>
       <section className="flex flex-col gap-8 border-t border-line py-12 lg:flex-row lg:gap-12">
         <div className="flex flex-col items-start gap-5 lg:w-1/3">
