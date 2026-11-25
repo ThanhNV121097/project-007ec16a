@@ -20,6 +20,7 @@ const (
 	keyHeader    = "Idempotency-Key"
 	keySentence  = "Send an Idempotency-Key header of 8 to 100 letters, digits, dots, dashes or underscores."
 	messageCheck = "Check the details of your order."
+	messageBody  = "The order must be one JSON object with the fields the shop expects."
 	maxPairs     = 50
 )
 
@@ -40,7 +41,7 @@ type itemRequest struct {
 
 // orderRequest is POST /v1/orders. delivery_fee and total are tolerated and
 // ignored for the same reason; every other field the contract does not define is
-// refused with 400.
+// refused with 400 by parseOrder, which names it.
 type orderRequest struct {
 	Items       []itemRequest   `json:"items"`
 	Delivery    string          `json:"delivery"`
@@ -56,8 +57,8 @@ type orderRequest struct {
 
 // decodeBody reads the request: 415 when it is not JSON, 413 over 64 KiB, 400 for
 // anything that is not exactly the object the contract defines (invalid JSON, a
-// wrong type, an undefined field, data after the object). It writes the answer
-// itself and says whether to go on.
+// wrong type, an undefined field, data after the object), with `errors` naming
+// each field at fault. It writes the answer itself and says whether to go on.
 func decodeBody(w http.ResponseWriter, r *http.Request) (orderRequest, bool) {
 	var req orderRequest
 	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
@@ -65,26 +66,19 @@ func decodeBody(w http.ResponseWriter, r *http.Request) (orderRequest, bool) {
 		return req, false
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxBody)
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	err := dec.Decode(&req)
-	if err == nil {
-		var extra json.RawMessage
-		switch e := dec.Decode(&extra); {
-		case errors.Is(e, io.EOF):
-		case e == nil:
-			err = errors.New("data after the order")
-		default:
-			err = e
-		}
-	}
+	raw, err := io.ReadAll(r.Body)
 	if err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
 			httpx.Error(w, http.StatusRequestEntityTooLarge, "payload_too_large", "The order is too large.", nil)
 			return req, false
 		}
-		httpx.Error(w, http.StatusBadRequest, "bad_request", "The order must be one JSON object with the fields the shop expects.", nil)
+		httpx.Error(w, http.StatusBadRequest, "bad_request", messageBody, fieldErrors{"body": bodySentence})
+		return req, false
+	}
+	req, faults := parseOrder(raw)
+	if len(faults) > 0 {
+		httpx.Error(w, http.StatusBadRequest, "bad_request", messageBody, faults)
 		return req, false
 	}
 	return req, true
