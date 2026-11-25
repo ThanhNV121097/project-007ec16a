@@ -842,6 +842,8 @@ Behaviour:
 | 5 | Copy for states the design does not draw: "Signing in…", "Wrong email or password.", "We cannot reach the server. Please try again.", "Too many tries. Please wait 15 minutes.", "Saving…", "We could not save. Please try again.", "Your session ended. Sign in again.", "Loading the overview…", "We could not load the overview.", "Try again", "Choose a JPEG, PNG or WebP picture.", "That picture is too large (5 MB at most).", "We could not upload that picture. Please try again." | Use this copy, added to the site's content so the owner can edit it | Stakeholder |
 | 6 | "To pack" counts placed and confirmed orders but opens the Orders list filtered to "Confirmed" only, as the design has it | Keep as designed | Stakeholder |
 | 7 | The ratings and review counts seeded with the shoes (and the shop's 4.8 from 181 reviews) are placeholders; they become the true figures the first time a review changes | As ADMIN-013 item 4 | Stakeholder |
+| 8 | A new staff member's starting password reaches them how, when the shop sends no email | The admin tells them in person; the staff member keeps it until the admin resets it (there is no change-password screen) | Stakeholder |
+| 9 | The page, dialog and message copy for staff accounts: "Staff", "Add staff member", "Switch off <name>?", "Remove <name>?", "The admin account cannot be switched off, changed or removed.", "Loading the staff…", "We could not load the staff.", "This area is for the shop's team", "Back to the shop" | Use this copy, added to the site's content so the owner can edit it | Stakeholder |
 
 ## 8. Traceability
 
