@@ -688,7 +688,7 @@ Behaviour:
 | AC-5 | The Delivery page | It is read | It shows "Free" as the only cost and no express, no cities and no cut-off (SITE-009 AC-1 to AC-5) |
 | AC-6 | The shop's questions of topic "payment" | They are read | The row "Can I pay cash on delivery?" is gone and a row "How do I pay?" answers "Online through VNPay, by card, domestic ATM card or QR."; the row "Are the shoes genuine?" is unchanged; no row mentions cash on delivery |
 | AC-7 | Every customer page | Its text is searched | The words "cash on delivery" and "pay on delivery" and any express delivery option appear nowhere |
-| AC-8 | The shop's questions, ways to pay and reviews | They are read | `f-delivery-time` has no "Express"; the `vnpay` note has no "marked paid at once"; `f-orders-number` has no "text message"; the review r-04 has no "Express" |
+| AC-8 | The shop's questions, ways to pay and reviews | They are read | `f-delivery-time` has no "Express"; the `vnpay` note has no "marked paid at once"; `f-orders-number` has no "text message"; the review r-04 has no "Express"; the review r-07 has no "Paid cash at the door" |
 
 **Failure, boundary and permission behaviour**
 
