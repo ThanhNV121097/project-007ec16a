@@ -153,7 +153,7 @@ func (s *Service) Resolve() httpx.Middleware {
 			u, found, err := s.lookup(ctx, hash)
 			cancel()
 			if err != nil {
-				logFailure(s.log, "session lookup failed", r.Method+" "+r.URL.Path[:min(len(r.URL.Path), 0)], err)
+				logFailure(s.log, "session lookup failed", r.Method, err)
 				refuse(w, http.StatusInternalServerError, "internal", internalMessage, nil)
 				return
 			}
