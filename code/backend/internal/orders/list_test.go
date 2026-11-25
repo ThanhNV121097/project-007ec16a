@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -120,7 +121,7 @@ func TestTheTeamsListSelectsNoPrivateColumn(t *testing.T) {
 func TestTheTeamsListHasTheSixteenPublicColumns(t *testing.T) {
 	var public []string
 	for _, c := range dealerList.Columns {
-		if c.Access == 0 {
+		if c.Access == data.Public {
 			public = append(public, c.Name)
 		}
 	}
@@ -132,7 +133,7 @@ func TestTheTeamsListHasTheSixteenPublicColumns(t *testing.T) {
 		found := false
 		for _, c := range dealerList.Columns {
 			if c.Name == name {
-				found = c.Access != 0
+				found = c.Access == data.Private
 			}
 		}
 		if !found {
@@ -181,7 +182,7 @@ func TestTheTeamReadsTheSeededOrdersWithoutTheirPrivateDetails(t *testing.T) {
 			t.Errorf("%s: %d orders, want %d", target, got, want)
 		}
 	}
-	_, one := read("/v1/orders?q=DOI-24817")
+	_, one := read("/v1/orders?q=24817")
 	if len(one) != 1 || one[0]["product"] != "samba-og-w-crystal-white" || one[0]["size"] != "39 1/3" || one[0]["qty"] != float64(1) ||
 		one[0]["total"] != float64(3090000) || one[0]["placed_at"] != "2026-11-23T16:05:00+07:00" {
 		t.Errorf("DOI-24817: %v", one)
