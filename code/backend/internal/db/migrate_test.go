@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -138,6 +139,76 @@ func TestMigrateAppliesOnceAndRunsConcurrentIndexesOutsideATransaction(t *testin
 	}
 	if n := count(t, pool, "widgets"); n != 1 {
 		t.Errorf("widgets has %d rows after two runs, want 1", n)
+	}
+}
+
+// Two instances that start together while a third holds the lock: whichever
+// gets it next runs CREATE INDEX CONCURRENTLY, which waits for every running
+// transaction. The other must be idle, not blocked inside pg_advisory_lock, or
+// PostgreSQL finds a cycle and fails one of them with SQLSTATE 40P01.
+func TestMigrateWaitingForTheLockDoesNotDeadlockAConcurrentIndex(t *testing.T) {
+	pool := testPool(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	fsys := fstest.MapFS{
+		"20260101000000_widgets.up.sql": {Data: []byte("CREATE TABLE widgets (id int PRIMARY KEY, label text);")},
+		"20260101000001_widget_indexes.up.sql": {Data: []byte(
+			"CREATE INDEX CONCURRENTLY IF NOT EXISTS widgets_label_idx ON widgets (label);\n")},
+	}
+
+	holder, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := holder.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
+		holder.Release()
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- Migrate(ctx, pool, fsys, quiet())
+		}()
+	}
+	time.Sleep(5 * lockPollInterval) // both are now waiting for the lock
+	if _, err := holder.Exec(ctx, "SELECT pg_advisory_unlock($1)", migrationLockKey); err != nil {
+		holder.Release()
+		t.Fatal(err)
+	}
+	holder.Release()
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Errorf("migrate: %v", err)
+		}
+	}
+	if n := count(t, pool, "schema_migrations"); n != 2 {
+		t.Errorf("schema_migrations has %d rows, want 2", n)
+	}
+}
+
+func TestMigrateGivesUpWaitingForTheLockWhenItsContextIsDone(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	holder, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer holder.Release()
+	if _, err := holder.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = holder.Exec(ctx, "SELECT pg_advisory_unlock($1)", migrationLockKey) }()
+
+	waitCtx, cancel := context.WithTimeout(ctx, 3*lockPollInterval)
+	defer cancel()
+	if err := Migrate(waitCtx, pool, fstest.MapFS{}, quiet()); err == nil {
+		t.Error("Migrate returned while another instance held the lock")
 	}
 }
 
