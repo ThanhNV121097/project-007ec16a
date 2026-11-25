@@ -85,6 +85,30 @@ Verify's first run found a direct open of `/shop` drawing the empty state, becau
 
 Two consequences, so nobody finds them later. **Run local must serve a build with the mock gone** (item 4's backend merged and #40 caught up, §6): only then does the page send `limit=12&status=live&page=n`, which SC-24, SC-26 and SC-27 read from the network log. And **no contract of this file changes**: the §2 table of answers, the §2.1 request counts, T1–T8 and K1–K5 stand as merged.
 
+### 3.2 Revision after the catch-up (UI fix 2, PR #40 head `28b30a5`, re-reviewed: approved for testing)
+
+The catch-up that §6 predicted has happened: `main` (with plan item 4's backend, PR #49) was merged into #40 and its conflicts resolved. Nothing here is a new decision; it is the check of §5 against the code, so Run local and Verify start from facts and not from the pull request's description. Read from `main` and from #40's diff against it (twelve files: `FilterRail`, `ShopFilterToggle`, `ShopNotice`, `ShopResults`, `ShopSizes`, `content.json`, `shop-list.ts`, `table.ts`, `Shop.tsx`, `shop-list.test.tsx`, `shop-states.test.tsx`, `table.test.tsx`):
+
+| Rule | What the code says | Holds |
+|---|---|---|
+| K1 | `main`'s `src/lib/search-filters-and-sorting-served-by-the-api.ts`: `listProducts` is `api.get<Page<Product>>("products", toParams(req))` with no `catch`; `getProductFilters` is `api.get("product-filters")`. #40 does not touch the file | Yes |
+| K2 | `ShopResults` takes `error: Error \| null` and draws only whether it is set; no component reads a field of an `ApiError`; `shop-states.test.tsx` asserts the alert carries no status or `Error` text | Yes |
+| K3 | #40's hunks in `shop-list.ts` are logic only (current-query answer, `retry`, `attempt`, paging reset); its two import lines are `main`'s, unchanged | Yes |
+| K4 | `useProductFilters` is not in #40's diff and still turns a failed read into "no options" | Yes |
+| K5 | `Shop.tsx` keeps `useCollection<Line>("lines", { pageSize: 20 })` as unchanged context | Yes |
+| K6 | `code/frontend/src/lib/mock/` holds only `orders.ts` (the checkout story's, not this story's); no `search-filters-and-sorting-served-by-the-api` mock and no `shop-mock.test.ts` exist on `main` or in #40's diff; no file under `code/` contains `doi:mock`; `shop-list.test.tsx`'s `vi.mock` already names the new client | Yes |
+
+Three consequences:
+
+- **§6 is history.** The pull request's own description still says "against the mock" and "stacked on plan item 4"; both paragraphs are stale. The facts are this section and §2–§2.1. **Run local** serves `main` with #40's head and no mock, so the request counts of §2.1 and the `limit=12&status=live&page=n` of SC-24, SC-26 and SC-27 can be read from the network log.
+- **No contract changes.** The §2 table of answers, §2.1, T1–T8 and K1–K6 stand as merged. Still no route, table, column or migration; the Story BE step has nothing to build.
+- **Two UI follow-ups are now ruled, not left open** (they replace the second and third sentences of the last row of §9, and neither blocks Verify):
+
+| # | Behaviour that must hold | Why it is a flicker and not a wrong list | If Dev takes it |
+|---|---|---|---|
+| R1 | A failure belongs to the request that failed. Going A (failed) → B → back to A before B answers must show "Loading the shoes…" for A's **new** request, never A's old error | The success handler already clears `failure`, so the error view is replaced when the new request answers; it only shows too early | Clear `failure` when the effect that issued it is cleaned up (the key changes), not in the effect body (the lint rule on state set in an effect body refuses that). Add one case to `shop-list.test.tsx`: after the A→B→A detour `error` is `null` and `loading` is `true` |
+| R2 | A stored answer is used only while its `pages` is not above the current `pages`. Going A (24 shoes, `pages` 2) → B → A must start at the first twelve, not flash 24 cards with "Show more" reading "Loading…" | The next answer replaces it with 12 cards; it is a flash, not a wrong count | `const shown = answer?.key === key && answer.pages <= pages ? answer : null`. **Not** "`pages` equal to the current": while "Show more" is on its way the page-1 answer (`pages` 1) must stay on screen with `pages` 2 (SC-24) |
+
 ## 4. Decisions
 
 ### 4.1 The four the story leaves to TL (story §8)
@@ -178,4 +202,4 @@ Story §3 says: build only after item 4 has merged. The facts that make that con
 | Dev, item 4's backend (PR #49) | K1–K6 (§5). The mock and its `doi:mock` knobs are deleted there; nothing of #40 is needed to merge it |
 | Dev, the catch-up of #40 | The table of §6. Only imports, the mock's deletion **and its test `shop-mock.test.ts`'s**, `pageSize: 20` and the `vi.mock` path differ; do not carry the knobs, the stand-in reading of the shoes or the test of either |
 | Test lead | Count requests by §2.1 (a failing read is two requests, because of `api.ts`'s one retry); a failed list is the same view for every rejection (§2); the shop's one way to the empty state is `total` 0; fault, delay and offline come from interception, never from the product |
-| UI follow-ups from the review of PR #40 (not backend, not blocking) | "Clear all" sits between Price and the Size pills (SC-3 lists it last; the test cases do not pin the place); keyboard focus after "Try again" falls to the page when its button unmounts; a failure for `(query, page 1)` shows at once if the visitor returns to that query before another read settles (clearing the failure when the effect starts fixes it); `filtering` counts any unknown parameter; a long sort label can wrap at 320px beside "Filter (n)". Dev may take them in the catch-up or leave them; none changes a contract here |
+| UI follow-ups from the review of PR #40 (not backend, not blocking) | "Clear all" sits between Price and the Size pills (SC-3 lists it last; the test cases do not pin the place); keyboard focus after "Try again" falls to the page when its button unmounts; a failure for `(query, page 1)` shows at once if the visitor returns to that query before another read settles (clearing the failure when the effect starts fixes it); `filtering` counts any unknown parameter; a long sort label can wrap at 320px beside "Filter (n)". Dev may take them with the next change to the file or leave them; none changes a contract here. The review of the caught-up head (§3.2) rules the second and third as R1 and R2 |
