@@ -288,12 +288,12 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | Only cash on delivery is implemented | `/checkout` loads | Step 03 lists "Cash on delivery" alone, selected |
-| AC-2 | VNPay is implemented and configured | `/checkout` loads | Step 03 lists "Cash on delivery" and "VNPay — ATM, Visa, Mastercard" |
-| AC-3 | The records hold four ways to pay | `/checkout` loads before the VietQR and MoMo story | "Bank transfer (VietQR)" and "MoMo wallet" are not listed |
-| AC-4 | The same | A shoe page's "Payment options" is opened | All four records are listed (SITE-006) |
-| AC-5 | An order is placed with `bank` | The shop receives it | 422 naming the payment method; no order is created |
-| AC-6 | Cash on delivery is chosen | The order is placed | The answer's payment address is empty and the browser goes to `/orders/<id>?placed=1` |
+| AC-1 | The records hold cash on delivery, bank transfer, VNPay and MoMo | `/checkout` loads | Step 03 lists "VNPay — ATM, Visa, Mastercard" alone, selected |
+| AC-2 | VNPay is implemented and its keys are set | `/checkout` loads | Step 03 lists VNPay alone, selected, and "Place order" is enabled |
+| AC-3 | The same records | `/checkout` loads before the VietQR and MoMo story | "Cash on delivery", "Bank transfer (VietQR)" and "MoMo wallet" are not listed |
+| AC-4 | The same | A shoe page's "Payment options" is opened | Only VNPay is listed (SITE-006) |
+| AC-5 | An order is placed with `bank`, and another with `cod` | The shop receives each | 422 naming the payment method; no order is created |
+| AC-6 | The VNPay story has not landed | VNPay is chosen and the order is placed | The answer's payment address is empty, the order is unpaid, the browser goes to `/orders/<id>?placed=1` and the order page says "awaiting payment" |
 | AC-7 | A way to pay whose provider returns the address `https://pay.example.test/x` | The order is placed | The answer carries that address and the browser is sent to it |
 | AC-8 | The provider fails to return an address | The order is placed | The order exists, unpaid; the answer's payment address is empty; the browser goes to `/orders/<id>?placed=1` where "Pay now" is shown |
 | AC-9 | Any order just placed | It is read | `paid` is false |
