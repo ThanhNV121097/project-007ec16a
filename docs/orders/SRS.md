@@ -362,7 +362,7 @@ Behaviour:
 | AC-20 | The same with no token | It is called | 404 |
 | AC-21 | An order of two pairs | The page loads | Both pairs are listed under "In this order", each with `<variant> · Qty <n>` and its line price, and the total is the stored total |
 | AC-22 | Delivery "Standard · 2–4 working days", customer "Lan Nguyen", city "Da Nang" | The page loads | "Delivering to" reads `Lan Nguyen, Da Nang` and "Delivery" reads `Standard · 2–4 working days · Free` |
-| AC-23 | The page loads | The visitor opens "Need to change something?" and "Wrong size?" | Their sentences and the links "Message us" (`/contact`) and "How exchanges work" (`/returns`) are shown |
+| AC-23 | The page loads | The visitor opens "Need to change something?" and "Wrong size?" | Their sentences — under the second, "Exchanges are not accepted. For a wrong or damaged delivery, or any question, message us." — and the links "Message us" (`/contact`) and "Return policy" (`/returns`) are shown |
 | AC-24 | The order answer is slow (2 seconds) | The page opens with a valid token | "We can't find that order." is not shown before the answer arrives |
 | AC-25 | The page loads | The visitor reads it | The order's address, phone, email and note appear nowhere on the page |
 | AC-26 | The first pair has a picture | The page loads | It is shown at the right and links to the shoe's page |
