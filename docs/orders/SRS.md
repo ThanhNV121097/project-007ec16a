@@ -412,6 +412,8 @@ Behaviour:
 | AC-8 | A missing id | `GET /v1/orders/nope` with no token | 404 with the same body as AC-4 |
 | AC-9 | Orders after this module is deployed | `GET /v1/orders?phone=…` with no session | 401 |
 | AC-10 | An order was placed | The order's own page and the network log are read | The token appears only in the placing answer and in this browser's storage |
+| AC-11 | An order linked to customer A's account | A, signed in, reads `GET /v1/orders/<id>` with no token | 200 with the order, without `phone`, `email`, `address`, `note` |
+| AC-12 | The same order | Customer B, signed in, reads it | 404 with the same body as AC-4 |
 
 **Failure, boundary and permission behaviour**
 
