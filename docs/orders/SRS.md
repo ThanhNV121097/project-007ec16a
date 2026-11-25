@@ -344,7 +344,7 @@ Behaviour:
 | AC-2 | The same | The page is refreshed | The order is still shown |
 | AC-3 | The same, in another browser with no token | `/orders/doi-24818` loads | "We can't find that order." with the line and the "Track an order" pill |
 | AC-4 | An order of status "shipped", expected `2026-11-26` | The page loads with the token | The heading reads "Your order is on its way." and the line "Expected by 26/11/2026." |
-| AC-5 | An order of status "delivered" | The page loads | The heading reads "Your order was delivered." and the line "Delivered. If the size is not right, the exchange is free the first time." |
+| AC-5 | An order of status "delivered" | The page loads | The heading reads "Your order was delivered." and the line "Delivered. If your delivery is wrong or damaged, message us." |
 | AC-6 | An order of status "cancelled" | The page loads | The heading reads "This order was cancelled.", the steps are replaced by the cancelled sentence, and no "Expected by" line is shown |
 | AC-7 | An order of status "packed" | The page loads | Placed, Confirmed, Packed are filled, Packed is ringed, On its way and Delivered are not filled |
 | AC-8 | A 390px window | The page loads | The five steps are a vertical list |
