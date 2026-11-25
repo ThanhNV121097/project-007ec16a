@@ -103,7 +103,7 @@ Check: interact_page
 **Scenario**: TC-09 — while an order is being placed the button says so, is disabled, and a second press sends nothing
 **Given**: BAG of TC-01; FORM typed; the answer of `POST /api/v1/orders` is held for 3 seconds (interception) before it is passed on to the shop; a request log on `/api/v1/orders`.
 **When**: `[data-testid='place-order']` is pressed, then pressed again twice at once (a double-click) and Enter is pressed in `#checkout-city`, all within the first second.
-**Then**: Within 200 ms of the first press the button's text is `Placing your order…` and its `disabled` property is true. The request log holds exactly one `POST /api/v1/orders` after the three further presses and after the answer arrives. The shop holds exactly one order for the bag (the next placing gets the number after this one, TC-20 style), and the pair left the shelf once.
+**Then**: Within 200 ms of the first press the button's text is `Placing your order…` and its `disabled` property is true. The request log holds exactly one `POST /api/v1/orders` after the three further presses and after the answer arrives. The shop holds exactly one order for the bag (`SELECT count(*) FROM orders WHERE is_sample = false` reads 1 after a RESET before the case) and the pair left the shelf once (the shoe's `stock` is one lower).
 Traces: SC-6 (ORD-001 AC-11; ORD-010 AC-6, item 4)
 Check: interact_page
 
