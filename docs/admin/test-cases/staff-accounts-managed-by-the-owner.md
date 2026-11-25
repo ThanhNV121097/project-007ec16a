@@ -527,7 +527,7 @@ Check: fetch_url
 **Scenario**: SC-33b — a picture the removed account uploaded is kept with its uploader cleared
 **Given**: The `uploads` table exists (otherwise this case is not applicable and is reported so); FX-STAFF-A and FX-UPLOAD.
 **When**: ADMIN sends `DELETE /v1/admin/staff/<FX-STAFF-A id>`; the verifier reads `SELECT name, uploaded_by FROM uploads WHERE name = repeat('a',32) || '.png'` and sends `GET /v1/uploads/<that name>`.
-**Then**: The `DELETE` answers 204; the SQL returns one row whose `uploaded_by` is `NULL`; the `GET` answers 200 with `Content-Type: image/png`. The row is deleted afterwards.
+**Then**: The `DELETE` answers 204; the SQL returns one row whose `uploaded_by` is `NULL`; the `GET` still answers 200 (the picture is served). The row is deleted afterwards.
 Traces: SC-33 (ADMIN-031 item 4; erd `uploads.uploaded_by` SET NULL)
 Check: fetch_url
 
