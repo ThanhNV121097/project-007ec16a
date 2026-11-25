@@ -398,7 +398,7 @@ Behaviour:
 
 **Requirement SITE-009 — Shipping information page**
 
-*As a* visitor, *I want to* know what delivery costs, how long it takes and where express reaches, *so that* I can order without asking.
+*As a* visitor, *I want to* know that delivery is free and how long it takes, *so that* I can order without asking.
 
 Behaviour:
 
