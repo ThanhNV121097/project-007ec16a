@@ -1127,7 +1127,7 @@ Every role the SRS names is covered, allowed and denied: visitor (SC-6.2, SC-7.7
 
 **Cases that depend on an arrangement the verifying role may not have, and are then reported UNVERIFIED naming the missing instrument, never passed from reading code:**
 - A slow answer (SC-21.1, SC-24.2, SC-27.2, SC-28.2, SC-29.1, SC-30.2, SC-33.4, SC-36.2, SC-37.3) needs `interact_page` to hold one request for a stated time; SC-31.2 needs it to replace one answer.
-- Placing a real order (SC-11, SC-12, SC-37.4, SC-38) needs the VNPay keys to be set in the run, because `POST /v1/orders` answers 503 `payment_unavailable` without them (`services.md` §3.10). The account-side half of each case is checked with an order inserted by `set_db_state`.
+- Placing a real order (SC-11, SC-12, SC-37.4, SC-38.2) needs the VNPay keys to be set in the run, because `POST /v1/orders` answers 503 `payment_unavailable` without them (`services.md` §3.10). **The keys are a precondition of the run (§0.2) and should be set before verification starts**: with them, every one of these cases is observed in full; without them the placing step of each is UNVERIFIED and only the account-side half, checked with an order inserted by `set_db_state`, is observed.
 - SC-17.4 needs `fetch_url` to report response times.
 
 **Findings against the documents (nothing was resolved silently):**
