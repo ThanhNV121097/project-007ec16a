@@ -95,8 +95,8 @@ Check: fetch_url
 
 **Scenario**: SC-2.4 — Two sign-ups with one email at the same moment make one account
 **Given**: R done. No account for `race@example.com`.
-**When**: Two `POST /v1/account/sign-up` calls with that email (names `Race One` and `Race Two`), issued in the same round so they overlap. Then, with `set_db_state`, a direct `INSERT` of a second `users` row whose email is `RACE@example.com`.
-**Then**: One call answers 201 and the other 409 `conflict`; exactly one row exists for the email. The direct insert is refused by the database with a unique violation (SQLSTATE 23505), proving the uniqueness is the table's and not only the handler's.
+**When**: Two `POST /v1/account/sign-up` calls with that email (names `Race One` and `Race Two`), issued in the same round so they overlap. Then, with `set_db_state`, two direct `INSERT`s into `users`, each in its own statement and each copying every other column from the existing `race@example.com` row with a fresh `id` (`INSERT INTO users (id, email, name, phone, password_hash, role) SELECT gen_random_uuid(), <email>, name, phone, password_hash, role FROM users WHERE email = 'race@example.com'`): (a) with email `race@example.com` (the stored, lower-case form); (b) with email `RACE@example.com`.
+**Then**: One call answers 201 and the other 409 `conflict`; exactly one row exists for the email. Insert (a) is refused by the database with a unique violation, SQLSTATE `23505`, constraint `uq_users_email` — the uniqueness is the table's and not only the handler's. Insert (b) is refused with a check violation, SQLSTATE `23514`, constraint `ck_users_email_lowercase` — an upper-case email cannot be stored at all, which is what makes the uniqueness case-insensitive (`erd.md` §3.18). After both inserts `SELECT count(*) FROM users WHERE lower(email) = 'race@example.com'` is still 1.
 Traces: SC-2 (ACC-001 Failure table "Conflict")
 Check: fetch_url
 
