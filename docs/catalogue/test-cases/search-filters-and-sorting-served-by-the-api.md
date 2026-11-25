@@ -494,7 +494,7 @@ Check: render_url
 **Scenario**: SC-29b — the options do not shrink when the list is filtered
 **Given**: The seed.
 **When**: Open `/shop?category=women`; read the "Size (EU)" pills and the "Colour" options.
-**Then**: The same 16 pills and the same nine colours as SC-29a (not only the women's five colours and nine sizes); the count reads `4 matching`.
+**Then**: The same 16 pills and the same nine colours as SC-29a (not only the women's four colours and nine sizes); the count reads `4 matching`.
 Traces: SC-29 (CAT-002 AC-20)
 Check: render_url
 
