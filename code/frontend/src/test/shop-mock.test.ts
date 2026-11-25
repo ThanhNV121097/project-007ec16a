@@ -11,8 +11,7 @@ import { DEFAULT_SORT, toRequest, type ShopQuery } from "../lib/shop-request";
 
 const base: ShopQuery = { category: [], line: [], colour: [], size: [], price: [], q: "", sort: DEFAULT_SORT };
 
-type Rows = Record<string, unknown>[];
-let tables: Record<string, Rows> = {};
+let tables: Record<string, object[]> = {};
 
 function shoe(id: string, over: Partial<Product> = {}): Product {
   return { id, name: id, line: "samba", category: "women", price: 2500000, status: "live", colour: "black", sizes: ["38", "40"], ...over };
@@ -29,7 +28,7 @@ beforeEach(() => {
   get.mockReset();
   // The API as the browser meets it: a filter on a field, at most a hundred a page.
   get.mockImplementation((name: string, params: { page: number; limit: number; status?: string }) => {
-    const rows = (tables[name] ?? []).filter((r) => !params.status || r.status === params.status);
+    const rows = (tables[name] ?? []).filter((r) => !params.status || (r as { status?: string }).status === params.status);
     const limit = Math.min(params.limit, 100);
     return Promise.resolve({ items: rows.slice((params.page - 1) * limit, params.page * limit), total: rows.length, page: params.page, limit });
   });
