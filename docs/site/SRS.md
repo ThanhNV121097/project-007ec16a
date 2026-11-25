@@ -94,7 +94,7 @@ Behaviour:
 1. Every customer page ends with a full-width dark band holding: the wordmark and the line "Đôi — genuine adidas, chosen online and delivered across Vietnam, with a size chart on every pair."
 2. Three columns of links. "Shop": All shoes, Women, Men, Kids, Gifts (the shop narrowed to the price band under 3,000,000 ₫). "Help": Size chart, Delivery, Return policy, Track an order, Contact. "The shop": About Đôi, Your bag, Dealer sign-in.
 3. Under a hairline: the independence notice ("Đôi is an independent dealer. adidas, Samba, Gazelle, Handball Spezial, Adizero and Megaride are trademarks of adidas AG; this shop is not adidas and is not run by adidas.") and the photo credits.
-4. "Dealer sign-in" in the footer is the only link to the dealer area on a customer page.
+4. "Dealer sign-in" in the footer is the only link to the dealer area (`/admin`) on a customer page for a visitor who is not signed in as admin or staff. The header's "Account" entry, added by the customer-accounts story (ACC-007), never links a signed-out visitor or a customer to `/admin`; it goes to `/admin` only for a visitor signed in as admin or staff.
 
 **Acceptance criteria**
 
