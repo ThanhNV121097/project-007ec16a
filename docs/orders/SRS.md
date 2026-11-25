@@ -168,7 +168,7 @@ Behaviour:
 | AC-6 | The request lists a price of 1 ₫ for the shoe | It is sent | The stored total ignores it and equals the shop's price |
 | AC-7 | An order placed on Monday 10:00 Vietnam time, standard | It is saved | Its expected date is Friday of that week |
 | AC-8 | An order placed on Monday 16:00 Vietnam time, standard | It is saved | Its expected date is the next Monday (counting begins on Tuesday) |
-| AC-9 | An order placed on Monday 10:00, express | It is saved | Its expected date is Tuesday |
+| AC-9 | A request carrying a delivery fee of 50.000 ₫ | An order is placed | The fee is ignored: the stored delivery fee is 0 and the total is the sum of the pairs |
 | AC-10 | An order placed on a Saturday, standard | It is saved | Counting begins on the following Monday; the expected date is the Friday of that week |
 | AC-11 | An order with two shoes | It is read back | Two pairs with their sizes, quantities and unit prices |
 | AC-12 | The seeded order `doi-24817` | It is read by the dealer | It shows as one pair of `samba-og-w-crystal-white`, EU 39 1/3 |
