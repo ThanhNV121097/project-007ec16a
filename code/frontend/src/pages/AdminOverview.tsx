@@ -108,6 +108,9 @@ export default function AdminOverview() {
           note: useContent("pages.admin.overview.low_note") },
       ]}
       panels={[
+        { title: useContent("pages.admin.overview.today_title"), content: (
+          <p className="text-sm text-ink">{fill(useContent("pages.admin.overview.today_text"), { waiting, low: low.length, sales: formatPrice(sales), n: month.length })}</p>
+        ) },
         { title: useContent("pages.admin.overview.chart_title"), content: <AdminBars rows={days} caption={useContent("pages.admin.overview.chart_title")} /> },
         { title: useContent("pages.admin.overview.lines_title"), content: <AdminBars kind="rows" rows={byLine} caption={useContent("pages.admin.overview.lines_title")} /> },
         { title: useContent("pages.admin.overview.recent_title"), content: <RecentList rows={orders.slice(0, 5)} products={products} statuses={statuses} /> },
