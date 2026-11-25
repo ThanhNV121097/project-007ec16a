@@ -431,8 +431,8 @@ Behaviour:
 
 | Field | Type | Required | Rule |
 |---|---|---|---|
-| Shop terms: free-delivery threshold, standard days, express days, express cities, same-day cut-off | read | yes | |
-| Delivery options: name, days, fee, note | read | yes | All options |
+| Shop terms: standard days | read | yes | |
+| Delivery option "standard": name, days, note, fee | read | yes | The one option; its fee is always 0, drawn as "Free" |
 | Questions: topic, question, answer | read | no | Topic "shipping" |
 
 **Requirement SITE-010 — Return policy page**
