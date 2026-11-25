@@ -29,7 +29,7 @@ func TestErrorWritesTheEnvelope(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Error.Code != "invalid" || body.Error.Fields["phone"] == "" {
+	if body.Error != "invalid" || body.Errors["phone"] == "" {
 		t.Errorf("unexpected body %+v", body)
 	}
 }
