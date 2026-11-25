@@ -57,10 +57,17 @@ describe("the staff table", () => {
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent("Shop owner");
     expect(rows[0]).toHaveTextContent("Admin");
+    expect(rows[0]).toHaveTextContent("Active");
     expect(rows[0].querySelector("button")).toBeNull();
     expect(rows[1]).toHaveTextContent("Staff");
     expect(rows[1].querySelector("button")).not.toBeNull();
     expect(rows[2]).toHaveTextContent("Switched off");
+  });
+
+  it("names the columns Name, Email, Role and Status", () => {
+    render(<StaffAccounts items={team} total={3} status="ready" onRetry={none} onChoose={none} />);
+    const heads = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(heads.slice(0, 4)).toEqual(["Name", "Email", "Role", "Status"]);
   });
 });
 
@@ -73,18 +80,26 @@ describe("the add dialog", () => {
   it("has three labelled fields, the password hidden, with its hint", () => {
     open(() => Promise.resolve({ ok: true }));
     expect(screen.getByRole("dialog", { name: "Add staff member" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
     expect(screen.getByLabelText("Starting password")).toHaveAttribute("type", "password");
     expect(screen.getByText("At least 10 characters.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
   });
 
   it("shows each refusal beside its own field and keeps what was typed", async () => {
     open(() => Promise.resolve({ ok: false, kind: "fields", errors: { name: "A name is needed" } }));
     type("Email", "lan@example.com");
+    type("Starting password", "short");
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     const name = await screen.findByText("A name is needed");
+    expect(name).toHaveAttribute("role", "alert");
     expect(screen.getByLabelText("Name")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByLabelText("Name")).toHaveAttribute("aria-describedby", name.id);
+    expect(screen.getByLabelText("Email")).not.toHaveAttribute("aria-invalid");
     expect(screen.getByLabelText("Email")).toHaveValue("lan@example.com");
+    expect(screen.getByLabelText("Starting password")).toHaveValue("short");
   });
 
   it("reads Saving… while it waits and sends once", async () => {
@@ -96,12 +111,13 @@ describe("the add dialog", () => {
     expect(add).toHaveBeenCalledTimes(1);
   });
 
-  it("says it could not save when the shop cannot be reached", async () => {
+  it("says it could not save when the shop cannot be reached, and lets the visitor press Add again", async () => {
     open(() => Promise.resolve({ ok: false, kind: "unreachable" }));
     type("Name", "Lan Tran");
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(await screen.findByText("We could not save. Please try again.")).toBeInTheDocument();
     expect(screen.getByLabelText("Name")).toHaveValue("Lan Tran");
+    expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
   });
 });
 
@@ -115,6 +131,7 @@ describe("the questions", () => {
     cleanup();
     ask("remove", () => Promise.resolve({ ok: true }));
     expect(screen.getByRole("alertdialog", { name: "Remove Minh Nguyen?" })).toBeInTheDocument();
+    expect(screen.getByText("The account is deleted and cannot be restored. Their work stays.")).toBeInTheDocument();
   });
 
   it("stays open and shows the shop's sentence when it refuses", async () => {
@@ -154,5 +171,6 @@ describe("who the page is for", () => {
     );
     expect(screen.getByText("overview reached")).toBeInTheDocument();
     expect(useStaff).not.toHaveBeenCalled();
+    expect(screen.queryByText("Staff")).toBeNull();
   });
 });
