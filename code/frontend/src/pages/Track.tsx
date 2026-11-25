@@ -6,6 +6,7 @@ import { useCollection } from "../data";
 import { formatDate } from "../lib/format";
 import { usePlacedOrders } from "../lib/mock/orders";
 import { digitsOf, ORDER_STEPS, type Order } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import Disclosure from "../components/Disclosure";
 import FaqRows from "../components/FaqRows";
 import OutlinePill from "../components/OutlinePill";
@@ -64,7 +65,7 @@ export default function Track() {
             </button>
           </form>
         </div>
-        <div className="lg:col-span-5 lg:col-start-8">
+        <Bleed side="right" ground className="py-8 lg:col-span-5 lg:col-start-8">
           <T k="pages.track.steps_heading" as="h2" className="mb-5 text-lg text-ink" />
           <Disclosure rows={ORDER_STEPS.map((s) => ({ label: labels?.[s] ?? s, content: <p className="max-w-[48ch] leading-relaxed">{steps?.[s]}</p> }))} />
           <div className="mt-10"><PromiseRow compact /></div>
@@ -83,7 +84,7 @@ export default function Track() {
               </ul>
             </div>
           )}
-        </div>
+        </Bleed>
       </section>
       <section className="flex flex-col gap-8 border-t border-line py-12 lg:flex-row lg:gap-12">
         <div className="flex flex-col items-start gap-5 lg:w-1/3">
