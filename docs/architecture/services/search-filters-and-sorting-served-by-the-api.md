@@ -124,7 +124,7 @@ Both ends are **included**. Applies to whole-number, decimal, date and instant c
 | Form | Where the stock is | The condition (`$n` is the size list as `text[]`) |
 |---|---|---|
 | **A** — before S5 | the S3 columns `sizes` and `sizes_out` of `products` | `EXISTS (SELECT 1 FROM unnest($n::text[]) AS w(s) WHERE w.s = ANY(t.sizes) AND NOT (w.s = ANY(t.sizes_out)))` |
-| **B** — after S5 | `product_sizes` | `EXISTS (SELECT 1 FROM product_sizes ps WHERE ps.product_id = t.id AND ps.size = ANY($n::text[]) AND ps.pairs > 0)` — served by `idx_product_sizes_size_in_stock` |
+| **B** — after S5 | `product_sizes` | `EXISTS (SELECT 1 FROM product_sizes sz WHERE sz.product_id = t.id AND sz.size = ANY($n::text[]) AND sz.pairs > 0)` — served by `idx_product_sizes_size_in_stock`. The inner alias is `sz`, not `ps`: after S5 the products `FROM` already uses `ps` for `product_stock`, and a shadowed alias is legal SQL that nobody reads correctly |
 
 The two are the same fact (the shoe lists the size, and its pairs are not 0); S5's `product_stock` makes `sizes_out` exactly "pairs = 0" and `sizes` exactly "has a row". **Whichever of S4 and S5 merges second rewrites this one clause** and `product-filters`' size statement (§4); S5's services file §5 says the same from its side. Tests reach the shoes through one fixture helper that knows the form (ERD §6), so no test changes when the form does.
 
@@ -148,7 +148,7 @@ The request `GET /v1/products?status=live&category=women&line=samba&size=38&pric
 ```sql
 WHERE t.status = $1 AND t.category_id = $2 AND t.line_id = $3
   AND t.price <= $4::numeric
-  AND EXISTS (SELECT 1 FROM product_sizes ps WHERE ps.product_id = t.id AND ps.size = ANY($5::text[]) AND ps.pairs > 0)
+  AND EXISTS (SELECT 1 FROM product_sizes sz WHERE sz.product_id = t.id AND sz.size = ANY($5::text[]) AND sz.pairs > 0)
   AND (strpos(t.search_text, (SELECT doi_fold($6))) > 0
        OR t.line_id IN (SELECT l.id FROM lines l WHERE strpos(doi_fold(l.name), (SELECT doi_fold($6))) > 0)
        OR t.category_id IN (SELECT c.id FROM categories c WHERE strpos(doi_fold(c.name), (SELECT doi_fold($6))) > 0))
