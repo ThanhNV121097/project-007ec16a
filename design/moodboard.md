@@ -43,6 +43,11 @@ direction — the template is one. It says how this business sits in it.
   catalogue's own heading uses the same h1, because its first screen still has to show shoes.
 - **Shape:** 0 radius on tiles and panels, full pills on every button, chip and the size buttons.
 - **Unlocks:** none taken. The template already sets the arrangement; nothing else was needed.
+- **One surface in the ink (moved after the first walk).** The walk read the template's palette as "a
+  white page with a coloured button on it" on every page. The template's accent is its ink, so the
+  footer became a full-width band in `--accent` with `--accent-ink` type and hairlines drawn at 15% of
+  the ground's colour. Every page now ends on the template's own colour, the only element that runs
+  edge to edge; everything above it stays on the 1200px measure, as the picture does.
 
 ## How this business fills the devices
 
