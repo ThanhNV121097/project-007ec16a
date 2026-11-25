@@ -499,7 +499,7 @@ A stock line under the picker (`role="status"`, 12px, `--danger` when it names a
 | State | Visual change | Tokens |
 |---|---|---|
 | Idle | Empty form | — |
-| Sending | Button disabled at 60% opacity, label "Sending…" | — |
+| Sending | Button disabled at 60% opacity, label "Sending…" (idle label "Send message") | — |
 | Sent | The form is replaced by the thank-you sentence at 18px | `text-lg` |
 | Failed | `role="alert"` line (14px ink) with the problem above the button | `text-ink` |
 | Offline | A 14px `--ink-soft` note says messages cannot be sent from this deployment | `text-ink-soft` |
