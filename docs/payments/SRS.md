@@ -76,7 +76,7 @@ Behaviour:
 
 | Case | Condition | Expected behaviour |
 |---|---|---|
-| Upstream failure | The keys are missing | AC-7, AC-8 |
+| Upstream failure | The keys are missing | AC-7, AC-8, AC-10 |
 | Permission | "Pay now" without the order's token | 404 (ORD-008) |
 | Boundary | Order within its deadline by under a minute | The address is built with an expiry at the deadline |
 
