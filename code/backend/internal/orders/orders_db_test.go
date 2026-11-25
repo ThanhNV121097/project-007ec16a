@@ -382,7 +382,9 @@ func TestTheSameKeyAnswersTheFirstOrderAgain(t *testing.T) {
 		t.Error("the shelf lost the pair twice")
 	}
 	// The same digits in another spelling are the same phone; other digits are another order.
-	placedOf(t, post(h, orderOf("+84 912.345.678", item("t-a", "38", 1)), "application/json", "tc-key-0001"), 409)
+	if again := placedOf(t, post(h, orderOf("0912.345.678", item("t-a", "38", 1)), "application/json", "tc-key-0001"), 200); again.Order["id"] != a.Order["id"] {
+		t.Error("the same digits in another spelling did not replay the order")
+	}
 	rec := post(h, orderOf("0912 345 679", item("t-a", "38", 1)), "application/json", "tc-key-0001")
 	if e := envelopeOf(t, rec); rec.Code != 409 || e.Error != "conflict" {
 		t.Errorf("another phone: %d %s", rec.Code, rec.Body)
