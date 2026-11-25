@@ -300,4 +300,5 @@ Behaviour:
 
 | Plan item | Requirement ids | Test cases |
 |---|---|---|
-| Search, filters and sorting served by the API | CAT-001, CAT-002, CAT-003, CAT-004 | `test-cases/search-filters-and-sorting-served-by-the-api.md` |
+| Search, filters and sorting served by the API | CAT-001, CAT-002, CAT-003 (items 1–5) | `test-cases/search-filters-and-sorting-served-by-the-api.md` |
+| Shop phone filters, Clear all, loading and errors (split from the item above: together they carry more than 40 criteria; built after it) | CAT-003 (items 6–8), CAT-004 | `test-cases/shop-phone-filters-clear-all-loading-and-errors.md` |
