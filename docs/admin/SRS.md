@@ -159,7 +159,7 @@ Behaviour:
 
 **Requirement ADMIN-003 — The admin account, one sign-in for every role, and protection against guessing**
 
-*As the* owner, *I want* the dealer account to come from my own settings and to resist guessing, *so that* nobody else gets in.
+*As the* owner, *I want* the admin account to come from my own settings, and every sign-in to resist guessing, *so that* nobody else gets in.
 
 Behaviour:
 
