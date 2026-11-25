@@ -830,7 +830,7 @@ Behaviour:
 
 - **Depends on:** the `data` module (collections and the paged list), the `catalogue` module (search, "any of" filters, sorting on the dealer's lists and the menu's order count), the `orders` module (per-size counts, order pairs, tokens), the `payments` module (online orders' paid state and the 30-minute rule).
 - **Depends on:** the owner supplying `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the console.
-- **Assumption:** the shop has one dealer account; no staff accounts are created in this release.
+- **Assumption:** the shop has one admin account, made from the owner's settings; staff accounts are added by the admin (ADMIN-030); customer accounts belong to the `accounts` module and share the users table and the sign-in.
 - **Assumption:** until the dealer sign-in story ships, the old pages work on the mock session; from this story they need the real session.
 
 | # | Open question | Proposed default | Who decides |
