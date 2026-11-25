@@ -154,7 +154,7 @@ Traces: SC-11 (ORD-002 AC-11)
 Check: interact_page
 
 **Scenario**: TC-16 — the shop refuses empty and blank values for a request that skips the page
-**Given**: Shoe `samba-og-w-core-black` size `38` with SHELF 5; the shoe's public `stock` read as S0; the next order number read from a placing before the case (or RESET).
+**Given**: RESET; shoe `samba-og-w-core-black` size `38` with SHELF 5; the shoe's public `stock` read as S0.
 **When**: Six REQ requests are sent, each with one change: (a) `address` `""`; (b) `address` `"   "`; (c) `customer` `""`; (d) `customer` `"   "`; (e) `city` `""`; (f) `phone` `""`.
 **Then**: Each answers 422 with `{"error":"invalid","message":<a sentence>,"errors":{…}}` whose `errors` has the key of the field at fault — (a), (b) `address`; (c), (d) `customer`; (e) `city`; (f) `phone` — with a sentence. No response has a `token` or `order`.
 Traces: SC-12 (ORD-002 AC-8, item 3)
