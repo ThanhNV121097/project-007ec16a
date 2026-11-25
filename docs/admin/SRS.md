@@ -564,8 +564,8 @@ Behaviour:
 | AC-8 | A shipped order | The dealer sets carrier `GHN`, tracking `GHN-PT27XM`, expected `2026-11-26` | They are saved and the customer's order page shows them |
 | AC-9 | An order paid by VNPay's notice, transaction `14123456` | The dealer opens it | The order page shows "Paid" and the transaction number `14123456`, read-only, with no control to change either |
 | AC-10 | An unpaid order | The dealer opens it | The order page shows "Awaiting payment" and no transaction number |
-| AC-11 | Any unpaid order, whatever its status | The dealer tries to mark it paid | 422 "Only the payment provider marks this order paid." and the order stays unpaid |
-| AC-12 | A paid order | The dealer marks it unpaid | 422 |
+| AC-11 | Until the bank-transfer story (PAY-020) is built: any unpaid order, whatever its status. After it: any unpaid order whose way to pay is not bank transfer | The dealer tries to mark it paid | 422 "Only the payment provider marks this order paid." and the order stays unpaid |
+| AC-12 | A paid order, before or after the bank-transfer story (PAY-020 lets the dealer mark a bank-transfer order paid, never unpaid) | The dealer marks it unpaid | 422 |
 | AC-13 | A packed order | The dealer changes the address | Saved |
 | AC-14 | A delivered order | The dealer changes the address | 422 naming `address`; the note can still change |
 | AC-15 | Any order | The dealer changes `total` | 422 naming `total` |
