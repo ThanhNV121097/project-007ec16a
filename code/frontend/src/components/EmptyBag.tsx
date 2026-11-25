@@ -1,7 +1,6 @@
 import { T } from "../editable";
 import { useCollection } from "../data";
 import type { Product } from "../lib/shop";
-import Bleed from "./Bleed";
 import Grid from "./Grid";
 import OutlinePill from "./OutlinePill";
 import ProductCard from "./ProductCard";
@@ -16,11 +15,12 @@ export default function EmptyBag({ heading = "pages.cart.empty_heading" }: { hea
   const fresh = useCollection<Product>("products", { where: { status: "live", is_new: true }, pageSize: 4 }).items;
   return (
     <>
-      <Bleed as="section" side="both" ground className="flex flex-col items-start gap-5 py-12">
+      <section className="flex flex-col items-start gap-5 pb-12 pt-10">
         <T k={heading} as="h1" className="max-w-[16ch] text-[length:var(--size-h1)] leading-[1.02] text-ink" />
         <T k="pages.cart.empty_line" as="p" className="max-w-[44ch] text-sm leading-relaxed text-ink-soft" />
         <OutlinePill to="/shop"><T k="pages.cart.keep" /></OutlinePill>
-      </Bleed>
+      </section>
+      <Rule />
       <div className="py-7"><T k="pages.cart.suggest" as="h2" className="text-lg text-ink" /></div>
       <Rule />
       <section className="py-10">
