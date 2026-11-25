@@ -229,6 +229,7 @@ Behaviour:
 | AC-10 | A session with role "staff" | Each of the endpoints in AC-1 to AC-6 is called | Allowed: the same answers as for an admin session |
 | AC-11 | A session with role "staff", then one with role "customer" | `GET /v1/admin/staff` and `POST /v1/admin/staff` | 403 for each |
 | AC-12 | No session | `GET /v1/admin/staff` | 401 |
+| AC-13 | An order linked to customer A's account, and a session of customer A | `GET /v1/orders/<id>` with no token | 200 with the order, without `phone`, `email`, `address`, `note` (not 403); the same call by customer B answers 404 (ORD-008 AC-11, AC-12) |
 
 **Failure, boundary and permission behaviour**
 
