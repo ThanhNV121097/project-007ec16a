@@ -6,7 +6,7 @@ import SiteFooter from "./components/SiteFooter";
 import SiteHeader from "./components/SiteHeader";
 import { useSession } from "./lib/session";
 import About from "./pages/About";
-import AdminCategories from "./pages/AdminCategories";
+import AdminKinds from "./pages/AdminKinds";
 import AdminLines from "./pages/AdminLines";
 import AdminOrder from "./pages/AdminOrder";
 import AdminOrders from "./pages/AdminOrders";
@@ -75,7 +75,7 @@ export default function App() {
       <Route path="/admin/products" element={<SignedIn><AdminProducts /></SignedIn>} />
       <Route path="/admin/products/:id" element={<SignedIn><AdminProduct /></SignedIn>} />
       <Route path="/admin/lines" element={<SignedIn><AdminLines /></SignedIn>} />
-      <Route path="/admin/categories" element={<SignedIn><AdminCategories /></SignedIn>} />
+      <Route path="/admin/categories" element={<SignedIn><AdminKinds /></SignedIn>} />
       <Route path="/admin/reviews" element={<SignedIn><AdminReviews /></SignedIn>} />
     </Routes>
   );
