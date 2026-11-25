@@ -6,6 +6,7 @@ import { lineKey, removeFromCart, setQuantity, useCart, type CartLine } from "..
 import { useDemo } from "../lib/demo";
 import { formatPrice } from "../lib/format";
 import { fill, type DeliveryOption, type Product, type ShopTerms } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import EmptyBag from "../components/EmptyBag";
 import Icon from "../components/Icon";
 import OutlinePill from "../components/OutlinePill";
@@ -76,7 +77,7 @@ export default function Cart() {
             </li>
           ))}
         </ul>
-        <aside className="lg:col-span-5 lg:pl-8">
+        <Bleed as="aside" side="right" ground className="py-8 lg:col-span-5">
           <T k="pages.cart.summary" as="h2" className="text-lg text-ink" />
           <dl className="mt-5 border-t border-line text-sm">
             <div className="flex justify-between border-b border-line py-3"><dt className="text-ink-soft"><T k="pages.cart.subtotal" /></dt><dd className="tabular-nums text-ink">{formatPrice(subtotal)}</dd></div>
@@ -90,7 +91,7 @@ export default function Cart() {
           <T k="pages.cart.pay_line" as="p" className="mt-3 text-xs leading-relaxed text-ink-soft" />
           <div className="mt-8"><PromiseRow compact /></div>
           <div className="mt-8"><OutlinePill to="/shop"><T k="pages.cart.keep" /></OutlinePill></div>
-        </aside>
+        </Bleed>
       </div>
     </>
   );
