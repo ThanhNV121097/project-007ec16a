@@ -1,7 +1,7 @@
 # Brief coverage
 
 Every line the owner chose on the brief form, quoted as the brief writes it, with the requirements that meet it.
-Requirement ids are in `docs/{module}/SRS.md` (`SITE` → `site`, `DATA` → `data`, `CAT` → `catalogue`, `ORD` → `orders`, `PAY` → `payments`, `ADMIN` → `admin`).
+Requirement ids are in `docs/{module}/SRS.md` (`SITE` → `site`, `DATA` → `data`, `CAT` → `catalogue`, `ORD` → `orders`, `PAY` → `payments`, `ADMIN` → `admin`, `ACC` → `accounts`).
 
 ## WHAT IT MUST DO
 
