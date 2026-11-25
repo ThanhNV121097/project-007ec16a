@@ -1,5 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
-import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { MemoryRouter, Route, Routes, useNavigate, type NavigateFunction } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Product from "../pages/Product";
 import type { Product as Shoe } from "../lib/shop";
@@ -93,12 +94,25 @@ function expectMissing() {
  * opened; a search suffix opens the same shoe again, which is how the page is
  * drawn again when the answer for its address arrives.
  */
+function Navigator({ into }: { into: { current?: NavigateFunction } }) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    into.current = navigate;
+  });
+  return null;
+}
+
 function open(first: string) {
-  const router = createMemoryRouter([{ path: "/shop/:id", element: <Product /> }], { initialEntries: [first] });
-  const view = render(<RouterProvider router={router} />);
+  const nav: { current?: NavigateFunction } = {};
+  const view = render(
+    <MemoryRouter initialEntries={[first]}>
+      <Navigator into={nav} />
+      <Routes><Route path="/shop/:id" element={<Product />} /></Routes>
+    </MemoryRouter>,
+  );
   const go = async (to: string, answer: Answer) => {
     hook.answer = answer;
-    await act(async () => { await router.navigate(to); });
+    await act(async () => { nav.current?.(to); });
   };
   return { ...view, go };
 }
