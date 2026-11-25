@@ -125,7 +125,7 @@ Thirty-three criteria, numbered `SC-n`. Each names the requirement and the SRS c
 - **SC-16 [CAT-004 AC-2, item 1]:** With only `q=samba` set the link is shown; pressing it removes `q`, empties the search box and shows the heading "All shoes".
 - **SC-17 [CAT-004 AC-3]:** With nothing set no "Clear all" link is shown; with only `sort=price` set none is shown either; ticking any box makes it appear.
 - **SC-18 [CAT-004 AC-4]:** With `sort=price` and filters set, pressing "Clear all" removes the filters and keeps `sort=price`: the control still reads "Price, low to high" and the cards rise by price.
-- **SC-19 [CAT-004 item 1, TL constraint]:** The dealer's lists are unchanged: where a list opts in nothing, `useTableQuery`'s `clear()` still keeps `size` (the page size) and its `filtering` still ignores it — a unit test of the hook — and `/admin/products?size=50&status=live`, signed in, still shows 50 rows a page and "Clear filters" keeps `size=50`. On `/shop`, `size=38` is never read as a page size: the list is still twelve a page.
+- **SC-19 [CAT-004 item 1, TL constraint]:** The dealer's lists are unchanged: for any caller of `useTableQuery` that does not opt in to the shop's behaviour, `clear()` still keeps `size` (the page size) and `filtering` still ignores it — a unit test of the hook — and `/admin/products?size=50&status=live`, signed in, still shows 50 rows a page and "Clear filters" keeps `size=50`. On `/shop`, `size=38` is never read as a page size: the list is still twelve a page.
 
 ### 9.5 Empty state (CAT-004 item 2)
 
