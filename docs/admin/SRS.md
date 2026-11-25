@@ -21,8 +21,11 @@ phones and addresses.
 | Actor | Who they are | What they may do in this module |
 |---|---|---|
 | Visitor | No session | Sign in. Nothing else: every dealer endpoint answers 401 |
-| Dealer | The owner or staff, signed in with the account made from the owner's settings (role "admin") | Everything in this module |
-| Other signed-in account | A session whose role is not "admin" (none is created in this release; the rule exists so one can never read dealer data) | Nothing in this module: every dealer endpoint answers 403 |
+| Admin | The owner, signed in with the account made from the owner's settings (role "admin") | Everything in this module, and the only one who manages accounts (ADMIN-030, ADMIN-031) |
+| Staff | A team member the admin added (role "staff") | Everything in this module except account management: shoes, lines, categories, reviews, orders, uploads and the overview |
+| Customer | A signed-in customer (role "customer", `accounts` module) | Nothing in this module: every dealer endpoint answers 403 and `/admin` shows "This area is for the shop's team" |
+
+In this file "the dealer" means a session whose role is admin or staff.
 
 ## 3. Scope
 
