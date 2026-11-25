@@ -4,6 +4,8 @@ import type { PaymentMethod } from "../lib/shop";
 import ListPage from "../components/admin/ListPage";
 import { columnsFromFields, fieldsOf } from "../components/admin/fields";
 import { formatDateTime } from "../lib/format";
+import type { Column } from "../components/DataTable";
+import type { Row } from "../data";
 import { LIST_COLUMNS, useAdminNav } from "./admin-nav";
 
 /** Every order, newest first: searchable, filtered by status and payment, each opening the order. */
@@ -12,7 +14,7 @@ export default function AdminOrders() {
   const keys = LIST_COLUMNS.orders;
   const methods = useCollection<PaymentMethod>("payments", { pageSize: 20 }).items;
   const columns = columnsFromFields(fieldsOf("orders").filter((f) => keys.includes(f.key)), keys.length)
-    .map((c) => (c.key === "placed_at" ? { ...c, render: (r: { placed_at?: unknown }) => formatDateTime(String(r.placed_at ?? "")) } : c));
+    .map((c): Column<Row> => (c.key === "placed_at" ? { ...c, render: (r: Row) => formatDateTime(String(r.placed_at ?? "")) } : c));
   return (
     <ListPage
       collection="orders"
