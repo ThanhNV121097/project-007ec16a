@@ -15,6 +15,7 @@ import (
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/orders"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -31,6 +32,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	// Feature modules mount here, one line each, e.g.
 	//   catalogue.Register(mux, pool, log)
 	data.Register(mux, pool, log)
+	orders.Register(mux, pool, log, orders.Options{})
 	mux.HandleFunc("/", notFound)
 
 	var h http.Handler = mux
