@@ -2,6 +2,7 @@ package orders
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -14,7 +15,7 @@ import (
 
 // answer is the body of a successful placing.
 type answer struct {
-	Order      json_RawMessage `json:"order"`
+	Order      json.RawMessage `json:"order"`
 	Token      string          `json:"token"`
 	PaymentURL string          `json:"payment_url"`
 }
