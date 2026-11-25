@@ -270,7 +270,7 @@ Behaviour:
 
 ## 7. Dependencies and assumptions
 
-- **Depends on:** the repository's `src/data/*.json` files and `schema.json`, as the owner left them when this story is built.
+- **Depends on:** the repository's `src/data/*.json` files and `schema.json`, as the owner left them when this story is built, which is after the story "Free delivery on every order, wording to match" has merged.
 - **Assumption:** the shop keeps fewer than 100 live shoes, so one page of at most 100 holds every shoe that the home, bag and checkout pages ask for with a large page size. If the catalogue grows past 100, those pages see only the first 100 until they are changed.
 - **Assumption:** the interim public read of orders (DATA-004 item 4) is acceptable for the short time before the orders and sign-in stories land; no real customer orders exist before then.
 - **Note for the pull request:** it says that the public read of orders is temporary, that customer name and city are visible until then, and which handler leaves the private and bookkeeping fields out of the query.
