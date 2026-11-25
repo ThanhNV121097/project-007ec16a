@@ -298,7 +298,7 @@ Traces: SC-20 (ORD-003 AC-14, item 7)
 Check: fetch_url
 
 **Scenario**: TC-36 — with the database unreachable, placing answers 500 with a generic body
-**Given**: SHELF(`samba-og-w-core-black`, `38`, 5); `stock` S0 and the next number read; then `set_db_available` takes the database away while the service keeps running.
+**Given**: RESET; SHELF(`samba-og-w-core-black`, `38`, 5); `stock` S0 read; then `set_db_available` takes the database away while the service keeps running.
 **When**: REQ (valid) is sent; then the database is made available again; the product and the next placing are read.
 **Then**: The answer is 500 with `{"error":"internal","message":<a short sentence>}` and no `errors` key; the body and the headers contain none of `SQL`, `pgx`, `postgres`, `connection refused`, `goroutine`, `.go:`, `0912`, `Example Street`, a table name or a stack trace; `X-Request-Id` is present. After the database is back, `stock` equals S0 and the next order gets the number it would have had (`DOI-24818` after RESET): nothing was saved and no pair left the shelf.
 Traces: SC-21 (ORD-003 "Upstream failure" row; contract §2.3 `internal`)
