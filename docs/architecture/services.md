@@ -782,7 +782,7 @@ The change is `UPDATE product_sizes SET pairs = $pairs WHERE product_id = $id AN
 { "url": "/api/v1/uploads/3f9c0a6e5b2d4c7f8a1e0b9d6c5a4f3e.jpg" }
 ```
 
-The `url` is what a record keeps in `image`, `image_back`, `image_detail`. The file is stored in `uploads` (`bytea`) under the server's own name — 32 random hex characters plus an extension chosen from the **detected** type; the uploaded file name is discarded, so `../../x.png` can name nothing.
+The `url` is what a record keeps in `image`, `image_back`, `image_detail`. It is a **browser-facing address** (hence the `/api` prefix, which the edge proxy strips); the route that serves it is `GET /v1/uploads/{name}` (§3.6) and the backend mounts nothing under `/api`. The file is stored in `uploads` (`bytea`) under the server's own name — 32 random hex characters plus an extension chosen from the **detected** type; the uploaded file name is discarded, so `../../x.png` can name nothing.
 
 | Code | HTTP | Trigger |
 |---|---|---|
