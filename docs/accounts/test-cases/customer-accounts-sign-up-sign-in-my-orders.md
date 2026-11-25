@@ -940,11 +940,11 @@ Traces: SC-35 ("A name of 100 characters is cut so the search and bag buttons st
 Check: measure_styles
 
 **Scenario**: SC-35.4 — On its own address the entry is underlined and marked as the current page
-**Given**: A signed-out visitor, then Lan signed in; 1280px.
-**When**: `/account/sign-in` is loaded signed out; `/account` is loaded as Lan; the entry's attributes and `text-decoration` are read.
-**Then**: Signed out on `/account/sign-in`, the entry has `aria-current="page"` and an underline; signed in as Lan on `/account`, the entry has `aria-current="page"` and an underline. On `/shop` neither has `aria-current`.
+**Given**: A browser operated with `interact_page`: first signed out, then signed in as Lan through the page's own sign-in form (the second half needs a session, which a bare page measurement does not hold); 1280px.
+**When**: `/account/sign-in` is loaded signed out; then Lan signs in, which lands on `/account`; then `/shop` is loaded as Lan. On each page the header entry's `aria-current` attribute and its computed `text-decoration-line` are read through `interact_page`'s inspection of the page. The signed-out `/shop` page is read too.
+**Then**: Signed out on `/account/sign-in`, the entry has `aria-current="page"` and a computed `text-decoration-line` of `underline`; signed in as Lan on `/account`, the entry has `aria-current="page"` and `underline`. On `/shop` — signed out and signed in — the entry has no `aria-current` attribute and its `text-decoration-line` is not `underline`.
 Traces: SC-35 (last but one sentence)
-Check: interact_page (attributes); measure_styles (`text-decoration-line` of the entry)
+Check: interact_page
 
 **Scenario**: SC-35.5 — At 390px the bar is unchanged and the open menu lists the five links, the entry, then the help links
 **Given**: A 390×844 window. Run three times: signed out, signed in as Lan, signed in as Minh.
