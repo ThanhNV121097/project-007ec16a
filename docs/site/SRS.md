@@ -593,7 +593,7 @@ Behaviour:
 
 1. The site's motion level is "lively", as the owner chose. When a page opens its content fades up by about 10px over about 360 ms; sections arrive as they scroll into view.
 2. The home page's headline words rise in one after another.
-3. The shop's count, and the first two figures of the returns page and the figures of the about page, count up to their value.
+3. The shop's count and the figures of the about page count up to their value. The returns page has no figure that counts up: its three words are words, not numbers (SITE-010 item 2).
 4. On a device with a fine pointer, the "New this month" cards tilt under the pointer; the "See this pair" and "Add to bag" buttons lean toward it; a shoe card's picture grows to 1.05 times its size over about 0.6 s and shows the shoe's second picture; the shoe page's photograph is looked into at twice its size.
 5. A closed row's "+" turns a quarter turn when it opens; the arrow of a line row on the home page moves 4px to the right on hover.
 6. A visitor whose device asks for reduced motion gets none of items 1 to 5: each page draws finished, every figure shows its final value at once, nothing is hidden waiting to move. Colour, underline and open/closed changes still happen.
