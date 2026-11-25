@@ -6,7 +6,7 @@ import { lineKey, removeFromCart, setQuantity, useCart, type CartLine } from "..
 import { useDemo } from "../lib/demo";
 import { formatPrice } from "../lib/format";
 import { fill, type DeliveryOption, type Product, type ShopTerms } from "../lib/shop";
-import Bleed from "../components/Bleed";
+import HeadPicture from "../components/HeadPicture";
 import EmptyBag from "../components/EmptyBag";
 import Icon from "../components/Icon";
 import OutlinePill from "../components/OutlinePill";
@@ -31,6 +31,7 @@ export default function Cart() {
   const freeText = useContent("pages.cart.free");
   const removeText = useContent("pages.cart.remove");
   const eachText = useContent("pages.cart.each");
+  const headAlt = useContent("pages.cart.head_alt");
 
   const example: CartLine[] = products.slice(1, 3).map((p) => ({
     id: p.id, name: p.name, price: p.price, image: p.image, variant: `EU ${(p.sizes ?? [])[3] ?? ""}`, qty: 1,
@@ -45,9 +46,12 @@ export default function Cart() {
 
   return (
     <>
-      <section className="flex items-end justify-between gap-6 pb-8 pt-8 lg:pt-10">
-        <T k="pages.cart.heading" as="h1" className="text-[length:var(--size-h1)] leading-[1.02] text-ink" />
-        <p className="shrink-0 pb-2 text-sm tabular-nums text-ink-soft">{fill(countText, { n: count })}</p>
+      <section className="grid gap-6 pb-8 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
+        <div className="flex flex-col justify-end gap-3 lg:col-span-6">
+          <T k="pages.cart.heading" as="h1" className="text-[length:var(--size-h1)] leading-[1.02] text-ink" />
+          <p className="text-sm tabular-nums text-ink-soft">{fill(countText, { n: count })}</p>
+        </div>
+        <HeadPicture src="/images/about-lacing.jpg" alt={headAlt} className="lg:col-span-6 lg:col-start-7" />
       </section>
       <Rule />
       <div className="grid gap-12 py-10 lg:grid-cols-12 lg:gap-8">
@@ -77,7 +81,7 @@ export default function Cart() {
             </li>
           ))}
         </ul>
-        <Bleed as="aside" side="right" ground className="py-8 lg:col-span-5">
+        <aside className="lg:col-span-5 lg:pl-8">
           <T k="pages.cart.summary" as="h2" className="text-lg text-ink" />
           <dl className="mt-5 border-t border-line text-sm">
             <div className="flex justify-between border-b border-line py-3"><dt className="text-ink-soft"><T k="pages.cart.subtotal" /></dt><dd className="tabular-nums text-ink">{formatPrice(subtotal)}</dd></div>
@@ -91,7 +95,7 @@ export default function Cart() {
           <T k="pages.cart.pay_line" as="p" className="mt-3 text-xs leading-relaxed text-ink-soft" />
           <div className="mt-8"><PromiseRow compact /></div>
           <div className="mt-8"><OutlinePill to="/shop"><T k="pages.cart.keep" /></OutlinePill></div>
-        </Bleed>
+        </aside>
       </div>
     </>
   );
