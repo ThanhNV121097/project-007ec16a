@@ -6,10 +6,9 @@ import { lineKey, removeFromCart, setQuantity, useCart, type CartLine } from "..
 import { useDemo } from "../lib/demo";
 import { formatPrice } from "../lib/format";
 import { fill, type DeliveryOption, type Product, type ShopTerms } from "../lib/shop";
-import Grid from "../components/Grid";
+import EmptyBag from "../components/EmptyBag";
 import Icon from "../components/Icon";
 import OutlinePill from "../components/OutlinePill";
-import ProductCard from "../components/ProductCard";
 import ProductImage from "../components/ProductImage";
 import PromiseRow from "../components/PromiseRow";
 import QuantityStepper from "../components/QuantityStepper";
@@ -40,25 +39,8 @@ export default function Cart() {
   const count = lines.reduce((n, l) => n + l.qty, 0);
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
   const fee = terms && subtotal >= terms.free_delivery_from ? 0 : standard?.fee ?? 0;
-  const fresh = products.filter((p) => p.is_new).slice(0, 4);
 
-  if (lines.length === 0) {
-    return (
-      <>
-        <section className="flex flex-col items-start gap-5 pb-12 pt-10">
-          <T k="pages.cart.empty_heading" as="h1" className="max-w-[14ch] text-[length:var(--size-h1)] leading-[1.02] text-ink" />
-          <T k="pages.cart.empty_line" as="p" className="max-w-[44ch] text-sm leading-relaxed text-ink-soft" />
-          <OutlinePill to="/shop"><T k="pages.cart.keep" /></OutlinePill>
-        </section>
-        <Rule />
-        <div className="py-7"><T k="pages.cart.suggest" as="h2" className="text-lg text-ink" /></div>
-        <Rule />
-        <section className="py-10">
-          <Grid count={fresh.length} max={4}>{fresh.map((p) => <ProductCard key={p.id} product={p} />)}</Grid>
-        </section>
-      </>
-    );
-  }
+  if (lines.length === 0) return <EmptyBag />;
 
   return (
     <>
