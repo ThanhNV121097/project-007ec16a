@@ -11,11 +11,11 @@ import (
 // zone needs no tzdata in the image.
 var ict = time.FixedZone("ICT", 7*3600)
 
-var number = regexp.MustCompile(`[0-9]+`)
+var digitRun = regexp.MustCompile(`[0-9]+`)
 
 // largestNumber is the biggest whole number in a text such as "2–4" (4).
 func largestNumber(s string) (int, error) {
-	found := number.FindAllString(s, -1)
+	found := digitRun.FindAllString(s, -1)
 	if len(found) == 0 {
 		return 0, errors.New("standard_days holds no number")
 	}
