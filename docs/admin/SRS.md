@@ -169,6 +169,7 @@ Behaviour:
 4. When `ADMIN_EMAIL` or `ADMIN_PASSWORD` is not set, no account is made and signing in is refused for everyone.
 5. After 5 failed sign-ins for one email, or from one network address, within 15 minutes, further sign-ins for that email or from that address are refused for 15 minutes, even with the right password, with status 429 and a note of the wait.
 6. A wrong password and an unknown email answer with the same status, the same body and a similar time.
+7. Staff and customer accounts are rows of the same users table (email, name, password hash, role, active) and sign in through the same endpoint, with the same failure messages and the same limits. An account that is switched off is refused with the same "Wrong email or password." answer.
 
 **Acceptance criteria**
 
