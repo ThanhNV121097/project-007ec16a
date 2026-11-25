@@ -200,7 +200,7 @@ Behaviour:
 | Shoe: name, price, sizes, sizes out, pictures, colour swatch, model, colourway, description, new, featured, status, category, line | read | yes | Live shoes only |
 | Category: name, picture, blurb | read | yes | |
 | Line: name, first-made year | read | yes | |
-| Shop terms: standard days, exchange days, refund days | read | yes | |
+| Shop terms: standard days | read | yes | |
 
 **Requirement SITE-005 — Shoe page: pictures, sizes and stock availability**
 
