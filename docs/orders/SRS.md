@@ -446,7 +446,7 @@ Behaviour:
 | AC-2 | The same | The browser's storage is read | It holds the order's id, number, time and token |
 | AC-3 | An online way to pay with an address | "Place order" succeeds | The bag is empty and the browser is at the payment address |
 | AC-4 | The order is refused (sold out) | The visitor reads the bag | The bag still holds every pair |
-| AC-5 | The flow "Choose a pair, pay and see the order placed" | A pair is chosen, the form is filled with `Lan Nguyen`, `0912345678`, `12 Example Street, Ward 1`, `Da Nang`, cash on delivery is chosen and "Place order" pressed | The order heading contains "Thank you" |
+| AC-5 | The flow "Choose a pair, pay and see the order placed" | A pair is chosen, the form is filled with `Lan Nguyen`, `0912345678`, `12 Example Street, Ward 1`, `Da Nang`, VNPay (the one choice) is chosen and "Place order" pressed, with the payment address empty | The order heading contains "Thank you" |
 
 **Failure, boundary and permission behaviour**
 
