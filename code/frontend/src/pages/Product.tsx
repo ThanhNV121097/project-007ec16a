@@ -234,7 +234,7 @@ export default function Product() {
           <BuyBox key={item.id} item={item} meta={meta} siblings={siblings} cutoff={terms?.dispatch_cutoff ?? ""} w={w} />
           <DetailRows item={item} line={line} cat={cat} terms={terms} payments={payments} w={w} />
         </div>
-        <div className="lg:w-7/12">
+        <div className="order-first lg:order-none lg:w-7/12">
           <Bleed side="right">
             <ProductGallery key={item.id} images={picturesOf(item)} alt={item.name} aspect="4/3"
               className="[&>[role=group]]:px-[var(--bleed)] lg:[&>[role=group]]:px-0" />
