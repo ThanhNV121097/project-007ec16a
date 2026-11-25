@@ -443,9 +443,9 @@ Behaviour:
 
 1. `/returns`, titled "Return policy" (tab title and menu label), shows the heading "No exchanges", the lead "Exchanges are not accepted. Please check your size on the size chart before you order, and contact us if you have a question.", and a picture. The owner's answer to the return question is "no exchanges allowed"; they gave no return window, shoe condition, return-shipping rule or refund terms, so the page states none.
 2. Three large words on a hairline, each with a line under it: "No" — "Exchanges are not accepted."; "Size" — "Check the size chart before you order."; "Ask" — "Call us, message us on Zalo or use the contact form." They are words, not numbers: none counts up and none comes from the shop's terms.
-3. "How to exchange" shows three numbered steps (01 Message us, 02 Hand over the pair, 03 Wear the right size), each with its sentence.
-4. "What we ask" shows four conditions, each with a tick.
-5. "Questions about returns" lists the shop's questions of topic "returns" as closed rows, beside a "Start an exchange" pill to `/contact`.
+3. "What you can do" shows three numbered steps, each with its sentence: 01 "Check your size" ("Measure your foot and find your size on the size chart before you order."), 02 "Ask before you order" ("Not sure about a size or a pair? Call us, message us on Zalo or send the contact form."), 03 "Report a problem" ("If your delivery is wrong or damaged, contact us with your order number.").
+4. "In short" shows two lines, each with a tick: "Exchanges are not accepted." and "Contact us with any question about an order, or to report a wrong or damaged delivery."
+5. "Questions about exchanges" lists the shop's questions of topic "returns" as closed rows, beside a "Contact us" pill to `/contact`. No answer offers an exchange, a refund, a window, a condition or a fee.
 
 **Acceptance criteria**
 
