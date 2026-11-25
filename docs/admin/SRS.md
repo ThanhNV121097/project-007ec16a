@@ -34,6 +34,7 @@ In this file "the dealer" means a session whose role is admin or staff.
 - Dealer sign-in and protected admin area
 - Manage shoes, lines, categories, reviews and orders
 - Dealer dashboard figures and charts
+- Staff accounts managed by the owner
 
 **Out of scope**
 
