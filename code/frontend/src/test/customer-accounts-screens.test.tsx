@@ -104,7 +104,7 @@ describe("sign in (SC-22, SC-24)", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Sign in" })).toBeInTheDocument();
     expect(screen.getByText("Buying as a guest needs no account.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/account/sign-up");
-    fireEvent.submit(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(screen.getAllByRole("alert").map((a) => a.textContent)).toEqual(["An email address is needed", "A password is needed"]);
   });
 
