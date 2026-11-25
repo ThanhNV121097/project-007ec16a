@@ -659,7 +659,7 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | The seeded orders at 25/11/2026 | `/admin` loads | "Sales this month" reads `47.810.000 ₫` with the note "13 orders" |
+| AC-1 | The seeded orders at 25/11/2026 | `/admin` loads | "Sales this month" reads `47.660.000 ₫` with the note "13 orders" |
 | AC-2 | The same | The page loads | "To pack" reads 2 with the note "placed or confirmed" |
 | AC-3 | Shoes with 73 pairs over 3 shoes | The page loads | "Pairs in stock" reads 73 with "across 3 shoes" |
 | AC-4 | Two shoes running low | The page loads | "Running low" reads 2 with "last pairs left" |
