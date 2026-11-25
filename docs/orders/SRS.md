@@ -162,9 +162,9 @@ Behaviour:
 |---|---|---|---|
 | AC-1 | The highest stored number is DOI-24817 | An order is placed | It is `DOI-24818`, id `doi-24818`, status "placed", paid false |
 | AC-2 | Two orders placed at the same moment | Both succeed | Their numbers differ |
-| AC-3 | A shoe priced 3.090.000 ₫, quantity 2, standard delivery, threshold 2.000.000 ₫ | An order is placed | The stored total is `6.180.000 ₫` |
-| AC-4 | A shoe priced 1.500.000 ₫, quantity 1, standard | An order is placed | The stored total is `1.530.000 ₫` |
-| AC-5 | A shoe priced 3.090.000 ₫, express | An order is placed | The stored total is `3.140.000 ₫` |
+| AC-3 | A shoe priced 3.090.000 ₫, quantity 2, standard delivery | An order is placed | The stored total is `6.180.000 ₫` and the stored delivery fee is 0 |
+| AC-4 | A shoe priced 1.500.000 ₫, quantity 1, standard | An order is placed | The stored total is `1.500.000 ₫` (under 2.000.000 ₫, still free) and the stored delivery fee is 0 |
+| AC-5 | A request naming the delivery option `express` | An order is placed | 422 naming `delivery`; no order is created |
 | AC-6 | The request lists a price of 1 ₫ for the shoe | It is sent | The stored total ignores it and equals the shop's price |
 | AC-7 | An order placed on Monday 10:00 Vietnam time, standard | It is saved | Its expected date is Friday of that week |
 | AC-8 | An order placed on Monday 16:00 Vietnam time, standard | It is saved | Its expected date is the next Monday (counting begins on Tuesday) |
