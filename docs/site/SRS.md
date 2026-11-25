@@ -535,7 +535,7 @@ Behaviour:
 | AC-10 | The form | The visitor tabs through it | Focus moves name, phone-or-email, message, button; the "website" field is skipped and has no visible box |
 | AC-11 | `/contact?about=Samba%20OG` | The page loads | "You are asking about Samba OG" is shown under the heading |
 | AC-12 | A phone number and an email are set in the content, address and hours are not | The page loads | Phone and Email rows are shown; Zalo, Shop and Hours rows are not |
-| AC-13 | The page loads | The visitor reads "Already answered" | Four links lead to `/size-chart`, `/shipping`, `/returns`, `/track` |
+| AC-13 | The page loads | The visitor reads "Already answered" | Four links labelled "Find your size", "Free delivery and arrival times", "Return policy" and "Track an order" lead to `/size-chart`, `/shipping`, `/returns`, `/track` |
 | AC-14 | Reply time "the same working day" | The page loads | The lead reads "Send a message about a size, an order or a gift. We answer the same working day." |
 | AC-15 | The "website" field contains text when the form is submitted | The submission is sent | The text is sent in the "website" field of the message, unchanged |
 
