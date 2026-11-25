@@ -277,8 +277,8 @@ Behaviour:
 
 Behaviour:
 
-1. Payments go through one interface that each way to pay plugs into. At launch cash on delivery is implemented. VNPay plugs in with the `payments` module.
-2. Step 03 of checkout offers a way to pay only when the shop can complete it: cash on delivery always; VNPay once it is implemented and its keys are set; bank transfer (VietQR) and MoMo not at all until their later story. Their rows stay in the records and keep showing where the design lists the shop's ways to pay (the shoe page), but checkout does not offer them.
+1. Payments go through one interface that each way to pay plugs into. VNPay is the only way to pay at launch — the owner chose "Online payment" — and there is no cash on delivery. The interface ships with the Checkout story; VNPay plugs into it with the `payments` module.
+2. Step 03 of checkout shows VNPay as its single way to pay, already selected. Cash on delivery, bank transfer (VietQR) and MoMo are not offered: their rows stay in the records, and nothing but VNPay appears at checkout or in the shoe page's "Payment options" until the later story adds bank transfer and MoMo (PAY-022).
 3. Placing an order with a way to pay that is not offered is refused.
 4. The order's answer carries a payment address: empty for cash on delivery; for an online method, the address of that provider's payment page. When it is not empty, the page sends the browser there right after the order is saved.
 5. If the provider cannot give an address at that moment, the order is still saved, the answer's payment address is empty, and the customer lands on the order page where "Pay now" is offered (ORD-007).
