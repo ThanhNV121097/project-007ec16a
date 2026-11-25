@@ -13,12 +13,12 @@ import Rule from "../components/Rule";
  */
 export default function About() {
   usePageMeta("pages.about.title", "pages.about.description");
-  const pairs = useCollection<Product>("products", { where: { status: "live" }, pageSize: 1 }).total;
+  const shoes = useCollection<Product>("products", { where: { status: "live" }, pageSize: 1 }).total;
   const lines = useCollection<Line>("lines", { pageSize: 1 }).total;
   const terms = useRecord<ShopTerms>("shop", "shop").item;
   const fig = useContent<Record<string, string>>("pages.about.figures");
   const figures = [
-    { big: String(pairs), line: fig?.pairs ?? "", count: true },
+    { big: String(shoes), line: fig?.shoes ?? "", count: true },
     { big: String(lines), line: fig?.lines ?? "", count: true },
     { big: String(terms?.rating ?? ""), line: fill(fig?.rating ?? "", { n: terms?.review_count ?? "" }), count: false },
   ];
