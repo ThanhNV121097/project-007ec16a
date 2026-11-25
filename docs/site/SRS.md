@@ -92,7 +92,7 @@ Behaviour:
 Behaviour:
 
 1. Every customer page ends with a full-width dark band holding: the wordmark and the line "Đôi — genuine adidas, chosen online and delivered across Vietnam, with a size chart on every pair."
-2. Three columns of links. "Shop": All shoes, Women, Men, Kids, Gifts (the shop narrowed to the price band under 3,000,000 ₫). "Help": Size chart, Delivery, Returns and exchange, Track an order, Contact. "The shop": About Đôi, Your bag, Dealer sign-in.
+2. Three columns of links. "Shop": All shoes, Women, Men, Kids, Gifts (the shop narrowed to the price band under 3,000,000 ₫). "Help": Size chart, Delivery, Return policy, Track an order, Contact. "The shop": About Đôi, Your bag, Dealer sign-in.
 3. Under a hairline: the independence notice ("Đôi is an independent dealer. adidas, Samba, Gazelle, Handball Spezial, Adizero and Megaride are trademarks of adidas AG; this shop is not adidas and is not run by adidas.") and the photo credits.
 4. "Dealer sign-in" in the footer is the only link to the dealer area on a customer page.
 
