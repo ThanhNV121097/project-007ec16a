@@ -544,7 +544,7 @@ Behaviour:
 | AC-5 | The same | `DOI-99999` and `0938 410 552` are typed | The not-found message is shown |
 | AC-6 | AC-4 and AC-5 | Their two answers are compared | Same status and same body |
 | AC-7 | The same | `DOI-24817` and `552` (the last digits only) are typed | The not-found message is shown |
-| AC-8 | The same | The phone is empty | The not-found message is shown and the shop is still asked (or the page shows it without asking) |
+| AC-8 | The same | The phone is empty | The shop answers 404 and the not-found message is shown |
 | AC-9 | A right pair | The lookup answers | The body holds `id`, `number`, `placed_at`, `token` and has no `phone`, `email`, `address`, `note`, `customer` or `city` |
 | AC-10 | A right pair | The browser's storage is read | It holds the id, number, time and token |
 | AC-11 | The shop is slow (3 seconds) | The button is pressed | It is disabled and reads "Searching…" until the answer arrives |
