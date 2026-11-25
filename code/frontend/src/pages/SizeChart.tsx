@@ -3,7 +3,7 @@ import { T, useContent, useList } from "../editable";
 import { usePageMeta } from "../seo";
 import { useCollection } from "../data";
 import { fill, type Line, type SizeRow } from "../lib/shop";
-import Bleed from "../components/Bleed";
+import HeadPicture from "../components/HeadPicture";
 import Disclosure from "../components/Disclosure";
 import FaqRows from "../components/FaqRows";
 import Rule from "../components/Rule";
@@ -32,10 +32,14 @@ export default function SizeChart() {
 
   return (
     <>
-      <Bleed as="section" side="both" ground className="grid gap-5 pb-10 pt-10 lg:grid-cols-12 lg:gap-8">
-        <T k="pages.sizes.heading" as="h1" className="-ml-[var(--bleed)] pl-[var(--bleed)] text-[length:var(--size-h1)] leading-[1.02] text-ink lg:col-span-6" />
-        <T k="pages.sizes.lead" as="p" className="max-w-[40ch] self-end text-sm leading-relaxed text-ink-soft lg:col-span-5 lg:col-start-8" />
-      </Bleed>
+      <section className="grid gap-6 pb-10 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
+        <div className="flex flex-col justify-end lg:col-span-6">
+          <T k="pages.sizes.heading" as="h1" className="text-[length:var(--size-h1)] leading-[1.02] text-ink" />
+          <T k="pages.sizes.lead" as="p" className="mt-5 max-w-[40ch] text-sm leading-relaxed text-ink-soft" />
+        </div>
+        <HeadPicture src="/images/head-size-chart.jpg" alt={useContent("pages.sizes.head_alt")} className="lg:col-span-6 lg:col-start-7" />
+      </section>
+      <Rule />
       <section className="grid gap-12 pb-12 pt-10 lg:grid-cols-12 lg:gap-8">
         <div className="lg:col-span-5">
           <ol className="border-t border-line">
