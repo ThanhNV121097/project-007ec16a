@@ -85,6 +85,10 @@ type Collection struct {
 	// From is the FROM clause, the table aliased t.
 	From    string
 	Columns []Column
+	// TeamOnly puts the collection's LIST behind a dealer session (admin or
+	// staff): 401 with no session, 403 for a customer. The record route is not
+	// affected.
+	TeamOnly bool
 }
 
 // public returns the columns a caller with no session may read, in output order.
@@ -155,6 +159,12 @@ func build(name, from string, cols ...Column) *Collection {
 	return &Collection{Name: name, From: from, Columns: append(cols, bookkeeping()...)}
 }
 
+// teamOnly marks a collection whose list only the shop's team may read.
+func teamOnly(c *Collection) *Collection {
+	c.TeamOnly = true
+	return c
+}
+
 // registry lists the ten collections. The only one with a join is orders: an
 // order's shoe, size and pairs are its first pair line.
 var registry = []*Collection{
@@ -166,7 +176,7 @@ var registry = []*Collection{
 		text("id"), text("topic"), text("question"), text("answer")),
 	build("lines", "lines t",
 		text("id"), text("name"), text("blurb"), col("since", Int), text("fit_note")),
-	build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
+	teamOnly(build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
 		text("id"), text("number"),
 		Column{Name: "placed_at", Kind: Instant,
 			Select: "to_char(t.placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD\"T\"HH24:MI:SS') || '+07:00'",
@@ -182,7 +192,7 @@ var registry = []*Collection{
 		text("customer"),
 		private("phone"), private("email"), private("address"),
 		text("city"),
-		private("note")),
+		private("note"))),
 	build("payments", "payment_methods t",
 		text("id"), text("name"), text("note"), col("online", Bool), text("icon")),
 	build("products", "products t",
