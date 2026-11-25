@@ -250,7 +250,7 @@
       },
       "signin": {
         "description": "Sign in to see orders, stock and sales.",
-        "image_alt": "Shoe boxes stacked on the shelves of a stockroom",
+        "image_alt": "Boxes stacked in a stockroom",
         "inside": [
           {
             "text": "Orders to confirm, pack and send, newest first."
