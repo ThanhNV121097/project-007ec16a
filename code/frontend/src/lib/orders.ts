@@ -191,22 +191,27 @@ export interface StoredOrder {
 const STORE = "doi:placed";
 let memory: StoredOrder[] = [];
 
-export function storedOrders(): StoredOrder[] {
+function onDisk(): StoredOrder[] {
   try {
-    const v = JSON.parse(localStorage.getItem(STORE) ?? "null") as unknown;
-    if (Array.isArray(v)) return v as StoredOrder[];
+    const v = JSON.parse(localStorage.getItem(STORE) ?? \"null\") as unknown;
+    return Array.isArray(v) ? (v as StoredOrder[]) : [];
   } catch {
-    /* unreadable or refused: what this page remembers */
+    return [];
   }
-  return memory;
+}
+
+/** Newest first: what storage holds, and what only this page load remembers. */
+export function storedOrders(): StoredOrder[] {
+  const disk = onDisk();
+  return [...memory.filter((m) => !disk.some((d) => d.id === m.id)), ...disk];
 }
 
 export function rememberOrder(placed: Placed): void {
   const { id, number, placed_at } = placed.order;
   const kept: StoredOrder = { id, number, placed_at, token: placed.token };
-  memory = [kept, ...storedOrders().filter((o) => o.id !== id)];
+  memory = [kept, ...memory.filter((o) => o.id !== id)];
   try {
-    localStorage.setItem(STORE, JSON.stringify(memory));
+    localStorage.setItem(STORE, JSON.stringify([kept, ...onDisk().filter((o) => o.id !== id)]));
   } catch {
     /* storage refused: the order is placed and the token lasts this page load */
   }
