@@ -588,7 +588,7 @@ Behaviour:
 | AC-4 | Five failures from one address across five different order numbers | A lookup from that address for a sixth order | 429 |
 | AC-5 | Five failures against one order number from address A | A lookup of that order from address B | 429 for that order number as well |
 | AC-6 | Five failures against a number that does not exist | A sixth try | 429 (no difference from an existing number) |
-| AC-7 | Three failures then a match, then two failures | The count is read | A match does not add to it: the sixth failure is counted at the fifth failed try after the match, not before |
+| AC-7 | Three wrong tries, then a right one, then two wrong tries, all within 15 minutes | A further try is made | 429: the right try neither counted as a failure nor cleared the three |
 | AC-8 | A lookup lock is on for `DOI-24817` | The order page `/orders/doi-24817` is opened in the browser that placed it | The order is shown |
 | AC-9 | A refused lookup | The 429 is read | It carries the wait in seconds |
 
