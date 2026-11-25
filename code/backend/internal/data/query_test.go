@@ -9,14 +9,35 @@ import (
 )
 
 // ordersShape is what the orders collection looked like while the generic reader
-// served it. Orders are read by internal/orders now, but the grammar still has to
-// read an instant, a date and a private column, so these tests keep the shape.
-var ordersShape = build("orders", "orders t",
+// served it. Orders are read by internal/orders now and are no longer in the
+// registry, but the grammar still has to read an instant, a date, a nullable
+column of a left join and a private column, so these tests keep the shape.
+var ordersShape = build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
 	text("id"), text("number"),
-	Column{Name: "placed_at", Kind: Instant, Select: "t.placed_at"},
-	text("status"), col("qty", Int), col("total", Int),
-	Column{Name: "eta", Kind: Date, Select: "t.eta"},
-	text("customer"), private("phone"), private("email"), private("address"), text("city"), private("note"))
+	Column{Name: "placed_at", Kind: Instant,
+		Select: "to_char(t.placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD\"T\"HH24:MI:SS') || '+07:00'",
+		Filter: "t.placed_at"},
+	text("status"),
+	Column{Name: "product", Kind: Text, Select: "coalesce(oi.product_id,'')", Filter: "oi.product_id", Nullable: true},
+	Column{Name: "size", Kind: Text, Select: "coalesce(oi.size,'')", Filter: "oi.size", Nullable: true},
+	Column{Name: "qty", Kind: Int, Select: "coalesce(oi.qty,0)", Filter: "oi.qty", Nullable: true},
+	col("total", Int),
+	ref("payment", "payment_method_id"), col("paid", Bool), ref("delivery", "delivery_option_id"),
+	text("carrier"), text("tracking"),
+	Column{Name: "eta", Kind: Date, Select: "coalesce(to_char(t.eta,'YYYY-MM-DD'),'')", Filter: "t.eta", Nullable: true},
+	text("customer"),
+	private("phone"), private("email"), private("address"),
+	text("city"),
+	private("note")).
+	searching(over("number", "customer"))
+
+// collectionOf is a collection of the registry, or the shape of the orders.
+func collectionOf(name string) *Collection {
+	if name == "orders" {
+		return ordersShape
+	}
+	return byName[name]
+}
 
 func parse(t *testing.T, collection, query string) (listRequest, map[string]string) {
 	t.Helper()
@@ -24,11 +45,7 @@ func parse(t *testing.T, collection, query string) (listRequest, map[string]stri
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := byName[collection]
-	if collection == "orders" {
-		c = ordersShape
-	}
-	return parseList(c, q)
+	return parseList(collectionOf(collection), q)
 }
 
 // whereOf is the condition and the bound values a query string stands for.
@@ -38,7 +55,7 @@ func whereOf(t *testing.T, collection, query string) (string, []any) {
 	if faults != nil {
 		t.Fatalf("%s?%s: %v", collection, query, faults)
 	}
-	return where(byName[collection], req)
+	return where(collectionOf(collection), req)
 }
 
 func orderOf(t *testing.T, collection, query string) string {
@@ -184,7 +201,7 @@ func TestAnyOfListsAreBoundAsOneArrayOfTheFieldsKind(t *testing.T) {
 		{"products", "rating=4.8,4.9", "t.rating = ANY($1::text[]::numeric[])", []string{"4.8", "4.9"}},
 		{"products", "featured=true,false", "t.featured = ANY($1::boolean[])", []bool{true, false}},
 		{"products", "released=2026-11-03,2026-11-10", "t.released = ANY($1::text[]::date[])", []string{"2026-11-03", "2026-11-10"}},
-		{"products", "sizes_low=40,38", "t.sizes_low && $1::text[]", []string{"40", "38"}},
+		{"products", "sizes_low=40,38", "ps.sizes_low && $1::text[]", []string{"40", "38"}},
 		// One item left after the empty ones are dropped is the plain form, so
 		// status=live keeps the equality an index is walked on.
 		{"products", "category=,women,", "t.category_id = $1", "women"},
@@ -439,7 +456,7 @@ func TestEveryCollectionSearchesOnlyItsNamedFields(t *testing.T) {
 		"sizes":      {"t.eu", "t.uk", "t.us_m", "t.us_w"},
 	}
 	for name, fields := range want {
-		search := byName[name].Search
+		search := collectionOf(name).Search
 		for _, f := range fields {
 			if !strings.Contains(search, f) {
 				t.Errorf("%s: the search does not look in %s: %s", name, f, search)
@@ -478,7 +495,7 @@ func TestSortIsOneFieldThenTheSeedOrder(t *testing.T) {
 		{"products", "sort=rating", "NULLIF(t.rating, 0) ASC NULLS LAST, t.seq ASC"},
 		{"products", "sort=name", "doi_fold(left(t.name, 100)) ASC, t.name ASC, t.seq ASC"},
 		{"products", "sort=-line", "doi_fold(left(t.line_id, 100)) DESC NULLS LAST, t.line_id DESC NULLS LAST, t.seq ASC"},
-		{"products", "sort=-sizes", "t.sizes DESC, t.seq ASC"},
+		{"products", "sort=-sizes", "ps.sizes DESC, t.seq ASC"},
 		{"products", "sort=%20-price%20", "t.price DESC, t.seq ASC"},
 		{"reviews", "sort=-date", "t.date DESC, t.seq ASC"},
 		{"reviews", "sort=-rating", "t.rating DESC NULLS LAST, t.seq ASC"},
@@ -519,8 +536,13 @@ func TestASortThatIsNotAPublicFieldIsAFault(t *testing.T) {
 
 func TestSizeIsTheEUSizeFilterOfShoesOnly(t *testing.T) {
 	cond, args := whereOf(t, "products", "size=38")
-	if !strings.Contains(cond, "unnest($1::text[])") || !strings.Contains(cond, "w.s = ANY(t.sizes)") || !strings.Contains(cond, "NOT (w.s = ANY(t.sizes_out))") ||
-		!reflect.DeepEqual(args, []any{[]string{"38"}}) {
+	// A size is available when product_sizes holds a pair of it for the shoe.
+	for _, want := range []string{"FROM product_sizes sz", "sz.product_id = t.id", "sz.size = ANY($1::text[])", "sz.pairs > 0"} {
+		if !strings.Contains(cond, want) {
+			t.Errorf("%q lacks %q", cond, want)
+		}
+	}
+	if !reflect.DeepEqual(args, []any{[]string{"38"}}) {
 		t.Errorf("%q %v", cond, args)
 	}
 	// A size is text: 36 2/3 comes percent-encoded; items are trimmed and a repeat dropped.
@@ -548,7 +570,7 @@ func TestTheConditionsOfOneRequestApplyTogether(t *testing.T) {
 		t.Errorf("args %#v, want %#v", args, want)
 	}
 	for _, frag := range []string{
-		"t.line_id = $1 AND t.category_id = $2 AND t.status = $3 AND (t.price <= $4::numeric) AND EXISTS (SELECT 1 FROM unnest($5::text[])",
+		"t.line_id = $1 AND t.category_id = $2 AND t.status = $3 AND (t.price <= $4::numeric) AND EXISTS (SELECT 1 FROM product_sizes sz WHERE sz.product_id = t.id AND sz.size = ANY($5::text[]) AND sz.pairs > 0)",
 		"strpos(t.search_text, (SELECT doi_fold($6)))",
 		"ORDER BY t.price ASC, t.seq ASC LIMIT $7 OFFSET $8",
 	} {
