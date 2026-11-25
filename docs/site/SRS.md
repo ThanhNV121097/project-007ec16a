@@ -661,6 +661,50 @@ Behaviour:
 |---|---|---|---|
 | Shoe by id | read | yes | |
 
+### 4.3 Free delivery on every order, wording to match
+
+**Requirement SITE-016 — Delivery is free on every order, and every page says so the same way**
+
+*As a* customer, *I want to* see that delivery costs nothing on every order and that I pay online, *so that* the total I see is the total I pay.
+
+Behaviour:
+
+1. The owner chose "Free delivery" (every order ships free: no fee, no free-shipping threshold, no priced express option) and "Online payment" (VNPay only, no cash on delivery). This requirement makes the built site say so. The owner has not given delivery areas, working days or a carrier: the working days, the carriers (GHN, GHTK) and the coverage line stay as the design suggested for the standard option and are the owner's to correct in the Studio (open question 6).
+2. The records: `delivery` holds one record, `standard`, with fee 0, and no `express` record. `shop` has no `free_delivery_from`, `express_days` or `express_cities`. The description of an order's delivery choices lists `standard` only. Every sample order has delivery `standard`, delivery fee 0 and a total equal to the sum of its pairs (DOI-24815 becomes 5.890.000 ₫, DOI-24810 3.290.000 ₫, DOI-24806 3.090.000 ₫). The `payments` records stay as they are; the Checkout story decides which of them are offered.
+3. The bag page (SITE-007), checkout and the order page (`orders` module), the shoe page (SITE-005, SITE-006) and the Delivery page (SITE-009) calculate no fee and no threshold. Wherever delivery is shown as an amount it reads "Free" (the site's own word for it, `pages.cart.free`), never `0 ₫`, and the total equals the sum of the pairs for any basket, under or over 2.000.000 ₫.
+4. The Delivery page says free delivery on every order and names no express, no cities, no "Free over" amount and no cut-off time (SITE-009). The contact page's link reads "Free delivery and arrival times" (SITE-012).
+5. Payment wording says online through VNPay (card, domestic ATM card, QR): the bag's line (SITE-007), the promise "Pay online" (SITE-004), the shoe page's "Payment options" (SITE-006) and the question on payment, "How do I pay?" — "Online through VNPay, by card, domestic ATM card or QR." — which replaces "Can I pay cash on delivery?".
+6. Nothing in the site's source offers cash on delivery or an express option.
+7. Nothing else changes: the site builds and lints clean and looks as before apart from these words and rows.
+
+**Acceptance criteria**
+
+| # | Given | When | Then |
+|---|---|---|---|
+| AC-1 | The site after this story | `code/frontend/src` is searched | There is no `free_delivery_from`, no `express_days`, no `express_cities`, no express delivery option, no delivery fee of 30000 or 50000, and no offer of cash on delivery |
+| AC-2 | The seeded delivery records | They are read | There is exactly one, `standard`, with fee 0 |
+| AC-3 | A bag worth 1.500.000 ₫ and a bag worth 3.090.000 ₫ | The bag page, the checkout summary and the order page of each are read | Delivery reads "Free" on each, never `0 ₫`, and Total equals the sum of the pairs |
+| AC-4 | The sample orders | They are read | Each has delivery `standard`, fee 0 and a total equal to the sum of its pairs; DOI-24815 is 5.890.000 ₫, DOI-24810 3.290.000 ₫, DOI-24806 3.090.000 ₫ |
+| AC-5 | The Delivery page | It is read | It shows "Free" as the only cost and no express, no cities and no cut-off (SITE-009 AC-1 to AC-5) |
+| AC-6 | The shop's questions of topic "payment" | They are read | One row, "How do I pay?", answers "Online through VNPay, by card, domestic ATM card or QR."; no row mentions cash on delivery |
+| AC-7 | Every customer page | Its text is searched | The words "cash on delivery" and "pay on delivery" and any express delivery option appear nowhere |
+
+**Failure, boundary and permission behaviour**
+
+| Case | Condition | Expected behaviour |
+|---|---|---|
+| Boundary | A basket under, at or over 2.000.000 ₫ | Delivery "Free" and Total equal to the pairs total in every case (AC-3) |
+| — | — | Not applicable: this story changes words, rows and records; the approved design has no error state for it, and it has no roles |
+
+**Data touched**
+
+| Field | Type | Required | Rule |
+|---|---|---|---|
+| Delivery record `standard`: name, days, note, fee | read | yes | Fee 0 |
+| Shop terms | read | yes | No free-delivery threshold, express days or express cities |
+| Sample orders: delivery, delivery fee, total | read | yes | Total is the sum of the pairs |
+| Words: bag line, promises, payment question, Delivery page, contact link | read | yes | From the site's content file |
+
 ## 5. Screens
 
 The design's pages and their states. A screen the design draws once has the single state `default`.
