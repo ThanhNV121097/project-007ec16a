@@ -62,6 +62,8 @@ No body: any request body (`Content-Length` above 0, or a chunked body with one 
 
 **`src/lib/api.ts` exports only `get` today** (PR #39). This story needs `api.post<T>(path, body?)`: `credentials: "include"`, `Content-Type: application/json` only when a body is given, the same 15 s timeout, the same `ApiError` mapping, **never retried** (a POST is not idempotent), and a `204` resolves `undefined` instead of failing (today `send` treats an empty body as a failure, which is right for a GET). If the checkout or order-page backend PR has already added a `post`, reuse it and extend only for the `204`; otherwise this PR adds it as an additive export. Whichever merges second keeps one `post`.
 
+The customer-accounts UI (plan item 15, PR #43) adds `useMe` and `refreshMe` over the same `GET /v1/auth/me` for the shop header, and expects `session.ts`'s `signIn` and `signOut` to call `refreshMe()` once. This story's `session.ts` does not know them: whichever of the two backend PRs merges second makes that one-line addition and keeps `useAuth`'s `epoch` guard. Both read one endpoint, so there is no backend consequence.
+
 Nothing else in the frontend changes: no `Admin*.tsx`, no `DashboardLayout.tsx`, no `RequireRole.tsx`, no `App.tsx` line (SC-39). `credentials: "include"` on `api.get` already carries the cookie to every existing data call.
 
 ## 3. The Go surface (`internal/auth`)
@@ -74,8 +76,9 @@ Package layout: `auth.go` (types, context, `Resolve`, `Require`), `signin.go` (t
 type Role string
 const (Admin Role = "admin"; Staff Role = "staff"; Customer Role = "customer")
 
-type User struct { ID, Email, Name string; Role Role }   // Name is the stored name, possibly ""
-func (u User) DisplayName() string                       // §3.4
+type User struct { ID, Email, Name string; Role Role; Active bool } // Name is the stored name, possibly ""; Active is true on every row Resolve and CreateUser return
+func DisplayName(name, email string) string              // §3.4, the one rule for a display name
+func (u User) DisplayName() string                       // DisplayName(u.Name, u.Email)
 
 func FromContext(ctx context.Context) (User, bool)       // what Resolve found
 func Require(roles ...Role) httpx.Middleware             // 401 / 403 / pass
@@ -94,6 +97,8 @@ func ClearCookie(w http.ResponseWriter, r *http.Request)
 ```
 
 `Querier` is the slice of `pgxpool.Pool` the package needs (`Query`, `QueryRow`, `Exec`) so a test passes a pool or a transaction; `Beginner` adds `Begin`. `Require` takes `auth.Admin`, `auth.Staff`, `auth.Customer` (and `auth.Require("admin")` compiles with an untyped constant). `CreateUser` is what this story's tests use to insert staff and customer rows, and what the staff and accounts stories call; it **never** hashes (R6): callers pass `PasswordHash` from `HashPassword`. `SetActive`, `SetPassword`, `UpdateProfile` and `Delete` of `_base.md` §1.1 are **not built here**; the staff and accounts stories add them to this package under the rules R1–R6 of the ERD file §6 (every one of them ends the user's sessions in its own transaction).
+
+**Reconciliation with the staff design (plan item 14, merged in PR #46).** That design calls `auth.NormalizeEmail`, `auth.HashPassword`, `auth.CreateUser`, `auth.ErrEmailTaken` and a display-name rule, and names its own list-row type `auth.Account{ID, Name, Email, Role string; Active bool}` with `Team`, `Target`, `EmailTaken`, `SetName`, `SetActive`, `SetPassword` and `DeleteStaff`. This story ships the first four exactly as listed above plus the package function `DisplayName(name, email)`; `NewUser` here is a superset of the four fields the staff story passes (`Name`, `Email`, `PasswordHash`, `Role`; the omitted `Phone`, `Address` and `City` are `''`). The staff story's backend PR adds the rest, and its `Account.DisplayName()` calls `DisplayName(name, email)`, so the admin row's empty stored name is shown the way `GET /v1/auth/me` shows it. `CreateUser` returns a `User` with `Active` true, from which the staff story builds its `201` body. **One `CreateUser` and one `NewUser`, never two:** if the staff backend merges first and already declares them, this story's backend adopts them and adds only the fields it needs.
 
 ### 3.2 `Resolve` and `Require`
 
