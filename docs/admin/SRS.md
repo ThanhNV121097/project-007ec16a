@@ -506,15 +506,21 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | Size `40` has 2 pairs and is in the last-pairs list | The shoe is saved with `40` moved to the sold-out list | `40` has 0 pairs and stock falls by 2 |
-| AC-2 | Size `41 1/3` is sold out | It is removed from the sold-out list and saved | It has 3 pairs and stock rises by 3 |
-| AC-3 | Size `38` has 8 pairs | `38` is added to the last-pairs list and saved | `38` has 2 pairs |
-| AC-4 | Size `38` has 1 pair and is in the last-pairs list | The shoe is saved unchanged | `38` still has 1 pair |
-| AC-5 | A shoe whose counts sum to 18 | It is saved with "Pairs in stock" typed as 99 | The saved stock is 18 and the form shows 18 |
-| AC-6 | A size in both lists | The shoe is saved | The size is sold out and has 0 pairs |
-| AC-7 | A size is removed from the shoe's sizes | The shoe is saved | The size and its count are gone |
-| AC-8 | A price-only save | `PUT` carries only `price` | Counts and lists are unchanged |
-| AC-9 | After any save | The shoe's lists are read | They agree with the counts: 0 pairs in the sold-out list only, 1–2 in the last-pairs list only |
+| AC-1 | A staff member creates a shoe with a price, pictures, status live and counts 4, 2 and 0 for sizes 38, 39 and 40 | "Add" is pressed | 201; `/shop` shows the shoe; its page shows 38 in stock, 39 with the last-pairs dot and 40 struck through; "pairs in stock" is 6 |
+| AC-2 | The same shoe | `GET /v1/products?size=40`, then `?size=38` | The shoe is not among the items for `40` and is for `38` |
+| AC-3 | Size `38` has 4 pairs | Staff set it to 0 on the shoe's admin page | "Saved." shows; the shoe page shows 38 sold out; 38 is in the sold-out list and no longer matches the size filter |
+| AC-4 | Size `38` has 5 pairs | Staff set it to 2 | 38 is in the last-pairs list and the shoe page shows it as last pairs |
+| AC-5 | Size `38` has 2 pairs and is in the last-pairs list | Staff set it to 3 | 38 is in neither list |
+| AC-6 | Size `38` has 1 pair | An order for 1 pair of it is placed | 38 has 0 pairs; after a reload the shoe's admin page shows 0 for 38 and the shoe page shows it sold out |
+| AC-7 | A shoe whose counts sum to 18 | It is read | "Pairs in stock" is 18 and is read-only in the form |
+| AC-8 | A count of -1, of 2.5 and of `abc` | The shoe is saved with each | 422 naming that size's count each time; nothing changes |
+| AC-9 | The admin page shows 38 with 4 pairs and an order then takes 2 | Staff change 38 to 6 from the number they saw (4) | 409 "Pairs were just taken by an order. Check the number and save again."; the stored count stays 2 and the row shows 2 |
+| AC-10 | A size is removed from the shoe's sizes | The shoe is saved | The size and its count are gone |
+| AC-11 | A price-only save | `PUT` carries only `price` | Counts and lists are unchanged |
+| AC-12 | A customer session, then no session | A count is changed | 403, then 401 |
+| AC-13 | An admin session and a staff session | Each changes a count | Both succeed |
+| AC-14 | A count change is in flight, then the shop is down | The row is read | "Saving…" shows, then "Saved."; with the shop down "We could not save. Please try again." shows and the typed number stays |
+| AC-15 | A placeholder shoe from the first design | Staff set it to draft | It leaves `/shop`, search and the home page; it can be deleted only when no order refers to it (ADMIN-014) |
 
 **Failure, boundary and permission behaviour**
 
