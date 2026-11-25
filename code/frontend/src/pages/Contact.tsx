@@ -3,7 +3,7 @@ import { T, useContent, useList } from "../editable";
 import { usePageMeta } from "../seo";
 import { useRecord } from "../data";
 import { fill, type ShopTerms } from "../lib/shop";
-import Bleed from "../components/Bleed";
+import HeadPicture from "../components/HeadPicture";
 import ContactForm from "../components/ContactForm";
 import Icon from "../components/Icon";
 import SpecList from "../components/SpecList";
@@ -27,10 +27,11 @@ export default function Contact() {
   const email = useContent("contact.email");
   const address = useContent("contact.address");
   const hours = useContent("contact.hours");
+  const headAlt = useContent("pages.contact.head_alt");
   return (
     <>
-      <section className="grid gap-12 pb-14 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
-        <div className="lg:col-span-5">
+      <section className="grid gap-x-8 gap-y-10 pb-14 pt-8 lg:grid-cols-12 lg:pt-10">
+        <div className="flex flex-col justify-end lg:col-span-6">
           <h1 data-testid="contact-heading" className="max-w-[12ch] text-[length:var(--size-h1)] leading-[1.02] text-ink">
             <T k="contact.heading" />
           </h1>
@@ -38,7 +39,10 @@ export default function Contact() {
             <p className="mt-5 text-sm text-ink-soft"><T k="pages.contact.about" />{" "}<span className="text-ink">{about}</span></p>
           )}
           <p className="mt-5 max-w-[40ch] text-sm leading-relaxed text-ink-soft">{lead}</p>
-          <div className="mt-6">
+        </div>
+        <HeadPicture src="/images/about-stockroom.jpg" alt={headAlt} className="lg:col-span-6 lg:col-start-7" />
+        <div className="lg:col-span-5">
+          <div>
             <SpecList items={[
               [<span key="p" className="inline-flex items-center gap-2"><Icon name="phone" size={16} /><T k="pages.contact.phone" /></span>, phone && <a href={`tel:${phone}`} className="underline underline-offset-4">{phone}</a>],
               [<span key="z" className="inline-flex items-center gap-2"><Icon name="chat" size={16} /><T k="pages.contact.zalo" /></span>, zalo],
@@ -59,10 +63,10 @@ export default function Contact() {
             ))}
           </ul>
         </div>
-        <Bleed side="right" ground className="py-8 lg:col-span-6 lg:col-start-7">
+        <div className="lg:col-span-6 lg:col-start-7">
           <T k="pages.contact.form_heading" as="h2" className="mb-6 text-lg text-ink" />
           <ContactForm />
-        </Bleed>
+        </div>
       </section>
     </>
   );
