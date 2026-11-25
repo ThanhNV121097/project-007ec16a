@@ -1,0 +1,176 @@
+package db
+
+import (
+	"context"
+	"fmt"
+	"io/fs"
+	"log/slog"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// migrationLockKey serialises Migrate across instances that start together:
+// the second one waits, then finds nothing left to apply.
+const migrationLockKey int64 = 7424001
+
+var (
+	upName       = regexp.MustCompile(`^(\d{14})_[a-z0-9_]+\.up\.sql$`)
+	concurrently = regexp.MustCompile(`(?i)\bconcurrently\b`)
+)
+
+type migration struct{ version, name string }
+
+// Migrate applies every *.up.sql in fsys that schema_migrations does not list,
+// in filename order, and records each one. Running it again is a no-op.
+//
+// A file runs in one transaction with its schema_migrations row. A file whose
+// SQL contains CONCURRENTLY runs outside one — Postgres refuses CREATE INDEX
+// CONCURRENTLY inside a transaction — one statement at a time, and is recorded
+// afterwards, so its statements must be safe to run twice.
+func Migrate(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS, log *slog.Logger) error {
+	files, err := listUp(fsys)
+	if err != nil {
+		return err
+	}
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire connection: %w", err)
+	}
+	defer conn.Release()
+
+	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
+		return fmt.Errorf("take migration lock: %w", err)
+	}
+	defer func() {
+		// The lock belongs to this session: release it even when ctx is done,
+		// or the pooled connection would carry it into its next use.
+		_, _ = conn.Exec(context.WithoutCancel(ctx), "SELECT pg_advisory_unlock($1)", migrationLockKey)
+	}()
+
+	if _, err := conn.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
+		version    text PRIMARY KEY,
+		name       text NOT NULL,
+		applied_at timestamptz NOT NULL DEFAULT now()
+	)`); err != nil {
+		return fmt.Errorf("create schema_migrations: %w", err)
+	}
+	applied, err := appliedVersions(ctx, conn)
+	if err != nil {
+		return err
+	}
+	for _, m := range files {
+		if applied[m.version] {
+			continue
+		}
+		body, err := fs.ReadFile(fsys, m.name)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", m.name, err)
+		}
+		if err := apply(ctx, conn, m, string(body)); err != nil {
+			return fmt.Errorf("migration %s: %w", m.name, err)
+		}
+		log.Info("migration applied", "version", m.version, "name", m.name)
+	}
+	return nil
+}
+
+func appliedVersions(ctx context.Context, conn *pgxpool.Conn) (map[string]bool, error) {
+	rows, err := conn.Query(ctx, "SELECT version FROM schema_migrations")
+	if err != nil {
+		return nil, fmt.Errorf("read schema_migrations: %w", err)
+	}
+	defer rows.Close()
+	applied := map[string]bool{}
+	for rows.Next() {
+		var v string
+		if err := rows.Scan(&v); err != nil {
+			return nil, fmt.Errorf("read schema_migrations: %w", err)
+		}
+		applied[v] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read schema_migrations: %w", err)
+	}
+	return applied, nil
+}
+
+func apply(ctx context.Context, conn *pgxpool.Conn, m migration, body string) error {
+	const record = "INSERT INTO schema_migrations (version, name) VALUES ($1, $2)"
+	if needsNoTransaction(body) {
+		for _, stmt := range splitStatements(body) {
+			if _, err := conn.Exec(ctx, stmt); err != nil {
+				return err
+			}
+		}
+		_, err := conn.Exec(ctx, record, m.version, m.name)
+		return err
+	}
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }() // a no-op once committed
+	if _, err := tx.Exec(ctx, body); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, record, m.version, m.name); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// listUp returns the *.up.sql files of fsys's root, in filename order. A name
+// that does not follow the convention, or a repeated version, is an error:
+// silently skipping a migration is the worse failure.
+func listUp(fsys fs.FS) ([]migration, error) {
+	entries, err := fs.ReadDir(fsys, ".")
+	if err != nil {
+		return nil, fmt.Errorf("list migrations: %w", err)
+	}
+	var out []migration
+	seen := map[string]string{}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".up.sql") {
+			continue
+		}
+		m := upName.FindStringSubmatch(name)
+		if m == nil {
+			return nil, fmt.Errorf("migration %q: name must be YYYYMMDDHHMMSS_description.up.sql", name)
+		}
+		if other, dup := seen[m[1]]; dup {
+			return nil, fmt.Errorf("migrations %q and %q share the version %s", other, name, m[1])
+		}
+		seen[m[1]] = name
+		out = append(out, migration{version: m[1], name: name})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].name < out[j].name })
+	return out, nil
+}
+
+func needsNoTransaction(body string) bool { return concurrently.MatchString(body) }
+
+// splitStatements cuts a no-transaction file at its semicolons and drops the
+// pieces that hold nothing but comments. It does not understand $$ bodies,
+// which is why such files may hold plain statements only.
+func splitStatements(body string) []string {
+	var out []string
+	for _, part := range strings.Split(body, ";") {
+		if hasSQL(part) {
+			out = append(out, strings.TrimSpace(part))
+		}
+	}
+	return out
+}
+
+func hasSQL(part string) bool {
+	for _, line := range strings.Split(part, "\n") {
+		if line = strings.TrimSpace(line); line != "" && !strings.HasPrefix(line, "--") {
+			return true
+		}
+	}
+	return false
+}
