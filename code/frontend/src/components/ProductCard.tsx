@@ -25,7 +25,7 @@ export default function ProductCard({ product, tilt = false }: { product: Produc
     >
       <ProductImage src={product.image} hover={product.image_back} alt={product.name} aspect="1/1"
         slot={`/images/products/${product.id}.jpg`} />
-      <span className="mt-3 flex items-baseline justify-between gap-3 text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink">
+      <span className="mt-3 flex flex-col gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
         <span className="min-w-0 underline-offset-4 group-hover:underline">{product.name}</span>
         <span className="shrink-0 tabular-nums">{formatPrice(product.price)}</span>
       </span>
