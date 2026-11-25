@@ -46,7 +46,7 @@ shop has no sales, the "In stock" figures drift from the shelf, and every custom
 
 **Requirement ORD-001 — The checkout page**
 
-*As a* customer, *I want to* see what I am buying, choose delivery and payment and see the total before I place the order, *so that* I know what I will pay.
+*As a* customer, *I want to* see what I am buying, that delivery is free and how I will pay, and the total before I place the order, *so that* I know what I will pay.
 
 Behaviour:
 
