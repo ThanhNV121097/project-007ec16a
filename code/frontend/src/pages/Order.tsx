@@ -41,7 +41,7 @@ function etaLine(view: View, words: { eta: string; done: string }): string {
 function OrderHead({ view, headline, words }: { view: View; headline: string; words: { number: string; eta: string; done: string } }) {
   const first = view.lines[0];
   return (
-    <section className="grid gap-8 pb-10 pt-8 lg:grid-cols-12 lg:pt-10">
+    <section className="grid gap-x-8 gap-y-10 pb-10 pt-8 lg:grid-cols-12 lg:pt-10">
       <div className="lg:col-span-6">
         <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink-soft">
           {fill(words.number, { number: view.number, date: formatDateTime(view.placed_at) })}
@@ -50,12 +50,13 @@ function OrderHead({ view, headline, words }: { view: View; headline: string; wo
         <p className="mt-5 text-sm text-ink-soft">{etaLine(view, words)}</p>
       </div>
       {first?.image && (
-        <Bleed side="right" className="lg:col-span-5 lg:col-start-8">
+        <Bleed side="right" className="lg:col-span-5 lg:col-start-8 lg:row-span-2">
           <Link to={`/shop/${first.id}`} aria-label={first.name} data-record={`products:${first.id}`} className="block">
             <ProductImage src={first.image} alt={first.name} aspect="4/3" eager />
           </Link>
         </Bleed>
       )}
+      <div className="lg:col-span-6"><OrderSteps status={view.status} /></div>
     </section>
   );
 }
@@ -114,20 +115,15 @@ export default function Order() {
     <>
       <OrderHead view={view} headline={headline} words={{ number: numberText, eta: etaText, done: doneText }} />
       <Rule />
-      <section className="py-10">
-        <OrderSteps status={view.status} />
-      </section>
-      <Rule />
       <div className="grid gap-12 py-10 lg:grid-cols-12 lg:gap-8">
         <div className="lg:col-span-7">
           <T k="pages.order.items" as="h2" className="text-lg text-ink" />
           <ul className="mt-5 border-t border-line">
             {view.lines.map((l) => (
               <li key={`${l.id}-${l.variant}`} data-record={`products:${l.id}`} className="flex gap-5 border-b border-line py-5">
-                <Link to={`/shop/${l.id}`} className="w-24 shrink-0 sm:w-32" aria-label={l.name}><ProductImage src={l.image} alt={l.name} aspect="1/1" /></Link>
                 <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink">{l.name}</p>
+                    <Link to={`/shop/${l.id}`} className="text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink underline-offset-4 hover:underline">{l.name}</Link>
                     <p className="mt-1 text-xs text-ink-soft">{fill(lineText, { variant: l.variant ?? "", qty: l.qty })}</p>
                   </div>
                   <p className="shrink-0 text-sm tabular-nums text-ink">{formatPrice(l.price * l.qty)}</p>
@@ -140,7 +136,7 @@ export default function Order() {
             <span className="text-2xl tabular-nums text-ink">{formatPrice(view.total)}</span>
           </div>
         </div>
-        <Bleed as="aside" side="right" ground className="flex flex-col gap-8 py-8 lg:col-span-5">
+        <aside className="flex flex-col gap-8 lg:col-span-5 lg:pl-8">
           <div>
             <T k="pages.order.details" as="h2" className="text-lg text-ink" />
             <SpecList className="mt-4" items={[
@@ -160,7 +156,7 @@ export default function Order() {
             ) },
           ]} />
           <div><OutlinePill to="/shop"><T k="pages.cart.keep" /></OutlinePill></div>
-        </Bleed>
+        </aside>
       </div>
     </>
   );
