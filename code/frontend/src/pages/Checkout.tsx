@@ -59,7 +59,7 @@ export default function Checkout() {
   const [form, setForm] = useState<Details>({ name: "", phone: "", address: "", city: "", note: "" });
   const [problems, setProblems] = useState<string[]>([]);
   const [placing, setPlacing] = useState(false);
-  const [refused, setRefused] = useState(false);
+  const [closed, setClosed] = useState(false);
   const [keyFor] = useState(keyKeeper);
   const sending = useRef(false);
 
@@ -69,10 +69,10 @@ export default function Checkout() {
   const showingExample = demo && real.length === 0;
   // The shop's price today, not the one the bag saved: a shoe that left the
   // shop keeps its saved price here and is refused by name when ordered.
-  const now = new Map(products.map((p) => [p.id, p.price]));
-  const lines = (showingExample ? example : real).map((l) => ({ ...l, price: now.get(l.id) ?? l.price }));
+  const current = new Map(products.map((p) => [p.id, p.price]));
+  const lines = (showingExample ? example : real).map((l) => ({ ...l, price: current.get(l.id) ?? l.price }));
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  const blocked = refused || option?.is_available === false;
+  const blocked = closed || option?.is_available === false;
   const set = (k: keyof Details) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   if (lines.length === 0) return <EmptyBag heading="pages.checkout.empty" />;
@@ -95,7 +95,7 @@ export default function Checkout() {
     const result = await placeOrder(request, keyFor(request));
     if (!result.ok) {
       setProblems(stopped(result));
-      setRefused(result.kind === "unavailable");
+      setClosed(result.kind === "unavailable");
       sending.current = false;
       setPlacing(false);
       return;
