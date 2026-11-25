@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 // The sandbox sets NODE_ENV=production and React.act needs the development build.
@@ -181,9 +181,5 @@ describe("who the page is for", () => {
     expect(screen.getByText("overview reached")).toBeInTheDocument();
     expect(useStaff).not.toHaveBeenCalled();
     expect(screen.queryByText("Staff")).toBeNull();
-  });
-
-  it("is a no-op for the test harness itself", async () => {
-    await waitFor(() => expect(true).toBe(true));
   });
 });
