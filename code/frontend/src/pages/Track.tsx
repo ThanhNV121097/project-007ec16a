@@ -24,6 +24,7 @@ export default function Track() {
   const orders = useCollection<Order>("orders", { pageSize: 500 }).items;
   const placed = usePlacedOrders();
   const notFound = useContent("pages.track.not_found");
+  const placeholder = useContent("pages.track.placeholder");
   const steps = useContent<Record<string, string>>("pages.track.steps");
   const labels = useContent<Record<string, string>>("orders.steps");
   const [number, setNumber] = useState("");
@@ -51,7 +52,7 @@ export default function Track() {
           <T k="pages.track.lead" as="p" className="mt-5 max-w-[42ch] text-sm leading-relaxed text-ink-soft" />
           <form onSubmit={submit} noValidate className="mt-8 flex max-w-md flex-col gap-4">
             <div><label htmlFor="order-number" className={LABEL}><T k="pages.track.number" /></label>
-              <input id="order-number" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="DOI-24817" className={FIELD} /></div>
+              <input id="order-number" value={number} onChange={(e) => setNumber(e.target.value)} placeholder={placeholder} className={FIELD} /></div>
             <div><label htmlFor="order-phone" className={LABEL}><T k="pages.track.phone" /></label>
               <input id="order-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={FIELD} /></div>
             {error && <p role="alert" className="flex items-center gap-2 text-xs text-danger"><Icon name="alert" size={14} className="shrink-0" />{error}</p>}
