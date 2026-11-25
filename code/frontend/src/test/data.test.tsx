@@ -181,6 +181,15 @@ describe("useRecord", () => {
     expect(mock).toHaveBeenCalledTimes(1);
   });
 
+  it("reads a 404 that does not carry the API's not_found code as an error, not as a missing record", async () => {
+    const name = fresh();
+    serve(() => new Response("<html>404 Not Found</html>", { status: 404 }));
+    const { result } = renderHook(() => useRecord(name, "samba"));
+    await waitFor(() => expect(result.current.error).toBeInstanceOf(Error));
+    expect(result.current.item).toBeUndefined();
+    expect(result.current.loading).toBe(false);
+  });
+
   it("reports any other failure as an error", async () => {
     const name = fresh();
     serve(() => json({ error: "internal", message: "x" }, 500));
@@ -220,5 +229,27 @@ describe("the browser's own copy", () => {
     const later = renderHook(() => useCollection(name, { where: { name: "Edited" } }));
     expect(later.result.current.items).toEqual(edited);
     expect(mock).toHaveBeenCalledTimes(1);
+  });
+
+  it("finds a name by its plain spelling and still tells digits and capitals apart", () => {
+    const name = fresh();
+    const mock = serve((url) => paged([], url));
+    const edited: Row[] = [
+      { id: "a", number: "DOI-24817", name: "Cửa Lò", size: "40", qty: 1 },
+      { id: "b", number: "DOI-24818", name: "Hà Nội", size: "41", qty: 2 },
+      { id: "c", number: "DOI-24819", name: "Huế", size: "40", qty: 2 },
+    ];
+    act(() => setCollection(name, edited));
+    const ids = (query: Query) => renderHook(() => useCollection(name, query)).result.current.items.map((r) => r.id);
+
+    expect(ids({ q: "cua lo" })).toEqual(["a"]);
+    expect(ids({ q: "CỬA LÒ" })).toEqual(["a"]);
+    expect(ids({ q: "DOI-24818" })).toEqual(["b"]);
+    expect(ids({ where: { name: "cua lo" } })).toEqual(["a"]);
+    expect(ids({ where: { qty: 2 } })).toEqual(["b", "c"]);
+    expect(ids({ where: { qty: 3 } })).toEqual([]);
+    expect(ids({ where: { size: "40" } })).toEqual(["a", "c"]);
+    expect(ids({ where: { size: ["41", "39"] } })).toEqual(["b"]);
+    expect(mock).not.toHaveBeenCalled();
   });
 });
