@@ -147,7 +147,7 @@ Behaviour:
 Behaviour:
 
 1. Placing an order sends the pairs (shoe, EU size, quantity), the delivery option, the payment method, name, phone, address, city and note. It sends no price, fee or total.
-2. The shop re-reads each shoe's price, the delivery fee and the free-delivery threshold, and computes the total itself: the sum of price × quantity, plus the delivery fee (standard is free at or above the threshold; express always costs its fee).
+2. The shop re-reads each shoe's price from the database and computes the total itself: the sum of price × quantity. Delivery is free: the stored delivery fee is always 0, no threshold is read, and the total is never more than that sum.
 3. The order is saved with the number `DOI-<n>` and the id `doi-<n>`, where n is one more than the highest number held, never repeating; the status "placed"; not paid; and an expected date from the delivery option: the day the order is placed, in Vietnam time, plus the option's longest working days (Standard 4, Express 1), skipping Saturdays and Sundays; an order placed on or after the shop's same-day cut-off (15:00) or on a weekend starts counting from the next working day.
 4. Each pair of the order keeps the unit price it was sold at, so a later price change does not change the order.
 5. An order can hold several pairs; the orders already on record, which hold one shoe each, keep working and show as orders of one pair.
