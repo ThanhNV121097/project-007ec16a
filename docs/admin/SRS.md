@@ -620,7 +620,7 @@ Behaviour:
 | AC-12 | No orders at all | The overview is read | Sales 0, order count 0, waiting 0, 14 entries of 0, every line 0, no latest orders |
 | AC-13 | An order of two pairs, one Samba and one Gazelle | The lines are read | Each line gains that pair's quantity |
 | AC-14 | No session | `GET /v1/admin/overview` | 401 |
-| AC-15 | A session that is not the dealer's | `GET /v1/admin/overview` | 403 |
+| AC-15 | A customer session | `GET /v1/admin/overview` | 403; an admin session and a staff session get 200 |
 | AC-16 | A new order is placed | The overview is read again | This month's sales and order count include it |
 | AC-17 | An order is cancelled | The overview is read again | It is no longer in any figure |
 | AC-18 | 10,000 orders | The overview is read | The answer is one request's worth of figures, not the orders themselves: it holds no order other than the five latest and no customer phone, email, address or note |
