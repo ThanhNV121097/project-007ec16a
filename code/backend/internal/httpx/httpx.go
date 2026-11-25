@@ -9,20 +9,16 @@ import (
 
 // ErrorBody is the one shape of every non-2xx answer the API gives:
 //
-//	{"error": {"code": "not_found", "message": "...", "fields": {"page": "..."}}}
+//	{"error": "invalid", "message": "Check the form.", "errors": {"price": "Price cannot be below 0"}}
 //
-// code is a stable machine word, message a sentence a person can read, and
-// fields names each input at fault with its own sentence (422, 400). Nothing
-// in it is ever SQL, a stack trace or another person's data.
+// error is a stable machine word, message a sentence a person can read, and
+// errors (only on 400 and 422) names each input at fault with its own
+// sentence, which is the `{"errors":{field: sentence}}` the SRS writes.
+// Nothing in it is ever SQL, a stack trace or another person's data.
 type ErrorBody struct {
-	Error ErrorDetail `json:"error"`
-}
-
-// ErrorDetail is the inside of ErrorBody.
-type ErrorDetail struct {
-	Code    string            `json:"code"`
+	Error   string            `json:"error"`
 	Message string            `json:"message"`
-	Fields  map[string]string `json:"fields,omitempty"`
+	Errors  map[string]string `json:"errors,omitempty"`
 }
 
 // JSON writes v as the answer with the given status.
@@ -33,7 +29,7 @@ func JSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// Error writes the error envelope. fields may be nil.
+// Error writes the error envelope. fields (input name → sentence) may be nil.
 func Error(w http.ResponseWriter, status int, code, message string, fields map[string]string) {
-	JSON(w, status, ErrorBody{Error: ErrorDetail{Code: code, Message: message, Fields: fields}})
+	JSON(w, status, ErrorBody{Error: code, Message: message, Errors: fields})
 }
