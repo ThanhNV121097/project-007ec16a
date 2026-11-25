@@ -442,7 +442,7 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | A bag of one pair; cash on delivery | "Place order" succeeds | The bag is empty and the address is `/orders/<id>?placed=1` |
+| AC-1 | A bag of one pair; the order is saved with no payment address (the VNPay story has not landed, or VNPay could not give one) | "Place order" succeeds | The bag is empty and the address is `/orders/<id>?placed=1` |
 | AC-2 | The same | The browser's storage is read | It holds the order's id, number, time and token |
 | AC-3 | An online way to pay with an address | "Place order" succeeds | The bag is empty and the browser is at the payment address |
 | AC-4 | The order is refused (sold out) | The visitor reads the bag | The bag still holds every pair |
