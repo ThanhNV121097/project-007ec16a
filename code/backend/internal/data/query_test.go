@@ -6,13 +6,27 @@ import (
 	"testing"
 )
 
+// ordersShape is what the orders collection looked like while the generic reader
+// served it. Orders are read by internal/orders now, but the grammar still has to
+// read an instant, a date and a private column, so these tests keep the shape.
+var ordersShape = build("orders", "orders t",
+	text("id"), text("number"),
+	Column{Name: "placed_at", Kind: Instant, Select: "t.placed_at"},
+	text("status"), col("qty", Int), col("total", Int),
+	Column{Name: "eta", Kind: Date, Select: "t.eta"},
+	text("customer"), private("phone"), private("email"), private("address"), text("city"), private("note"))
+
 func parse(t *testing.T, collection, query string) (listRequest, map[string]string) {
 	t.Helper()
 	q, err := url.ParseQuery(query)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return parseList(byName[collection], q)
+	c := byName[collection]
+	if collection == "orders" {
+		c = ordersShape
+	}
+	return parseList(c, q)
 }
 
 func TestPageAndLimitDefaults(t *testing.T) {
@@ -98,7 +112,7 @@ func TestFiltersAreReadByKind(t *testing.T) {
 	}
 	cond, args := where(req.filters)
 	// Filters follow the registry's column order, not the query string's.
-	for _, want := range []string{"t.category_id = $1", "t.price = $2::bigint", "t.status = $3", "t.featured = $4::boolean", "t.released = $5::date", "$6 = ANY(t.sizes_low)", "t.rating = $7::numeric"} {
+	for _, want := range []string{"t.category_id = $1", "t.price = $2::bigint", "t.status = $3", "t.featured = $4::boolean", "t.released = $5::date", "$6 = ANY(ps.sizes_low)", "t.rating = $7::numeric"} {
 		if !strings.Contains(cond, want) {
 			t.Errorf("where %q lacks %q", cond, want)
 		}
