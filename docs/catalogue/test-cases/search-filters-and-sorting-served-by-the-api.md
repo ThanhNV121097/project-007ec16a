@@ -355,7 +355,7 @@ Traces: SC-18 (CAT-002 AC-18, AC-19)
 Check: fetch_url
 
 **Scenario**: SC-18b — a draft contributes nothing, a sold-out size is still listed, parameters are ignored
-**Given**: The seed plus FX-DRAFT changed to list only size `47` and colour `green`; and one live fixture shoe `tc-size-46` listing only size `46` with 0 pairs (sold out); and the seeded `megaride-bones-halo-green` (the only green live shoe) set to `draft`.
+**Given**: The seed plus FX-DRAFT with its colour set to `green` and its sizes replaced by the single size `47`; and one live fixture shoe `tc-size-46` listing only size `46` with 0 pairs (sold out); and the seeded `megaride-bones-halo-green` (the only green live shoe) set to `draft`.
 **When**: `GET /v1/product-filters`, then `GET /v1/product-filters?colour=black&size=38&q=zzz&category=women&limit=1&page=9`.
 **Then**: Both answer 200 with the same body. `colours` has eight entries and no `green` (the draft fixture's green and the draft seed shoe add nothing); `sizes` ends `…,"45 1/3","46"` — `46` (sold out, but listed by a live shoe) is present and `47` (draft only) is absent. Afterwards the seed shoe is set back to `live`.
 Traces: SC-18 (CAT-002 item 8; contract §3.4)
