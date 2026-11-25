@@ -17,7 +17,7 @@ Requirement ids are in `docs/{module}/SRS.md` (`SITE` → `site`, `DATA` → `da
 | "Order status tracking (in the owner's words)" | ORD-007, ORD-020, ORD-021, ORD-022, ORD-023, ADMIN-016 | The order page with its five steps, the track page that finds an order by number and phone, and the dealer moving the order along |
 | "Return policy page (in the owner's words)" | SITE-010 | The Return policy page: "No exchanges", stating no window, condition, fee or refund because the owner gave none |
 | "Shipping information page (in the owner's words)" | SITE-009, SITE-016 | The Delivery page: free delivery on every order |
-| "Stock availability display (in the owner's words)" | SITE-005, ORD-004, ORD-005, ADMIN-015 | Sizes in stock, on last pairs and sold out on the shoe page, kept true as pairs sell and as the dealer saves a shoe |
+| "Stock availability display (in the owner's words)" | SITE-005, ORD-004, ORD-005, ADMIN-015 | Sizes in stock, on last pairs and sold out on the shoe page, kept true as pairs sell and as staff type the pairs for each size |
 | "Shoe size chart (in the owner's words)" | SITE-008 | The Size chart page with the foot-length finder and the full chart |
 
 ## WHAT THE FEATURES NEED
