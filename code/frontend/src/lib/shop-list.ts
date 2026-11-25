@@ -39,6 +39,8 @@ export function useShopList(query: ShopQuery) {
   const [paging, setPaging] = useState({ key, pages: 1 });
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
+  // A new query starts at its first page, and coming back to an old one does too.
+  if (paging.key !== key) setPaging({ key, pages: 1 });
   const pages = paging.key === key ? paging.pages : 1;
 
   useEffect(() => {
