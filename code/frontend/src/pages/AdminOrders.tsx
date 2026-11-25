@@ -1,4 +1,6 @@
 import { useContent } from "../editable";
+import { useCollection } from "../data";
+import type { PaymentMethod } from "../lib/shop";
 import ListPage from "../components/admin/ListPage";
 import { columnsFromFields, fieldsOf } from "../components/admin/fields";
 import { formatDateTime } from "../lib/format";
@@ -8,6 +10,7 @@ import { LIST_COLUMNS, useAdminNav } from "./admin-nav";
 export default function AdminOrders() {
   const nav = useAdminNav();
   const keys = LIST_COLUMNS.orders;
+  const methods = useCollection<PaymentMethod>("payments", { pageSize: 20 }).items;
   const columns = columnsFromFields(fieldsOf("orders").filter((f) => keys.includes(f.key)), keys.length)
     .map((c) => (c.key === "placed_at" ? { ...c, render: (r: { placed_at?: unknown }) => formatDateTime(String(r.placed_at ?? "")) } : c));
   return (
@@ -28,9 +31,7 @@ export default function AdminOrders() {
           ["delivered", useContent("orders.steps.delivered")],
           ["cancelled", useContent("pages.admin.orders.cancelled")],
         ] },
-        { key: "payment", label: useContent("pages.admin.orders.payment"), options: [
-          ["cod", "COD"], ["bank", "VietQR"], ["vnpay", "VNPay"], ["momo", "MoMo"],
-        ] },
+        { key: "payment", label: useContent("pages.admin.orders.payment"), options: methods.map((m) => [m.id, m.name] as const) },
       ]}
     />
   );
