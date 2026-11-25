@@ -807,7 +807,7 @@ Behaviour:
 | Overview — loading, load failed | Not drawn in the approved design; required by the plan item | ADMIN-021 | loading; error |
 | Lists: Shoes, Lines, Categories, Reviews, Orders | Lists, with the Add / Edit dialog and the delete question | ADMIN-010, ADMIN-011, ADMIN-012, ADMIN-014 | default; empty ("Nothing here yet"); filtered empty ("Nothing matches those filters"); dialog open; delete question |
 | Lists and dialogs — saving, field errors, could not save, session ended | Not drawn in the approved design; required by the plan item | ADMIN-011 | saving; field errors; could not save; session ended |
-| Shoe `/admin/products/:id` | Record page | ADMIN-010, ADMIN-011, ADMIN-012, ADMIN-015 | default (tabs); saved ("Saved."); record not here |
+| Shoe `/admin/products/:id` | Record page | ADMIN-010, ADMIN-011, ADMIN-012, ADMIN-015 | default (tabs); saved ("Saved."); record not here; one size's count saving, saved, refused (409), failed |
 | Order `/admin/orders/:id` | Record page with the summary sentence | ADMIN-011, ADMIN-016 | default (tabs Order, Delivery, Customer); saved; record not here |
 | Order — pairs list of a multi-pair order | Not drawn in the approved design; required by the plan item's multi-pair orders | ADMIN-016 | multi-pair |
 
