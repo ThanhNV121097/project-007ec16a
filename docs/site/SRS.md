@@ -411,11 +411,11 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | Threshold 2.000.000 ₫ | `/shipping` loads | The first figure reads "Free" and its line reads "Standard delivery on every order over 2.000.000 ₫ — that is every pair in the shop." |
-| AC-2 | Standard days "2–4", express days "1", express cities "Hà Nội and TP. Hồ Chí Minh, inner districts" | The page loads | The second figure reads `2–4` and the third reads `1` with "Working day by express in Hà Nội and TP. Hồ Chí Minh, inner districts." |
-| AC-3 | Cut-off 15:00 | The page loads | "Orders placed before 15:00 on a working day leave the same day." is shown |
-| AC-4 | Two delivery options (Standard 30.000 ₫, Express 50.000 ₫) | The page loads | The table headers read Option, Arrives, Where, Fee and two rows follow, fees `30.000 ₫` and `50.000 ₫` |
-| AC-5 | The same | The visitor reads the Standard row | "Free over 2.000.000 ₫" appears under its fee; the Express row has no such line |
+| AC-1 | The delivery record `standard` has fee 0 | `/shipping` loads | The lead reads "Every pair leaves boxed, tagged and tracked, and delivery is free on every order."; the first figure reads "Free" and its line reads "Delivery on every order, whatever it comes to — that is every pair in the shop." |
+| AC-2 | Standard days "2–4" | The page loads | The second figure reads `2–4` with "Working days by standard delivery, anywhere in Vietnam."; there is no third figure |
+| AC-3 | The shop's same-day cut-off is 15:00 | The page loads | The page does not state the cut-off; the words "express" and "Free over", the figures `30.000` and `50.000`, `0 ₫`, and any amount followed by ₫ appear nowhere on it |
+| AC-4 | One delivery option, Standard | The page loads | The table headers read Option, Arrives, Where, Cost and one row follows, its Cost cell reading "Free" |
+| AC-5 | The same | The visitor reads the Standard row | "Free" is its only cost; no "Free over" line appears under it and no Express row exists |
 | AC-6 | Four questions of topic "shipping" | The page loads | Four closed rows are shown (one per such question), each opening onto its answer |
 | AC-7 | The page loads | The visitor presses "Track an order" | The address is `/track` |
 | AC-8 | The stored express fee is changed to 60.000 ₫ | The page loads | The Express row shows `60.000 ₫` |
