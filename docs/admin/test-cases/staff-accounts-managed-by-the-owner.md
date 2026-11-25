@@ -691,11 +691,11 @@ Check: fetch_url
 Traces: contract (§2.4 paging; §3.26)
 Check: fetch_url
 
-**Scenario**: C-6 — `DELETE` and `PUT` target a uuid path segment only
-**Given**: The session is ADMIN; FX-STAFF-A exists.
-**When**: ADMIN sends `DELETE /v1/admin/staff/` followed by the upper-cased id of FX-STAFF-A; and `PUT /v1/admin/staff/<id>/extra` with `{"name":"X"}`; and `GET /v1/admin/staff/<id>`; and `PATCH /v1/admin/staff/<id>`.
-**Then**: The account is unchanged afterwards (name "Tc Staff A", active, present); the `GET` and `PATCH` on the item path answer 404 or 405 with a body of the one error shape, never 200 and never a modification; the upper-cased id answers either 404 (a segment that does not match the lower-case id pattern) or 204 with the account removed — whichever, the answer is 404 or 204 and nothing else.
-Traces: contract (§2.5 path segments; §3.27 `{id}` is a uuid)
+**Scenario**: C-6 — the list order is stable: the admin first, then by creation, and pages join up
+**Given**: The session is ADMIN; five accounts `tc-o1@example.com` … `tc-o5@example.com` are created one after another with five `POST` calls issued back to back; the order of the five 201 answers is noted.
+**When**: ADMIN sends `GET /v1/admin/staff?limit=100` twice; then `?limit=2&page=1`, `?limit=2&page=2`, `?limit=2&page=3`.
+**Then**: The two full reads are identical, byte for byte in `items`; `items` is the admin followed by the five accounts in the order they were created; the three pages hold 2, 2 and 2 items (the admin and `tc-o1`, then `tc-o2` and `tc-o3`, then `tc-o4` and `tc-o5`), every page reports `total` 6, and their concatenation equals the full list with no id repeated or missing.
+Traces: contract (§2.4 stable unique order; §3.26 the admin first, then by creation)
 Check: fetch_url
 
 **Scenario**: C-7 — a failed write is 500 `internal` with a generic body and nothing half-saved
