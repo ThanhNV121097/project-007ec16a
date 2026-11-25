@@ -8,7 +8,7 @@ Requirement ids are in `docs/{module}/SRS.md` (`SITE` → `site`, `DATA` → `da
 | Brief line | Requirements | What meets it |
 |---|---|---|
 | "show what is offered — the menu, the products, the services — with prices" | SITE-004, SITE-005, SITE-006, CAT-002, DATA-001, DATA-002 | The home page, the shoe page and the shop page show every live shoe with its price; the records come from the database |
-| "a cart and online ordering" | SITE-007, ORD-001, ORD-002, ORD-003, ORD-004, ORD-005, ORD-006, ORD-007, ORD-009, ORD-010 | The bag (drawer and page) and the checkout that places an order, takes the pairs off the shelf and shows the order |
+| "a cart and online ordering" | SITE-007, SITE-016, ORD-001, ORD-002, ORD-003, ORD-004, ORD-005, ORD-006, ORD-007, ORD-009, ORD-010 | The bag (drawer and page) and the checkout that places an order, takes the pairs off the shelf and shows the order |
 | "online payment" | PAY-001, PAY-002, PAY-003, PAY-004, PAY-005, ORD-006, PAY-020, PAY-021, PAY-022 | VNPay (card, banking app, QR) with the notice as the only thing that marks an order paid; VietQR transfer and MoMo in the later story |
 | "a dashboard: figures and charts at a glance" | ADMIN-020, ADMIN-021 | The dealer's overview with four figures, a 14-day sales chart, pairs sold by line, the latest orders and what is running low |
 | "an admin area where the owner manages the content and the records" | ADMIN-001, ADMIN-002, ADMIN-003, ADMIN-004, ADMIN-010, ADMIN-011, ADMIN-012, ADMIN-013, ADMIN-014, ADMIN-015, ADMIN-016 | Dealer sign-in, the protected area, and saving shoes, lines, categories, reviews and orders, with picture upload |
