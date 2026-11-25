@@ -123,7 +123,7 @@ Behaviour:
 | # | Given | When | Then |
 |---|---|---|---|
 | AC-1 | The dealer signs in | The response is read | It sets one cookie, not readable by scripts, sent only to this site, expiring in 7 days |
-| AC-2 | A session | `GET /v1/auth/me` | 200 with `{"email":…,"name":…,"role":"admin"}` |
+| AC-2 | An admin session | `GET /v1/auth/me` | 200 with `{"email":…,"name":…,"role":"admin"}` |
 | AC-3 | No session | `GET /v1/auth/me` | 401 |
 | AC-4 | A session for `lan.tran@example.com` | The left menu's foot is read | The initial `L`, the name `Lan Tran` and the role `admin` |
 | AC-5 | A signed-in dealer on `/admin/orders` | The page is reloaded | The page stays and shows the orders |
