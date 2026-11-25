@@ -5,6 +5,7 @@ import { useCollection } from "../data";
 import { formatPrice } from "../lib/format";
 import { fill, sizesInStock, type Category, type Line, type Product } from "../lib/shop";
 import { SplitHeading } from "../motion";
+import Bleed from "../components/Bleed";
 import ColourDots from "../components/ColourDots";
 import Grid from "../components/Grid";
 import Icon from "../components/Icon";
@@ -16,7 +17,7 @@ import Rule from "../components/Rule";
 
 /**
  * THE HOME PAGE: one pair at full size — the template's own first screen,
- * its name large at the left and its tile filling the right half — then the
+ * its name large at the left and its tile running off the right edge — then the
  * pairs new this month, who they are for, the lines as an index, and what
  * the shop promises. The pair that opens the site is the record marked
  * `featured` in src/data, chosen by the owner in the Data panel.
@@ -65,13 +66,11 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="lg:col-span-6 lg:col-start-7">
-            <Link to={`/shop/${lead.id}`} aria-label={lead.name} className="block overflow-hidden bg-surface">
-              <div data-parallax="">
-                <ProductImage src={lead.image} hover={lead.image_back} alt={lead.name} aspect="1/1" eager />
-              </div>
+          <Bleed side="right" className="lg:col-span-6 lg:col-start-7">
+            <Link to={`/shop/${lead.id}`} aria-label={lead.name} className="block">
+              <ProductImage src={lead.image} hover={lead.image_back} alt={lead.name} aspect="4/3" eager />
             </Link>
-          </div>
+          </Bleed>
         </section>
       )}
 
