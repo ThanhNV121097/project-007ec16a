@@ -160,13 +160,6 @@ func TestFiltersAreReadByKind(t *testing.T) {
 }
 
 func TestAnyOfListsAreBoundAsOneArrayOfTheFieldsKind(t *testing.T) {
-	when := func(s string) time.Time {
-		v, err := time.Parse(time.RFC3339, s)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return v
-	}
 	for _, c := range []struct {
 		collection, query, cond string
 		arg                     any
@@ -178,8 +171,6 @@ func TestAnyOfListsAreBoundAsOneArrayOfTheFieldsKind(t *testing.T) {
 		{"products", "featured=true,false", "t.featured = ANY($1::boolean[])", []bool{true, false}},
 		{"products", "released=2026-11-03,2026-11-10", "t.released = ANY($1::text[]::date[])", []string{"2026-11-03", "2026-11-10"}},
 		{"products", "sizes_low=40,38", "t.sizes_low && $1::text[]", []string{"40", "38"}},
-		{"orders", "placed_at=2026-11-23T16:05:00%2B07:00,2026-11-22T16:05:00%2B07:00", "t.placed_at = ANY($1::timestamptz[])",
-			[]time.Time{when("2026-11-23T16:05:00+07:00"), when("2026-11-22T16:05:00+07:00")}},
 		// One item left after the empty ones are dropped is the plain form, so
 		// status=live keeps the equality an index is walked on.
 		{"products", "category=,women,", "t.category_id = $1", "women"},
@@ -189,6 +180,17 @@ func TestAnyOfListsAreBoundAsOneArrayOfTheFieldsKind(t *testing.T) {
 		if cond != c.cond || len(args) != 1 || !reflect.DeepEqual(args[0], c.arg) {
 			t.Errorf("%s?%s: %q %#v, want %q %#v", c.collection, c.query, cond, args, c.cond, c.arg)
 		}
+	}
+}
+
+func TestAListOfMomentsIsBoundAsInstants(t *testing.T) {
+	cond, args := whereOf(t, "orders", "placed_at=2026-11-23T16:05:00%2B07:00,2026-11-22T16:05:00%2B07:00")
+	moments, ok := args[0].([]time.Time)
+	if cond != "t.placed_at = ANY($1::timestamptz[])" || len(args) != 1 || !ok || len(moments) != 2 {
+		t.Fatalf("%q %#v", cond, args)
+	}
+	if want, _ := time.Parse(time.RFC3339, "2026-11-23T16:05:00+07:00"); !moments[0].Equal(want) {
+		t.Errorf("got %v, want %v", moments[0], want)
 	}
 }
 
@@ -322,9 +324,9 @@ func TestAUnionOfRangesIsOrOfTheRangesAndAndOfTheEnds(t *testing.T) {
 		t.Errorf("%q %v", cond, args)
 	}
 	// _ranges combines with _from and _to of the same field by AND.
-	cond, _ = whereOf(t, "products", "price_ranges=..2999999&price_from=1000000")
-	if cond != "(t.price >= $1::numeric) AND ((t.price <= $2::numeric))" && cond != "((t.price <= $1::numeric)) AND (t.price >= $2::numeric)" {
-		t.Errorf("%q", cond)
+	cond, args = whereOf(t, "products", "price_ranges=..2999999&price_from=1000000")
+	if cond != "(t.price >= $1::numeric) AND (t.price <= $2::numeric)" || !reflect.DeepEqual(args, []any{"1000000", "2999999"}) {
+		t.Errorf("%q %v", cond, args)
 	}
 	if _, faults := parse(t, "products", "released_ranges=2026-01-01..2026-03-31,2026-07-01..2026-09-30"); faults != nil {
 		t.Errorf("date ranges: %v", faults)
