@@ -307,6 +307,7 @@ Behaviour:
 |---|---|---|
 | Invalid input | A way to pay that is not offered | 422 (AC-5) |
 | Upstream failure | The provider is unreachable when placing | The order is saved without an address (AC-8) |
+| Upstream failure | VNPay's keys are missing (VNPay story landed) | 503 and no order (AC-10, AC-11) |
 | Conflict | Not applicable: nothing is paid by this module | — |
 
 **Data touched**
