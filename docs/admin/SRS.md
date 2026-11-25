@@ -526,7 +526,7 @@ Behaviour:
 
 | Case | Condition | Expected behaviour |
 |---|---|---|
-| Concurrency | A customer's order and the dealer's save arrive together | The final counts equal the dealer's lists applied to the counts after the order |
+| Concurrency | A customer's order and a staff count change arrive together | Either the order's pairs are counted first and the change is refused with 409 (AC-9), or the change is stored first and the order takes its pairs from the new count; never a silent overwrite and never a count below 0 |
 
 **Data touched**
 
