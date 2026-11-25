@@ -276,7 +276,7 @@ Behaviour:
 | # | Given | When | Then |
 |---|---|---|---|
 | AC-1 | A shoe whose Lining is empty | The visitor opens "Details" | The list has no "Lining" row; the other filled rows are shown |
-| AC-2 | The shop has four ways to pay on record | The visitor opens "Payment options" | Four entries are listed, each `<name>. <note>` with its icon |
+| AC-2 | The shop has four ways to pay on record and offers VNPay at checkout | The visitor opens "Payment options" | One entry is listed, `VNPay — ATM, Visa, Mastercard. <note>` with its icon; cash on delivery, bank transfer and MoMo are not listed |
 | AC-3 | Terms: standard "2–4" days, cut-off 15:00, exchange 14, refund 7 | The visitor opens "Delivery & returns" | The text reads "Free standard delivery in 2–4 working days, sent the same day if you order before 15:00. Exchange the size within 14 days, or return it unworn within 7 days for a refund." |
 | AC-4 | The same row | The visitor reads its links | "Delivery" goes to `/shipping` and "Returns and exchange" goes to `/returns` |
 | AC-5 | The shoe has five live reviews | The page loads | Exactly three reviews are listed, the newest first |
