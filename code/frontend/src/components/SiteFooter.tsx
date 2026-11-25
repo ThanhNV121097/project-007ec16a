@@ -45,7 +45,7 @@ export default function SiteFooter() {
         <hr className="h-px w-full border-0 bg-accent-ink/15" />
         <div className="flex flex-col gap-3 pt-6 text-[0.8125rem] leading-relaxed text-accent-ink/60 md:flex-row md:items-start md:justify-between md:gap-10">
           <T k="footer.independent" as="p" className="max-w-[60ch]" />
-          <PhotoCredits className="text-[0.8125rem] text-accent-ink/60 md:max-w-[50ch] md:text-right" />
+          <PhotoCredits className="text-[0.8125rem] leading-relaxed text-accent-ink/70 md:max-w-[50ch] md:text-right" />
         </div>
       </div>
     </footer>
