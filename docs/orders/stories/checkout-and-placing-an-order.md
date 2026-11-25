@@ -135,11 +135,11 @@ Each criterion names the SRS requirement and criterion it narrows (`SC-n [REQ AC
 | Requirement | Criteria | Criterion list |
 |---|---|---|
 | ORD-001 | AC-1 to AC-14 | SC-1 to SC-8, SC-15 (AC-13) |
-| ORD-002 | AC-1 to AC-11 | SC-9 to SC-12, SC-11 |
-| ORD-003 | AC-1 to AC-18 | SC-13 to SC-21; **AC-19** is out of scope (§4, accounts) |
-| ORD-004 | AC-1 to AC-8 | SC-11, SC-23 to SC-26 |
-| ORD-005 | AC-1 to AC-6, AC-8 | SC-25, SC-27 to SC-29; **AC-7** is out of scope (§4, admin) |
-| ORD-006 | AC-1, AC-2, AC-3, AC-5 to AC-10 (UI half), AC-9 | SC-5, SC-8, SC-16, SC-20, SC-30, SC-31; **AC-4, AC-10 (503 half), AC-11, AC-12** are out of scope (§4) |
+| ORD-002 | AC-1 to AC-11 | SC-9 to SC-12 |
+| ORD-003 | AC-1 to AC-18 | SC-13 to SC-22 (SC-22 is the performance requirement); **AC-19** is out of scope (§4, accounts) |
+| ORD-004 | AC-1 to AC-8 | SC-11 (AC-8), SC-23 to SC-26 |
+| ORD-005 | AC-1 to AC-6, AC-8 | SC-25 (AC-8), SC-27 to SC-29; **AC-7** is out of scope (§4, admin) |
+| ORD-006 | AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-8, AC-9, and the UI half of AC-10 | SC-5, SC-8, SC-16, SC-20, SC-30, SC-31, SC-32; **AC-4, the 503 half of AC-10, AC-11 and AC-12** are out of scope (§4) |
 | ORD-008 | AC-1, AC-4, AC-5, AC-6, AC-8, AC-9, AC-10 | SC-35 to SC-37; **AC-2, AC-3, AC-7, AC-11, AC-12** are out of scope (§4, sessions) |
 | ORD-009 | AC-1 to AC-4 | SC-26, SC-32; **AC-5** moves to the next item (§2) |
 | ORD-010 | AC-1 to AC-6 | SC-6, SC-33, SC-34 |
