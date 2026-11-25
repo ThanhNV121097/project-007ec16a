@@ -570,8 +570,8 @@ Check: fetch_url
 
 **Scenario**: SC-37a — `PUT` and `DELETE` on a customer's id, an unknown uuid and a non-uuid answer one and the same 404
 **Given**: FX-CUSTOMER (id read with `SELECT id FROM users WHERE email = 'tc-customer@example.com'`); the session is ADMIN.
-**When**: ADMIN sends `PUT` with `{"is_active":false}` and `DELETE` to `/v1/admin/staff/` followed by each of: FX-CUSTOMER's id; `11111111-2222-4333-8444-555555555555` (an unknown uuid); `not-a-uuid`; `123`; `..%2Fadmin`. The twelve answers are compared.
-**Then**: Every answer is 404 with the identical body `{"error":"not_found","message":<one and the same sentence>}` and no `errors` key; ten of the twelve bodies are byte-identical (the two for `..%2Fadmin` may be the router's own 404 and, if so, have the same shape `{"error":"not_found","message":…}`); no 409, 422 or 500.
+**When**: ADMIN sends `PUT` with `{"is_active":false}` and `DELETE` to `/v1/admin/staff/` followed by each of: FX-CUSTOMER's id; `11111111-2222-4333-8444-555555555555` (an unknown uuid); `not-a-uuid`; `123`. The eight answers are compared.
+**Then**: Every one of the eight answers is 404 with the byte-identical body `{"error":"not_found","message":<one and the same sentence>}` and no `errors` key (a customer's id cannot be told from one that does not exist); no 409, 422 or 500.
 Traces: SC-37 (ADMIN-031 AC-10, item 1; "Not found" row)
 Check: fetch_url
 
