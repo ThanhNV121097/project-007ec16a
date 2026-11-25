@@ -37,7 +37,7 @@ works at phone width first. Without it a customer cannot choose a pair or trust 
 - Paying online — belongs to the `payments` module.
 - Where the records come from (database, API, paging) — belongs to the `data` module; this module only requires what the pages show.
 - Dealer screens under `/admin` — belong to the `admin` module.
-- Customer accounts, wish lists, customers writing reviews — not in the brief or the design; reviews are shown here and managed by the dealer in `admin`.
+- Customer accounts — belong to the `accounts` module; the header's "Account" entry arrives with it (ACC-007). Wish lists and customers writing reviews — not in the brief or the design; reviews are shown here and managed by the shop team in `admin`.
 - Example bag lines that the design shows to reviewers in the Studio (demo mode) — never shown on the live site.
 
 ## 4. Functional requirements
