@@ -157,8 +157,8 @@ Check: interact_page
 
 **Scenario**: SC-5d — no horizontal scroll while loading, after a failure and after a failed "Show more"
 **Given**: The seed plus FX-LIVE30. Viewport narrow, then phone. Arrangements HOLD(3) on the first products request, FAIL500, and FAIL500-PAGE2.
-**When**: (1) Open `/shop` with the first request held; during the wait read the page. (2) Open `/shop` with FAIL500; when "We could not load the shoes." is shown read the page. (3) Open `/shop` normally, lift nothing, set FAIL500-PAGE2 and press "Show more"; when the message shows under the cards read the page. Each reading: scroll right by 100px; read `scrollX` and `scrollWidth`.
-**Then**: In all three states at both widths `scrollX` stays 0 and `scrollWidth` does not exceed the inner width; the text "Loading the shoes…" and "We could not load the shoes." wrap inside the window.
+**When**: (1) Open `/shop` with the first request held; during the wait read the page. (2) Open `/shop` with FAIL500; when "We could not load the shoes." is shown read the page. (3) Open `/shop` with no interception so 12 cards show, then set FAIL500-PAGE2 and press "Show more"; when the message shows under the cards read the page. Each reading: scroll right by 100px; read the horizontal scroll offset and the document's scroll width.
+**Then**: In all three states at both widths the scroll offset stays 0 and the scroll width does not exceed the inner width; the text "Loading the shoes…" and "We could not load the shoes." wrap inside the window.
 Traces: SC-5 (SRS §6 Responsive)
 Check: interact_page
 
