@@ -8,7 +8,6 @@ import { usePlacedOrders } from "../lib/mock/orders";
 import { digitsOf, ORDER_STEPS, type Order } from "../lib/shop";
 import Disclosure from "../components/Disclosure";
 import Icon from "../components/Icon";
-import Rule from "../components/Rule";
 
 const FIELD = "w-full appearance-none rounded-sm border border-field bg-ground px-3 py-3 text-base text-ink outline-none placeholder:text-ink-soft focus:border-ink sm:text-sm";
 const LABEL = "mb-1.5 block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-ink-soft";
@@ -82,7 +81,6 @@ export default function Track() {
           )}
         </div>
       </section>
-      <Rule />
     </>
   );
 }
