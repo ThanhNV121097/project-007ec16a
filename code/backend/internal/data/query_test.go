@@ -97,12 +97,13 @@ func TestFiltersAreReadByKind(t *testing.T) {
 		t.Fatalf("got %d filters, %v", len(req.filters), faults)
 	}
 	cond, args := where(req.filters)
-	for _, want := range []string{"t.category_id = $1", "t.price = $3::bigint", "t.featured = $4::boolean", "t.rating = $5::numeric", "t.released = $6::date", "$7 = ANY(t.sizes_low)"} {
+	// Filters follow the registry's column order, not the query string's.
+	for _, want := range []string{"t.category_id = $1", "t.price = $2::bigint", "t.status = $3", "t.featured = $4::boolean", "t.released = $5::date", "$6 = ANY(t.sizes_low)", "t.rating = $7::numeric"} {
 		if !strings.Contains(cond, want) {
 			t.Errorf("where %q lacks %q", cond, want)
 		}
 	}
-	if len(args) != 7 || args[2] != int64(3290000) || args[3] != true {
+	if len(args) != 7 || args[1] != int64(3290000) || args[3] != true {
 		t.Errorf("args %v", args)
 	}
 }
