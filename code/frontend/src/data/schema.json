@@ -98,8 +98,6 @@
         { "key": "express_days", "label": "Express delivery, working days", "type": "text" },
         { "key": "express_cities", "label": "Express covers", "type": "text" },
         { "key": "dispatch_cutoff", "label": "Same-day dispatch before", "type": "text" },
-        { "key": "exchange_days", "label": "Days to exchange a size", "type": "number" },
-        { "key": "refund_days", "label": "Days to return for a refund", "type": "number" },
         { "key": "reply_time", "label": "Messages answered within", "type": "text" },
         { "key": "rating", "label": "Average rating", "type": "number" },
         { "key": "review_count", "label": "Reviews in all", "type": "number" }
