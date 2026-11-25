@@ -376,7 +376,7 @@ Check: render_url — if the instrument does not list the requests, this case is
 **Scenario**: TC-48 The built bundle holds none of the deleted files' records
 **Given**: The built site; the page's script assets are found from the HTML of `/`.
 **When**: `GET /` is read for its `<script src>` and `<link rel=modulepreload>` addresses, and each JavaScript asset is fetched.
-**Then**: No asset contains `Samba OG Black Crystal`, `featuresneakerboutique`, `US$130`, `Cửa Lò`-style order text such as `Customer cancelled by phone`, or the five line ids as record objects (`"since":1950`).
+**Then**: No asset contains `Samba OG Black Crystal`, `featuresneakerboutique`, `US$130`, the order note `Customer cancelled by phone`, or a line record such as `"since":1950`.
 Traces: SC-26 (DATA-005 AC-1; `dist/` search)
 Check: fetch_url
 
