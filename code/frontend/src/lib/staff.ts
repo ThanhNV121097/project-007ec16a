@@ -40,9 +40,6 @@ export type StaffResult =
 
 export type StaffStatus = "loading" | "ready" | "error";
 
-const call = (id?: string) => id;
-void call;
-
 /** The shop's refusal or silence, as the page tells them apart. */
 function failure(e: unknown): StaffResult {
   if (e instanceof MockFault && e.status === 422 && e.body.errors) {
