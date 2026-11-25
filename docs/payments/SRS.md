@@ -247,8 +247,8 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | Both keys set | The server starts | VNPay is offered at checkout |
-| AC-2 | A key missing | The server starts | VNPay is not offered and the server still starts |
+| AC-1 | Both keys set | The server starts | VNPay is the only way to pay at checkout and "Place order" is enabled |
+| AC-2 | A key missing | The server starts | The server still starts; checkout shows "Online payment is not available right now. Please try again later." with "Place order" disabled, and placing an order answers 503 |
 | AC-3 | The built site | Its files and responses are searched for the hash secret | It appears nowhere |
 | AC-4 | The server's log after a payment | It is searched for the hash secret | It appears nowhere |
 | AC-5 | The settings' example file | It is read | It names `VNPAY_TMN_CODE` and `VNPAY_HASH_SECRET` with no value |
