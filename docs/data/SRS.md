@@ -275,7 +275,7 @@ Behaviour:
 | Open question | Proposed default | Who decides |
 |---|---|---|
 | Unknown parameters are ignored, not rejected, so that `q`, `sort`, ranges and comma lists (used by the pages today) do not break between this story and the catalogue story | Ignore unknown parameters | TL |
-| Whether the shop's `_source` notes should stay available to the dealer somewhere | Not returned by the API; the dealer's Studio keeps the notes in the repository history | Stakeholder |
+| Whether the records' source notes (`_source`) should be readable by the dealer through the API | Not returned to a caller with no session; the `admin` module decides whether a dealer session sees them | Stakeholder |
 
 ## 8. Traceability
 
