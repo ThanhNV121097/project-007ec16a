@@ -29,7 +29,7 @@ The site is one light palette: **no dark mode** (`color-scheme: light`, no `[dat
 | Token | Tailwind name | Value | Used for |
 |---|---|---|---|
 | `--ground` | `bg-ground` | `#F8F8F8` | Page background, form-field fill, drawer and mobile-menu panel |
-| `--surface` | `bg-surface`, `bg-surface` | `#E8E8E8` | The grey of the photographs' own seamless: full-width bands behind a photograph or a working panel (`Bleed ground`), the catalogue's search/sort band, hover fill of the menu button, listbox and the contact dock's Zalo button |
+| `--surface` | `bg-surface` | `#E8E8E8` | The grey of the photographs' own seamless: full-width bands behind a photograph or a working panel (`Bleed ground`), the catalogue's search/sort band, hover fill of the menu button, listbox and the contact dock's Zalo button |
 | `--ink` | `text-ink`, `bg-ink`, `border-ink` | `#080808` | All text, filled pill buttons, selected size pill, ringed colour dot, bag-count badge |
 | `--ink-soft` | `text-ink-soft` | `#6B6B6B` | Secondary text, captions, labels, disabled and struck-through sizes, placeholder text |
 | `--accent` | `bg-accent`, `text-accent` | `#080808` | The footer band; the active option in a `Select` list; checkbox tick (`accent-[var(--accent)]`). Equal to `--ink` |
