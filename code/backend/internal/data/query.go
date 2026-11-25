@@ -438,9 +438,6 @@ func parseRanges(column Column, key, raw string) ([][]edge, string) {
 	return alts, ""
 }
 
-// parseLimit and the readers above are the whole of the boundary: every
-// value the SQL binds has been read as its kind before a statement is built.
-
 // bindItems turns the items of a filter into what is bound to its placeholder
 // — one value, or a list of them — or the sentence that says why one cannot be
 // read as the field's kind.
