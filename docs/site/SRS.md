@@ -585,6 +585,47 @@ Behaviour:
 |---|---|---|---|
 | Page title and description | read | yes | From the site's content file |
 
+**Requirement SITE-015 — Motion at the level the owner chose**
+
+*As the* owner, *I want* the site to move as much as I chose, and not at all for a visitor who asked their device for less motion, *so that* it feels alive without bothering anyone.
+
+Behaviour:
+
+1. The site's motion level is "lively", as the owner chose. When a page opens its content fades up by about 10px over about 360 ms; sections arrive as they scroll into view.
+2. The home page's headline words rise in one after another.
+3. The shop's count, and the first two figures of the returns page and the figures of the about page, count up to their value.
+4. On a device with a fine pointer, the "New this month" cards tilt under the pointer; the "See this pair" and "Add to bag" buttons lean toward it; a shoe card's picture grows to 1.05 times its size over about 0.6 s and shows the shoe's second picture; the shoe page's photograph is looked into at twice its size.
+5. A closed row's "+" turns a quarter turn when it opens; the arrow of a line row on the home page moves 4px to the right on hover.
+6. A visitor whose device asks for reduced motion gets none of items 1 to 5: each page draws finished, every figure shows its final value at once, nothing is hidden waiting to move. Colour, underline and open/closed changes still happen.
+7. A device without a fine pointer gets none of the pointer effects in item 4.
+
+**Acceptance criteria**
+
+| # | Given | When | Then |
+|---|---|---|---|
+| AC-1 | No reduced-motion request | A page opens | Its content starts about 10px lower and transparent and ends in place within 500 ms |
+| AC-2 | The device asks for reduced motion | A page opens | The content is in place at once, with no animation |
+| AC-3 | No reduced-motion request | The home page opens | The headline's words rise in one after another |
+| AC-4 | The device asks for reduced motion | The home page opens | The whole headline is shown at once |
+| AC-5 | No reduced-motion request | `/shop` opens with 12 matches | The count shown rises from 0 to 12 |
+| AC-6 | The device asks for reduced motion | `/shop` opens with 12 matches | The count shows 12 at once |
+| AC-7 | A fine pointer and no reduced-motion request | The pointer rests on a shoe card | Its picture grows to 1.05 times and shows the second picture |
+| AC-8 | A fine pointer and the device asks for reduced motion | The pointer rests on a shoe card | The picture does not grow and the second picture is not shown |
+| AC-9 | A touch-only device | A shoe card is touched | The picture does not grow and no tilt happens |
+| AC-10 | Any device | A closed row is pressed | It opens and shows its content (with or without reduced motion) |
+
+**Failure, boundary and permission behaviour**
+
+| Case | Condition | Expected behaviour |
+|---|---|---|
+| Boundary | Reduced motion asked for | Nothing is hidden waiting to move; every page is complete without its animation script (AC-2, AC-4, AC-6) |
+
+**Data touched**
+
+| Field | Type | Required | Rule |
+|---|---|---|---|
+| Motion level | read | yes | "lively", from the site's settings |
+
 ### 4.2 Product page waits for the shoe before saying it is missing
 
 **Requirement SITE-014 — The "not in the shop" message appears only once the shop has answered**
