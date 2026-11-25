@@ -363,8 +363,8 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | Cash on delivery, VNPay, VietQR and MoMo are all configured | `/checkout` loads | Four rows, in the records' order: cash on delivery, bank transfer, VNPay, MoMo |
-| AC-2 | Only VietQR is configured of the two | `/checkout` loads | Bank transfer is listed and MoMo is not |
+| AC-1 | VNPay, VietQR and MoMo are all configured | `/checkout` loads | Three rows: VNPay first, then bank transfer, then MoMo; no cash on delivery |
+| AC-2 | Only VietQR is configured of the two | `/checkout` loads | VNPay is listed first, bank transfer after it, and MoMo is not listed |
 | AC-3 | The change set of this story | It is listed | It edits no file of the Checkout story's page |
 
 **Failure, boundary and permission behaviour**
