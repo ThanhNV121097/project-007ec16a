@@ -297,6 +297,9 @@ Behaviour:
 | AC-7 | A way to pay whose provider returns the address `https://pay.example.test/x` | The order is placed | The answer carries that address and the browser is sent to it |
 | AC-8 | The provider fails to return an address | The order is placed | The order exists, unpaid; the answer's payment address is empty; the browser goes to `/orders/<id>?placed=1` where "Pay now" is shown |
 | AC-9 | Any order just placed | It is read | `paid` is false |
+| AC-10 | The VNPay story has landed and VNPay's keys are not set | `/checkout` loads with a pair in the bag | The VNPay row, "Online payment is not available right now. Please try again later." in alert style and a disabled "Place order" are shown |
+| AC-11 | The same | A request to place an order is sent | 503; no order is created and no pair leaves the shelf |
+| AC-12 | The VNPay story has not landed; an unpaid order | "Pay now" is pressed | The shop answers 409 "online payment is not available yet" and the page shows "We could not open the payment page. Please try again." |
 
 **Failure, boundary and permission behaviour**
 
