@@ -746,7 +746,7 @@ Every page above is drawn once for a phone width and widens at 1024px, as `desig
 | # | Open question | Proposed default | Who decides |
 |---|---|---|---|
 | 1 | The shop's phone, Zalo, email, address and opening hours are empty in the content today, so the dock and four of the five contact rows are not drawn. The brief asks for "a way to call or message". | The message form is the way in until the owner types the numbers into the Studio; the dock and rows appear by themselves when they do | Stakeholder |
-| 2 | The shoe page lists all four ways to pay and the bag says "Pay by cash on delivery, bank transfer, VNPay or MoMo at the next step." but checkout offers only cash on delivery and, later, VNPay (project decision; VietQR and MoMo come in a later story) | Leave the shoe page list and the bag line as designed; the owner may edit the line in the Studio | Stakeholder |
+| 2 | Closed by the owner's answer "Online payment": VNPay is the only way to pay at launch, so the shoe page lists it alone and the bag line says so (SITE-006, SITE-007, SITE-016) | Decided | — |
 | 3 | The design leaves the message box of the contact form optional; the brief lists "name, phone or email, message" | Keep it optional as designed | Stakeholder |
 | 4 | With a sold-out size and no last-pairs size the design reads "In stock in all {n} sizes." with n counting only the sizes still in stock | Keep the design's wording | Stakeholder |
 | 5 | The design has no screen for an unknown address (for example `/abc`) | Leave it as designed: no page is drawn beyond the header and footer | Stakeholder |
