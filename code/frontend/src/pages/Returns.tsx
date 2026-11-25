@@ -3,7 +3,7 @@ import { usePageMeta } from "../seo";
 import { useRecord } from "../data";
 import { formatPrice } from "../lib/format";
 import { fill, type ShopTerms } from "../lib/shop";
-import Bleed from "../components/Bleed";
+import HeadPicture from "../components/HeadPicture";
 import FaqRows from "../components/FaqRows";
 import Icon from "../components/Icon";
 import OutlinePill from "../components/OutlinePill";
@@ -29,18 +29,22 @@ export default function Returns() {
   ];
   return (
     <>
-      <section className="grid gap-6 pb-10 pt-8 lg:grid-cols-12 lg:pt-10">
-        <T k="pages.returns.heading" as="h1" className="max-w-[12ch] text-[length:var(--size-h1)] leading-[1.02] text-ink lg:col-span-6" />
-        <T k="pages.returns.lead" as="p" className="max-w-[44ch] self-end text-sm leading-relaxed text-ink-soft lg:col-span-5 lg:col-start-8" />
+      <section className="grid gap-6 pb-10 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
+        <div className="flex flex-col justify-end lg:col-span-6">
+          <T k="pages.returns.heading" as="h1" className="max-w-[12ch] text-[length:var(--size-h1)] leading-[1.02] text-ink" />
+          <T k="pages.returns.lead" as="p" className="mt-5 max-w-[44ch] text-sm leading-relaxed text-ink-soft" />
+        </div>
+        <HeadPicture src="/images/head-returns.jpg" alt={useContent("pages.returns.head_alt")} className="lg:col-span-6 lg:col-start-7" />
       </section>
-      <Bleed as="section" side="both" ground className="grid sm:grid-cols-3">
+      <Rule />
+      <section className="grid border-b border-line sm:grid-cols-3">
         {figures.map((f, i) => (
           <div key={i} className={`py-10 ${i > 0 ? "border-t border-line sm:border-l sm:border-t-0 sm:pl-8" : "sm:pr-8"}`}>
             <p data-count={i < 2 ? "" : undefined} className="text-[length:var(--size-h1)] leading-none tabular-nums tracking-tight text-ink">{f.big}</p>
             <p className="mt-4 max-w-[28ch] text-sm leading-relaxed text-ink-soft">{f.line}</p>
           </div>
         ))}
-      </Bleed>
+      </section>
       <section className="grid gap-8 py-12 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <T k="pages.returns.steps_heading" as="h2" className="text-[length:var(--size-h2)] leading-[1.1] text-ink" />
