@@ -177,6 +177,8 @@ Behaviour:
 | AC-15 | An unknown delivery option id | The order is placed | 422 naming the delivery option; no order is created |
 | AC-16 | A payment method that is not offered | The order is placed | 422 naming the payment method; no order is created |
 | AC-17 | A line with quantity 0 or a size the shoe does not list | The order is placed | 422 naming that line; no order is created |
+| AC-18 | A basket under 2.000.000 ₫ and a basket over it | Each is placed | Each stored total equals exactly the sum of its pairs' price × quantity and each stored delivery fee is 0 |
+| AC-19 | A signed-in customer and a guest | Each places an order | The first order is linked to the customer's account and the second to none |
 
 **Failure, boundary and permission behaviour**
 
