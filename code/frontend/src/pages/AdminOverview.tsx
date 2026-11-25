@@ -42,7 +42,7 @@ function RecentList({ rows, products, statuses }: { rows: Order[]; products: Pro
             <span className="min-w-0">
               <span className="font-medium tabular-nums text-ink">{o.number}</span>{" · "}
               <span className="text-ink">{o.customer}</span>{" · "}
-              <span className="text-ink-soft">{products.find((p) => p.id === o.product)?.name} · EU {o.size}</span>
+              <span className="text-ink-soft">{`${products.find((p) => p.id === o.product)?.name ?? ""} · EU ${o.size}`}</span>
             </span>
             <span className="shrink-0 text-ink-soft">
               {statuses[o.status] ?? o.status} · <span className="tabular-nums">{formatDateTime(o.placed_at)}</span> · <span className="tabular-nums text-ink">{formatPrice(o.total)}</span>
