@@ -482,7 +482,7 @@ func TestSortIsOneFieldThenTheSeedOrder(t *testing.T) {
 
 func TestASortThatIsNotAPublicFieldIsAFault(t *testing.T) {
 	generic := "sort must be a field of this list, such as price or -price."
-	for _, q := range []string{"sort=zzz", "sort=price,name", "sort=price%20name", "sort=-", "sort=--price", "sort=Price", "sort=price;", "sort=t.price"} {
+	for _, q := range []string{"sort=zzz", "sort=price,name", "sort=price%20name", "sort=-", "sort=--price", "sort=Price", "sort=price%3B", "sort=t.price"} {
 		req, faults := parse(t, "products", q)
 		if faults["sort"] != generic || req.sort != nil {
 			t.Errorf("%s: %v", q, faults)
