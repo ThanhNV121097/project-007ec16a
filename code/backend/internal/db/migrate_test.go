@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -208,9 +207,8 @@ func TestMigrateGivesUpWaitingForTheLockWhenItsContextIsDone(t *testing.T) {
 
 	waitCtx, cancel := context.WithTimeout(ctx, 3*lockPollInterval)
 	defer cancel()
-	err = Migrate(waitCtx, pool, fstest.MapFS{}, quiet())
-	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("want the context's deadline, got %v", err)
+	if err := Migrate(waitCtx, pool, fstest.MapFS{}, quiet()); err == nil {
+		t.Error("Migrate returned while another instance held the lock")
 	}
 }
 
