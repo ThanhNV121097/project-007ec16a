@@ -105,9 +105,10 @@ func (s *service) list(w http.ResponseWriter, _ *http.Request) {
 	httpx.Error(w, http.StatusUnauthorized, "unauthenticated", "Sign in to see orders.", nil)
 }
 
-func (s *service) internal(w http.ResponseWriter, what string, err error) {
-	// The cause is logged and never returned: it can hold SQL or a host name.
-	s.log.Error(what, "error", err)
+func (s *service) internal(w http.ResponseWriter, r *http.Request, what string, err error) {
+	// The cause is logged beside the request id and never returned: it can hold
+	// SQL or a host name.
+	s.log.Error(what, "request_id", httpx.RequestIDFrom(r.Context()), "error", err)
 	httpx.Error(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.", nil)
 }
 
