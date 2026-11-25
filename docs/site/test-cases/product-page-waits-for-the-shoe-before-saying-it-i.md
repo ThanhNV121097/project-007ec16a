@@ -36,14 +36,14 @@ Shape: frontend only. The story adds no endpoint and no table. The four contract
 **Scenario**: TC-01 — a shoe held for 2 seconds never shows the missing text while it waits (desktop)
 **Given**: A 1280×800 window. Arrangement H(2, shoe) for `samba-og-w-crystal-white`; the shoe is live, so its answer after 2 s is the record.
 **When**: `/shop/samba-og-w-crystal-white` is opened and readings of `main` are taken at the first paint and at 0.5 s, 1 s and 1.5 s.
-**Then**: In each of the four readings the text `MISSING` is not on the page (searched in `document.body`'s text, not only in `main`), no `h1` has that text, and no `a` whose text is `PILL` exists inside `main`. (The shoe itself is not yet there either; that is TC-03.)
+**Then**: In each of the four readings the text `MISSING` is not on the page (searched in the whole page's text, not only in `main`), no `h1` has that text, and no `a` whose text is `PILL` exists inside `main`. (The shoe itself is not yet there either; that is TC-03.)
 Traces: SC-1 (SITE-014 AC-1)
 Check: interact_page
 
 **Scenario**: TC-02 — the same wait on a phone shows no missing text
 **Given**: A 390×844 window. Arrangement H(2, shoe) for `samba-og-w-crystal-white`.
 **When**: `/shop/samba-og-w-crystal-white` is opened and readings are taken at the first paint and at 0.5 s, 1 s and 1.5 s.
-**Then**: In each reading `MISSING` is not in `document.body`'s text and no `a` with the text `PILL` is inside `main`. After the answer (a reading at 2.5 s) `[data-testid='product-name']` reads `Samba OG Crystal White`.
+**Then**: In each reading `MISSING` is not in the whole page's text and no `a` with the text `PILL` is inside `main`. After the answer (a reading at 2.5 s) `[data-testid='product-name']` reads `Samba OG Crystal White`.
 Traces: SC-1 (SITE-014 AC-1; NFR phone first)
 Check: interact_page
 
@@ -88,7 +88,7 @@ Check: interact_page
 
 **Scenario**: TC-08 — the shoe is drawn whole in the first paint after its answer, and the missing text was never there
 **Given**: A 1280×800 window. Arrangement H(2, shoe) for `samba-og-w-crystal-white`.
-**When**: `/shop/samba-og-w-crystal-white` is opened and the page is polled (every 250 ms or faster) from the navigation until 3 s after it, reading in every poll whether `MISSING` is in `document.body`'s text and whether `[data-testid='product-name']` exists.
+**When**: `/shop/samba-og-w-crystal-white` is opened and the page is polled (every 250 ms or faster) from the navigation until 3 s after it, reading in every poll whether `MISSING` is in the whole page's text and whether `[data-testid='product-name']` exists.
 **Then**: `MISSING` is in no poll at any time. In the first poll where `[data-testid='product-name']` exists (no earlier than about 1.75 s and no later than about 2.5 s after the navigation), the same poll also finds: the heading text `Samba OG Crystal White`; `a[href='/shop']` with the text `All shoes` inside `main`; a price `3.090.000 ₫`; at least nine `[data-testid^='size-']` pills; and `[data-testid='add-to-bag']`. There is no later poll in which one of these appears for the first time (no second wait).
 Traces: SC-5 (SITE-014 item 4; SITE-005 AC-1)
 Check: interact_page
@@ -149,7 +149,7 @@ Check: measure_styles
 **Scenario**: TC-16 — a draft shoe's address is answered 404: nothing first, then the missing view, never the shoe
 **Given**: A 1280×800 window. Arrangement T (`samba-og-kids-cloud-white` set to `draft`), a visitor with no session, and arrangement H(2, shoe) for that id.
 **When**: `/shop/samba-og-kids-cloud-white` is opened and polled from the navigation until 3 s after it; then the shoe is set back to `live`, the hold is removed and the page is reloaded.
-**Then**: While draft: in every poll `[data-testid='product-name']` does not exist and the text `Samba OG Kids Cloud White` is not in `document.body`'s text; in the polls before about 2 s `MISSING` is not on the page and `main`'s text is empty; in the polls after the answer `main` holds the `h1` `That pair is not in the shop any more.` and the pill `All shoes`. After it is set back to `live` and reloaded: `[data-testid='product-name']` reads `Samba OG Kids Cloud White` and `MISSING` is not on the page.
+**Then**: While draft: in every poll `[data-testid='product-name']` does not exist and the text `Samba OG Kids Cloud White` is not in the whole page's text; in the polls before about 2 s `MISSING` is not on the page and `main`'s text is empty; in the polls after the answer `main` holds the `h1` `That pair is not in the shop any more.` and the pill `All shoes`. After it is set back to `live` and reloaded: `[data-testid='product-name']` reads `Samba OG Kids Cloud White` and `MISSING` is not on the page.
 Traces: SC-10 (SITE-014 AC-3; ADMIN-013 AC-11)
 Check: interact_page
 
@@ -160,7 +160,7 @@ Check: interact_page
 **Scenario**: TC-17 — with the shop unreachable the page stays empty and never says the pair is gone (desktop and phone)
 **Given**: Arrangement U (the API stopped; the gateway answers 502 to every `/api/…` request). A 1280×800 window, then the same case at 390×844.
 **When**: `/shop/samba-og-w-crystal-white` is opened and readings are taken at the first paint and at 1 s, 2 s, 3 s, 4 s and 6 s (the data module may retry a failed read once before it gives up; the readings span both).
-**Then**: In every reading, at both widths, `MISSING` is not in `document.body`'s text; no `a` with the text `PILL` exists in `main`; no `h1`, `[data-testid='product-name']`, `[data-testid^='size-']` or `[data-testid='add-to-bag']` exists; `main`'s trimmed text is empty; `header` and `footer` exist and have text. The page does not redirect (`location.pathname` is still `/shop/samba-og-w-crystal-white`).
+**Then**: In every reading, at both widths, `MISSING` is not in the whole page's text; no `a` with the text `PILL` exists in `main`; no `h1`, `[data-testid='product-name']`, `[data-testid^='size-']` or `[data-testid='add-to-bag']` exists; `main`'s trimmed text is empty; `header` and `footer` exist and have text. The page does not redirect (`location.pathname` is still `/shop/samba-og-w-crystal-white`).
 Traces: SC-11 (SITE-014 AC-4)
 Check: interact_page
 
