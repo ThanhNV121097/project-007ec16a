@@ -689,6 +689,7 @@ Behaviour:
 | 4 | The design's words "we text you when the pair is on its way" (ORD-002) promise a text message; the brief and plan build none, and the "we confirm by text message" line went with cash on delivery | Asked of the owner: either they accept the words as the shop's promise to call or write, or they reword them in the Studio; no text sending is built | Owner |
 | 5 | Closed in this revision: the design copy "the order is marked paid at once and packed today" is untrue until VNPay's notice arrives, so ORD-001 item 6 reads "we pack your order after the payment is confirmed" | Decided | — |
 | 6 | The drawer lets a customer raise a line above 5 pairs; the bag page stops at 5 | The shop checks stock only; no fixed cap beyond the pairs on the shelf | Stakeholder |
+| 7 | Copy for the checkout state when VNPay's keys are missing: "Online payment is not available right now. Please try again later." | Use it, added to the site's content so the owner can edit it | Stakeholder |
 
 ## 8. Traceability
 
