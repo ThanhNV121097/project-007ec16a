@@ -759,3 +759,4 @@ Every page above is drawn once for a phone width and widens at 1024px, as `desig
 |---|---|---|
 | The site as designed | SITE-001, SITE-002, SITE-003, SITE-004, SITE-005, SITE-006, SITE-007, SITE-008, SITE-009, SITE-010, SITE-011, SITE-012, SITE-013, SITE-015 | `test-cases/the-site-as-designed.md` |
 | Product page waits for the shoe before saying it is missing | SITE-014 | `test-cases/product-page-waits-for-the-shoe-before-saying-it-is-missing.md` |
+| Free delivery on every order, wording to match | SITE-016 | `test-cases/free-delivery-on-every-order-wording-to-match.md` |
