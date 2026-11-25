@@ -38,7 +38,7 @@ In this file "the dealer" means a session whose role is admin or staff.
 
 **Out of scope**
 
-- Creating more dealer or staff accounts, changing a password, "forgot password" — no screen in the design and no plan item; the one dealer account comes from the owner's settings. The sign-in page's note "Accounts are for the dealer and staff. Ask the owner for one." is the owner's wording and stays.
+- Changing one's own password and "forgot password" — no screen in the design and no plan item (the admin resets a staff member's password, ADMIN-031). The sign-in page's note "Accounts are for the dealer and staff. Ask the owner for one." is the owner's wording and stays.
 - Customers' sign-in — customers have no accounts.
 - How customers place and read orders — the `orders` module.
 - Marking an online order paid — only the payment provider's notice does that (`payments` module); the dealer marks cash-on-delivery orders paid here.
