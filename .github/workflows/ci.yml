@@ -441,8 +441,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      # NOT ON A DESIGN'S OWN BRANCH. A project that starts from a built template
+      # starts from the template's SAMPLE site, and adapting it deletes the
+      # sample's pages this business has no use for. Run 007ec16a renamed the
+      # sample's "Kinds" screen to its own categories, deleted the two files
+      # nothing reached any more, and was sent a whole design turn to put them
+      # back — where "Modules nothing reaches", below, would then report them.
+      # What a design deletes is judged by the build, the walk and the review,
+      # which look at the site rather than at the diff. A STORY's pull request
+      # is still refused: its frontend is the design the owner approved.
       - name: No frontend file is deleted
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'design/')
         run: |
           set -euo pipefail
           base="origin/${{ github.base_ref }}"
