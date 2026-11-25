@@ -528,7 +528,7 @@ Behaviour:
 
 **Requirement ADMIN-016 — The dealer handles an order**
 
-*As the* dealer, *I want to* move an order along, give the courier's details and mark cash received, *so that* customers see the truth.
+*As the* dealer, *I want to* move an order along, give the courier's details and see whether it is paid, *so that* customers see the truth.
 
 Behaviour:
 
