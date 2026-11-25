@@ -2495,6 +2495,8 @@ Migration `users_and_sessions` applies before the listener (nothing reads it unt
 <!-- story 13: Product page waits for the shoe before saying it is missing -->
 # Service contracts — Product page waits for the shoe before saying it is missing (plan item 13)
 
+> **Revision 2 (the design step ran again after "Site data from the database" merged, PR #39).** The contract below stands; nothing in it is redesigned. What changed is evidence: §3.1 reads the merged `useRecord` against H1–H5 (all hold), §3.2 replaces the `renderToString` check, which cannot run, with a check that can, §5 and §8 are updated to the state of `main`, and §8 records that `main`'s `Product.tsx` has the bug today.
+
 Module `site` · Requirement SITE-014 (with the not-found row of SITE-005; ADMIN-013 item 1 for the draft case) · Story `docs/site/stories/product-page-waits-for-the-shoe-before-saying-it-i.md` · UI PR #27 · Tables: `docs/architecture/erd/product-page-waits-for-the-shoe-before-saying-it-i.md` (none changed).
 
 Every path is written the way the Go backend mounts it — **no `/api` prefix**: the browser's `/api/v1/products/samba-og-w-crystal-white` reaches Go as `/v1/products/samba-og-w-crystal-white`.
@@ -2529,17 +2531,50 @@ Waiting for the shoe is the request's own life. `src/lib/api.ts` (S3 §5.1) abor
 
 ## 3. What this page needs from `useRecord(name, id)` — the contract S3's hook must meet
 
-DATA-005 item 7 and AC-8/AC-9/AC-11, and S3 §5.2, say `useRecord` returns `{ item, loading, error }`, that a request in flight is `loading`, that a 404 is `item` undefined with `loading` false and `error` null, and that any other failure sets `error`. They do **not** say four things this page depends on (H1–H4); H5 is already in S3's wording and is repeated so a refactor does not lose it. S3's hook is not written yet (no pull request for it is open), so this design states them now; they extend S3, they do not change an export, a signature or a returned field.
+DATA-005 item 7 and AC-8/AC-9/AC-11, and S3 §5.2, say `useRecord` returns `{ item, loading, error }`, that a request in flight is `loading`, that a 404 is `item` undefined with `loading` false and `error` null, and that any other failure sets `error`. They do **not** say four things this page depends on (H1–H4); H5 is already in S3's wording and is repeated so a refactor does not lose it. They extend S3; they do not change an export, a signature or a returned field. S3 has now merged (PR #39), so the hook is read, not promised: §3.1.
 
 | # | Requirement on the hook | Why this page needs it | How it is checked |
 |---|---|---|---|
-| H1 | **`loading` is true on the first render of a `(name, id)` that has no answer yet** — derived while rendering, not set by an effect afterwards. A hook that starts at `loading: false` and flips to `true` in `useEffect` renders one frame of `{ item: undefined, loading: false, error: null }`, which is exactly "answered not found" | SC-3: the page must not read "no request yet" as "not found". Without it the missing view flashes for a frame on every shoe page and on every address change, which is the bug this story exists to remove | A `renderToString` of `Product` with the **real** hook for an id with no cached answer contains neither `That pair is not in the shop any more.` nor the pill (TC-05). Added by the data story's review or its unit tests; this story's test file cannot run it before then |
+| H1 | **`loading` is true on the first render of a `(name, id)` that has no answer yet** — derived while rendering, not set by an effect afterwards. A hook that starts at `loading: false` and flips to `true` in `useEffect` renders one frame of `{ item: undefined, loading: false, error: null }`, which is exactly "answered not found" | SC-3: the page must not read "no request yet" as "not found". Without it the missing view flashes for a frame on every shoe page and on every address change, which is the bug this story exists to remove | A render of `Product` with the **real** hook and a `fetch` that is held pending: the first commit contains neither `That pair is not in the shop any more.` nor the pill (TC-05, §3.2). `renderToString` cannot be used (§3.1). `data.test.tsx` already asserts `loading: true` and `item` undefined on the hook's first render |
 | H2 | **A record answered for another `(name, id)` is never returned as this one's.** When `id` changes, `item` is `undefined` (or the record's own `id` differs from the one asked) until the new answer arrives; `loading` is true for that interval | SC-4, SC-13: going from one shoe to another must not show the first shoe's name or price under the new address, and must not show the missing view before the new answer. The page also compares `item.id` with the address (belt and braces, UI PR #27), but a hook that leaks is still a defect: other pages read it | S3's hook unit tests: change `id`, read the very next render |
 | H3 | **"Not found" means status `404` and the API's own code `not_found`.** A `404` whose body is not the envelope — a gateway's or a static server's own 404 page, a mis-routed `/api` — arrives from `api.ts` as `ApiError` `status` 404, code `internal` (S3 §5.1), and the hook reports it as an **error**, not as "not found" | SITE-014 item 2 says the missing view follows an answer from the shop. If any 404 counted, a broken proxy rule would tell every visitor that every shoe has been withdrawn | A hook test with a `404` whose body is `<html>…` → `error` set, `item` undefined. The API's real 404 (`{"error":"not_found",…}`) still gives `error` null, so DATA-005 AC-11 holds unchanged |
 | H4 | **A late answer for an earlier id never replaces the current one** (DATA-005 AC-10, "the latest query wins", applied to `useRecord` as well as `useCollection`) | SC-4/SC-13 hop between ids quickly (a colour dot, a related-pair card); the first shoe's slow answer must not land under the second address | A hook test: ask `a`, ask `b`, answer `b` then `a`; the hook holds `b` |
 | H5 | **A failure after a record is in hand keeps the record** (S3 §5.2 "keeps the items already loaded"), and `error` may be set beside it. Not new | The page draws the shoe "whatever the other flags say" (story §3, UI PR #27 test) | Already in S3's wording; listed so a refactor does not drop it for `useRecord` |
 
-None of these changes a response the API sends. They are checked at S3's backend review (the hook lives in that story's `src/data/index.ts`) and at Verify. If S3 lands without H1 or H3, the finding is raised against S3 and `src/data/` is **not** patched here (story §4).
+None of these changes a response the API sends. If the hook ever stops meeting H1–H5, the finding is raised against the data story and `src/data/` is **not** patched here (story §4).
+
+### 3.1 The merged hook, read against H1–H5
+
+Read in `code/frontend/src/data/index.ts` on `main` (lines 379–421) and in `src/lib/api.ts`. Every row holds; none needs a change.
+
+| # | Where it is met in `useRecord` | Existing test | Verdict |
+|---|---|---|---|
+| H1 | `useState({ key: "", loading: true, … })` and, **during render**, `fresh = state.key === key`, `waiting = id !== undefined && (!fresh \|\| state.loading)`. The first render of any id has `fresh` false, so `loading` is true and `item` undefined before any effect runs | `data.test.tsx` "is loading until the answer, then holds the record" asserts it on the first render | Holds |
+| H2 | `item: fresh ? state.item : undefined`, `error: fresh ? state.error : null`: another key's state is never returned | "drops the old record the moment the id changes" (rerender with `b`: `item` undefined, `loading` true) | Holds |
+| H3 | `isNotFound(e)` is `e instanceof ApiError && e.status === 404 && e.code === "not_found"`; `api.ts` `failure()` gives a body that is not the envelope code `internal` | "reads a 404 that does not carry the API's not_found code as an error" and "reads a 404 as no record and no error" | Holds. The API's own 404 is `httpx.Error(w, 404, "not_found", "Not found.", nil)` (`internal/data/handler.go`) |
+| H4 | The effect's cleanup sets `live = false`, and `setState` runs only `if (live)`; a late answer is also ignored because `fresh` compares `state.key` with the current key | **None for `useRecord`** ("latest wins" is tested for `useCollection`) | Holds by the code. The one gap is a test: the colour-dot sequence in §3.2 (a slow first answer landing after the second address) closes it, so it belongs in the product-page real-hook test, not in `src/data/` |
+| H5 | `setState` replaces the whole state, so `item` and `error` are never set together | — | Holds vacuously. The page's "a record in hand wins whatever the flags say" stays the safe rule if a refresh is ever added |
+
+Three more facts about the hook that matter to this page:
+
+- **`useEdited` has no `getServerSnapshot`** (`useSyncExternalStore(subscribe, getSnapshot)` with two arguments). React refuses to server-render a component that uses it, so the parenthetical in story SC-3 and the `renderToString` of TC-05 **cannot be run as written**. This is a limit of the instrument, not a defect of the page or of the hook, and the criterion itself ("the first render shows no missing text") is met by H1. §3.2 gives the check that can run. Not patched here: `src/data/` is the data story's.
+- **The Studio's hand-edited copy is an answer.** When the dealer's Studio has set a copy of `products` (`edit !== undefined`), the hook answers from it at once with `loading: false` and no request, so an unknown id draws the missing view immediately. That is correct (nothing is in flight) and is not a violation of SITE-014; the visitor's site never has an edited copy.
+- **A failed GET is asked twice** (`api.ts`: one retry on status 0 or 5xx, never on a 404), and identical GETs asked at the same moment **share one request** (`shared()`, keyed by URL). Both matter to how a test holds or fails a request (§3.2).
+
+### 3.2 Holding one request in a test, with no backend route
+
+The waiting rows (SC-1, 2, 4, 6, 8, 11, 12, 13) need a request that is held, delayed or failed on purpose, and the verify notes record that no tool of the pipeline holds one URL. Decision S4 (below) keeps the backend free of any such route, so the instrument is in the frontend's own test layer, with the **real** `useRecord` and the **real** `api.ts`:
+
+| Need | How |
+|---|---|
+| Hold the shoe's request | `vi.stubGlobal("fetch", …)` as `data.test.tsx`'s `serve()` does; the stub answers `/api/v1/products/<id>` with a promise the test resolves (or with fake timers advanced by 2 000 ms), and every other URL the page asks for (the live list, `lines/<id>`, `categories/<id>`, `shop/shop`, `payments/vnpay`, `reviews`) at once, or at 4 000 ms for SC-6 |
+| Prove "nothing at the first paint" (SC-3) | Render `Product` in a `MemoryRouter` at `/shop/<id>` beside a probe component whose `useLayoutEffect` copies the container's `innerHTML`. Layout effects run in the first commit, **before** the passive effect that sends the request, so the copy is the first paint. Assert it is empty. A second copy taken while the request is held is also empty |
+| Answer 404 / 500 / offline | 404: `new Response(JSON.stringify({error:"not_found",message:"Not found."}), {status:404})`, asked **once**. 500 with the envelope, or `fetch` rejecting: asked **twice** (the retry), then `error` is set. A 404 whose body is `<html>` is an `error`, not the missing view (H3) |
+| Unreachable for 5 seconds (SC-11) | With fake timers, `fetch` rejects; advance 5 000 ms in steps and assert the container is empty at each |
+| Colour dot to a slow shoe (SC-4, SC-13) | Navigate to the second id, hold its URL, assert empty, then resolve it. The first id's answer, resolved **after** the second, must not replace the second (H4) |
+| Do not leak between tests | `shared()` keeps a held GET in `inflight` until it settles, so a request left pending joins the next test that asks the same URL. Settle (resolve or reject) every held request before the test ends, or give each test its own id |
+
+This is test code in `src/test/` and edits nothing in `src/data/`. It complements the nine stubbed tests of PR #27 (which prove the page's decision); it proves that the real hook and the page agree. It is the story's backend-independent evidence for the rows a running site cannot hold; the running site still carries the 404, 500 and unreachable rows, whose faults need no hold (§5).
 
 ## 4. The "mock", read and judged
 
@@ -2552,14 +2587,16 @@ The UI PR adds **no mock module** (the story needs no data of its own). The only
 | The 404 stub is `{ item: undefined, loading: false, error: null }` | S3 §5.2 and H3 | Matches the only form of "answered not found" the hook is allowed to report |
 | The test shoe's `id` is `samba-og-w-crystal-white` with `sizes` `["36","38","40"]` | The seeded record has nine sizes from `36` | Harmless: the stub is not a fixture of the API. TC-10 and TC-11 read the real record |
 
+Revision 2 re-read the UI PR at head `5518928`: still no mock module, still nine tests, and the stub's `useRecord` shape still matches the merged hook field for field (`{ item, loading, error }`); the verdicts above stand.
+
 **Frontend change required when the API lands: none.** Nothing is swapped and no file is deleted: the page already reads through `src/data/index.ts`, which S3 re-points at the API. The stub never ships (it is in `src/test/`).
 
 ## 5. Ordering: what can be verified when
 
 | Criteria | Needs | Until then |
 |---|---|---|
-| SC-3 / TC-05 (real hook, no flash on the first render) | S3's hook with H1 | `useRecord` today answers `loading: false` for every id, so the check can only run for a known id. Report it as waiting for S3, not as a failure of this page |
-| SC-1, 2, 4, 5, 6, 8, 9, 11, 12, 13 and TC-27, 28, 30 | S3's reader and hook, served through `run_project` | The stubbed unit tests (TC-25) are the only evidence of the waiting rows |
+| SC-3 / TC-05 (real hook, no flash on the first render) | S3's hook with H1 (**landed**, §3.1) and the UI PR's page | Runnable now through §3.2 (first-commit probe, real hook, `fetch` held). Not through `renderToString`, which React refuses for `useEdited` (§3.1). Against the running site it needs a build **of the UI PR's head**: a bundle built from `main`'s `Product.tsx` draws the missing view on every first paint, which is the bug, not a failure of the fix |
+| SC-1, 2, 4, 5, 6, 8, 9, 11, 12, 13 and TC-27, 28, 30 | S3's reader and hook (**landed**), served through `run_project` from a build of PR #27's head | The 404 row (unknown id), the 500 row (database down) and the unreachable row (API stopped, a gateway answer) need no hold and can be run against the site. The **held** rows (SC-1, 2, 4, 6, 8's pre-answer half) have no instrument on the running site; their evidence is §3.2 plus the stubbed tests (TC-25). Report them as covered by unit evidence, not as unverified failures |
 | **SC-10 / TC-29 (a draft shoe, as a visitor)** | **The visitor rule of ADMIN-013 item 1: `GET /v1/products/{id}` answers a no-session caller `404 not_found` for a `draft` shoe** | **S3 does not serve it.** S3's decision C1 (`erd/site-data-from-the-database.md` §7) serves every row, because no draft can exist before an endpoint can create one, and S3 §4.1 hands the rule to "Manage shoes, lines, categories, reviews and orders" (plan item 10). Test's arrangement T sets a shoe to `draft` directly in the database, which S3's reader would still answer `200` |
 
 The last row is a conflict between this story's SC-10 and a merged decision, so it is stated and resolved here rather than quietly overridden:
@@ -2599,10 +2636,11 @@ One, in §5: SC-10's draft half against S3's decision C1 / §4.1. Resolved as op
 
 | Who | What they must know |
 |---|---|
+| Everyone, **merge order** | `main`'s `Product.tsx` (line 202) still reads only `item` from `useRecord`, and `main`'s `useRecord` has been the real API hook since PR #39, so **every shoe page on `main` flashes the missing view while its request is in flight today.** PR #27 is the fix and has no dependency left (S3 landed). It should merge ahead of any story that waits on a shoe page, and the site served for any verification must be built from its head, not from `main` |
 | Dev, backend step of this story | **There is no backend work.** No route, handler, migration, test fixture or `/api` prefix to check. The step has nothing to implement; the orchestrator may close it without a pull request |
-| S3 "Site data from the database" | Meet H1–H5 in `useRecord` (§3). H1 and H3 are the two that change what a page can see; the backend review of that story checks them against this file |
+| S3 "Site data from the database" | Merged and met H1–H5 (§3.1); no action. If `useRecord` is refactored, keep its first-render `loading: true` (H1) and the `not_found`-only rule (H3) |
 | "Manage shoes, lines, categories, reviews and orders" | The visitor rule (`draft` → `404 not_found`, byte-identical to an unknown id) is what makes SC-10 and TC-29 of this story verifiable (§5); a dealer session gets `200` |
-| Test lead | Report TC-29 and the draft half of SC-10 as blocked by plan item 10, and TC-05 as blocked by S3's hook, not as failures; run everything else in §5 once S3 has landed |
+| Test lead | Report TC-29 and the draft half of SC-10 as blocked by plan item 10, not as a failure. TC-05 is no longer blocked: run it as §3.2 describes (first-commit probe with the real hook), since `renderToString` cannot run. Run the rest of §5 against a build of PR #27's head |
 | "Free delivery on every order" (PR #24) | Shares `Product.tsx` with this story but in `DetailRows`, not in `Product()` (story §7); whichever merges second rebases |
 
 
@@ -2871,4 +2909,188 @@ None. Refinements of silence only: §4.5 points 1–5 and the display-name and A
 | Test lead | SC-9/SC-10 are guard-first: a bad body or a bad id as staff or with no session is `403` / `401`, never `404`/`400`. SC-37: `PUT {"role":"admin"}` to a customer's id is `404` (target before body); to the admin's id `409`. SC-36: `POST` with `role` is `400`, `PUT` with `role` is `422`. The 404 sentence is "That account was not found." |
 | "Dealer sign-in" (item 9) | R1, R2, R3 and the shared `NormalizeEmail` are checked at its backend review |
 | "Customer accounts" (item 15) | Reuses `NormalizeEmail`, `HashPassword`, `CreateUser` and `DisplayName` from §5.1 rather than writing a second copy |
+
+
+<!-- story 16: Shop phone filters, Clear all, loading and errors -->
+# Service contracts — Shop phone filters, Clear all, loading and errors (plan item 16)
+
+Module `catalogue` · Requirements CAT-003 items 6–8, CAT-004 in full · Story `docs/catalogue/stories/shop-phone-filters-clear-all-loading-and-errors.md` · UI PR #40 · Tables: `docs/architecture/erd/shop-phone-filters-clear-all-loading-and-errors.md` (none changed).
+
+Every path is written the way the Go backend mounts it — **no `/api` prefix**: the browser's `/api/v1/products` reaches Go as `/v1/products`.
+
+## 1. Verdict: this story adds, changes and removes no endpoint
+
+The story is `/shop` in the browser. It reads four routes that other stories define and serve, and adds no request, response field, status code, error code, header or route:
+
+| Read | Defined by | Used for |
+|---|---|---|
+| `GET /v1/products?status=live&limit=12&page=n&…` | item 4, `services/search-filters-and-sorting-served-by-the-api.md` §3 (envelope `{items, total, page, limit}`, `_base.md` §2.4) | The list, the count, "Show more" |
+| `GET /v1/product-filters` | item 4, same file §4 | The Colour options and the Size (EU) pills |
+| `GET /v1/categories`, `GET /v1/lines` | S3, `services/site-data-from-the-database.md` | Names for the heading and the For and Line groups |
+
+All four are public, answer `Cache-Control: no-store`, and fail with the project's envelope `{error, message, errors}` and its closed lowercase catalog (`_base.md` §2.3). A failed query is `internal` (500); `unavailable` (503) is only `/healthz` and shutdown. Offset paging is the project's only scheme and is reused untouched.
+
+What this design adds is **(a)** the table of answers the page branches on, so a wrong status from the API is named as the cause and not blamed on the page (§2); **(b)** how many requests each visitor action sends, which the verifying tester counts (§2.1); **(c)** the mock read and judged (§3); **(d)** the four decisions the story leaves to TL, ruled, and four more that follow from them (§4); **(e)** what plan item 4's backend swap must keep and the order the two pull requests meet in (§5, §6).
+
+## 2. The reads, and what the page draws for each answer
+
+`useShopList` (`src/lib/shop-list.ts`) reports `{ items, total, hasMore, loading, error, loadMore, retry }` for the **current query only** and `ShopResults` draws one thing at a time:
+
+| What the shop answers | What the hook reports | What the results area draws |
+|---|---|---|
+| `200`, `items` of up to twelve, `total` above `items.length` | `items`, `total` = the API's total, `hasMore` true, `loading` false, `error` null | The cards, then "Show more"; the line `<total> matching` |
+| `200`, `total` 0, `items: []` — a search or filter that matches nothing: `q=zzzz`, `line=zzz`, `colour=zzz`, `size=99` | `items: []`, `total` 0, `loading` false, `error` null | The empty state: "No pair matches that.", its line, "Clear all" with an arrow, and `0 matching`. **This is the only way the empty state is reached** |
+| The first request of a query is on its way (a first visit, a ticked box, "Try again") | `items: []`, `total` null, `loading` true, `error` null | "Loading the shoes…" (`role="status"`). No cards of the previous list, no count, no empty state |
+| The next page is on its way | `items` kept, `total` kept, `loading` true | The cards, and "Show more" disabled and reading "Loading…" |
+| The first page is **rejected** — see the list below | `items: []`, `total` null, `loading` false, `error` set | "We could not load the shoes." (`role="alert"`) and "Try again". No count, no empty state, no card |
+| Page 2 or later is **rejected** | `items` kept, `total` kept, `loading` false, `error` set | The cards stay and `<total> matching` stays; the message and "Try again" take the place of "Show more" |
+| An older query's answer **or failure** arrives after a newer one | Dropped by the hook (`current` flag of the effect) | Whatever the newest query says (SC-30) |
+
+**Rejected** means `api.get` rejects with an `ApiError` or the hook receives any `Error`. All of these are one view, because the page can do one thing about any of them (ask again) and must claim nothing it does not know:
+
+- `500` `internal` — the database cannot be reached, a statement fails or times out (item 4 §3.9).
+- `502`, `503`, `504` from the edge proxy while the API is stopped or restarting — a body that is not the envelope arrives as `ApiError` with code `internal` (`api.ts` `failure`).
+- No answer — the browser is offline, the connection is refused, the request is aborted, or 15 s pass (`ApiError` `status` 0, code `network`).
+- `200` whose body is not JSON — a static server answering for a missing proxy rule. `api.ts` turns an undefined body into `ApiError`, so it is an error and never an empty list.
+- Any `4xx`, including `400 bad_request` for an address a person edited by hand (`q` over 100 characters, for example). The shop's own requests never produce one (the page sends only bands and sorts it knows), so the view is the honest one: "could not load".
+
+The page draws **no part** of the rejection: not the status, not the `error` code, not the `message`, not `errors`. SC-25's test answers a 500 with a marker message and reads the page for it; no component reads an `ApiError` field.
+
+### 2.1 What each action sends (the tester counts these)
+
+The one retry is `api.ts`'s, not the hook's: `api.get` tries a failed `GET` once more (no answer, timeout, 5xx; never a 4xx), and each try is abandoned after 15 s. The hook adds none of its own.
+
+| Action | Requests | Notes |
+|---|---|---|
+| First page, answered | 1 | `GET /v1/products?status=live&limit=12&page=1&sort=-released[&…]` |
+| First page, every request answers 500 or no answer | **2**, then the error view | The try and `api.ts`'s retry. Longest wait before the error view appears: 2 × 15 s, all of it under "Loading the shoes…" |
+| First page, `4xx` | 1, then the error view | A `4xx` is an answer; it is not retried |
+| "Try again" on a failed first page, server back | 1 | Same filters, `limit=12`, `status=live`, `page=1` (SC-26) |
+| "Try again", server still failing | 2, then the error view again | The message is replaced by "Loading the shoes…" for the whole attempt |
+| "Show more" | 1, the button disabled until it settles | A disabled button sends nothing, so a second press sends no second request (SC-24) |
+| "Try again" on a failed page 2 | 1 (2 if it fails again) | The **same** page: `page=2`, the same filters. Page 1's cards stay; none is repeated or skipped (SC-27) |
+| A filter changed while a request is in flight | 1 more | The earlier request is **not aborted** (`api.get` takes no signal); its answer or failure is dropped by the hook. A few concurrent `GET`s of twelve shoes is the whole cost |
+| Back from a shoe | 1 for the list, plus the options and the names the page reads on every visit | The list is re-read from the address and starts at its first twelve (SC-10, SC-11); nothing is restored from an earlier visit (ERD D1) |
+
+A page is ordered by the sort key and then `seq`, a total order (item 4 §3.6), so asking the same page again returns the same shoes unless the dealer changed the catalogue in between; the hook drops a shoe it already holds before appending, so a shifted offset repeats nothing on screen (item 4 §2).
+
+## 3. The mock, read and judged
+
+This story has **no mock module of its own**. PR #40 adds fault knobs to **plan item 4's** mock, `src/lib/mock/search-filters-and-sorting-served-by-the-api.ts`, and changes `src/lib/shop-list.ts`. Both are unreviewed input as far as their contents go (the UI review covered isolation and the story's behaviours). Read against the contract above:
+
+| What the UI stage does | What the contract does | Judgment | Frontend change at the swap |
+|---|---|---|---|
+| `localStorage["doi:mock"]` = `shop-slow` (3 s), `shop-error` (every list read fails), `shop-more-error` (page 2 and later fail); `navigator.onLine === false` fails like a 5xx | The real failures are a 5xx, a stopped API, a refused connection and an offline browser, made by the tester's request interception. The story says the product carries **no** switch for delay or failure (story §9) | **Departure — must not survive.** A storage flag that makes the production shop fail is a switch a visitor could be talked into setting, in a file the build ships | The whole file is deleted by item 4's backend step, which already deletes the mock; no importer remains (`shop-list.ts` is its only importer). Nothing else in the page reads `doi:mock` |
+| A failed read rejects with `new Error("The shoes could not be read")` | The real rejection is an `ApiError` (`status`, `code`, `message`, `errors`) | Sound: the hook keeps `e instanceof Error ? e : new Error(String(e))`, and no component reads a field of it | None |
+| A slow read resolves after 3000 ms | Slowness is the network; neither the hook nor the page has a timer of its own | Sound | None |
+| Answer `{items, total, page, limit}` and `ProductFilters { colours, sizes }` | Identical (item 4 §2 and §4) | Sound | None |
+| `useShopList` returns `{items, total: number \| null, hasMore, loading, error, loadMore, retry}` | S3's `useCollection` returns `{items, total, pages, page, hasMore, loading, error, loadMore}`. The shop does not go through `useCollection` (item 4 §6) | Sound, and the right shape for the page: `total` is `null` until the query's first answer, so "0 matching" is never claimed for a list that has not come; `pages` and `page` are drawn nowhere. The story's §3 says the shop needs "the data story's hook"; what it needs from S3 is `api.ts` (its `ApiError`, its one retry, its 15 s limit), which `listProducts` reaches through `api.get` | None |
+| `useProductFilters` turns a failed read into "no options" | `GET /v1/product-filters` can fail like any read | Accepted, see decision T6 | None |
+
+### 3.1 Revision after the UI's fix 1 (PR #40 head `f45c569`, re-reviewed: approved for testing)
+
+Verify's first run found a direct open of `/shop` drawing the empty state, because item 4's UI-stage mock read the shoes from `src/data`'s store, which only other pages fill. Fix 1 rewrote **the mock's reading**, not the contract, and added one test file. Read and judged:
+
+| What fix 1 does | What the contract does | Judgment | Frontend change at the swap |
+|---|---|---|---|
+| The mock's `listProducts` and `getProductFilters` read every live shoe through `api.get("products", { status: "live", page, limit: 100 })`, a page after another, on every call, and narrow, sort and slice them in the browser; the lines' and categories' names are read the same way, only when `q` is set | The real list is **one request** of `limit=12` that the database narrows (item 4 §3); the options are one `GET /v1/product-filters` | **Departure — a stand-in, and it must not survive.** It is the right stand-in for the UI stage because it fails the way the real client does (a failed page rejects, so a refused database, a 502 and an offline browser are "could not load", never an empty list — K1 already holds for the mock). But it sends no `limit=12`, reads the whole catalogue per visit, and its page size is the ceiling, so none of §2.1's request counts can be read from a build that still holds it | None beyond the swap already listed: `shop-list.ts` is the mock's only importer and changes two imports; the mock is deleted (§5 K6) |
+| New `src/test/shop-mock.test.ts` tests that mock (a failed read rejects; a direct open lists the catalogue) | After the swap there is no mock to test; the same facts are item 4's `shop-request` and `shop-list` tests against `api.get` | **Companion of the mock — deleted with it.** Left behind, it imports a file that no longer exists and fails the suite and CI lint | Deleted at the catch-up of #40 (§5 K6, §6) |
+| The mock's `doi:mock` knobs (`shop-slow`, `shop-error`, `shop-more-error`) are unchanged by fix 1 | T7 (§4.2): the product carries no switch for delay or failure | Unchanged ruling; still deleted with the mock | None |
+
+Two consequences, so nobody finds them later. **Run local must serve a build with the mock gone** (item 4's backend merged and #40 caught up, §6): only then does the page send `limit=12&status=live&page=n`, which SC-24, SC-26 and SC-27 read from the network log. And **no contract of this file changes**: the §2 table of answers, the §2.1 request counts, T1–T8 and K1–K5 stand as merged.
+
+## 4. Decisions
+
+### 4.1 The four the story leaves to TL (story §8)
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| T1 | How "Clear all" removes the size without touching the dealer's lists | **`useTableQuery({ sizeIsFilter: true })`**, the shop's opt-in (confirmed from the UI review). With it `size` is never read as a page size, `clear()` removes it and `filtering` counts it; without it every caller is unchanged (`size` is the page size, `clear()` keeps it, `filtering` ignores it). The address parameter stays `size`. `FilterRail` takes an optional `table` prop so the page and the rail are **one** instance; every call on one page passes the same value, so the page's `clear()` and the rail's cannot disagree. `ListPage` (the dealer's lists) calls `useTableQuery({ size: 20 })` and sends `size` as `limit`; it never forwards it as a filter, so item 4 making `size` the EU-size filter of `products` does not reach it | Renaming the address parameter (`sizes=`, `eu=`): CAT-003 item 1, CAT-004 AC-1 and AC-2, item 4's SC-34 and S4 decision T2 all name `size`, and every shared link, home tile and footer entry would change. A second copy of the hook for the shop: two sources of truth for `clear()`. Dropping `size` from the hook's own parameters for everyone: the dealer's `?size=50` would stop being a page size (SC-19) |
+| T2 | Retry and "more is loading" in the list hook | **`useShopList.retry()`**, additive: it re-runs the read for the same `(query, page)`, so a failed page 2 is asked as page 2 and a failed first page as page 1 — never skipped, never a page already shown. **"More is loading" is derived**: `loading` with `items` on screen. An older request's failure cannot set `error` (the effect's `current` flag, SC-30). The hook also returns only the current query's answer and resets paging with the query, which SC-23 and SC-11 need | Putting retry in `api.ts` or `useCollection`: the shop uses neither's list state, and `api.ts` is every page's client — a retry policy there is a policy for the whole site. Automatic back-off retry: out of scope (story §5); the visitor's "Try again" is the only second chance beyond `api.ts`'s one |
+| T3 | Where the four strings live | **`src/content.json`, four new keys, existing keys untouched** — a one-time exception to the freeze in `overview.md` §5, for new keys only: `pages.shop.loading` = "Loading the shoes…", `pages.shop.error` = "We could not load the shoes.", `pages.shop.retry` = "Try again", `pages.shop.loading_more` = "Loading…" (the single character `…`). Confirmed from the diff: they sit in alphabetical position inside `pages.shop`, so a textual conflict can only be with a neighbouring key and the second pull request to merge keeps both | Typing the strings into the components (what the dealer sign-in story did): SC-31 asks that the owner edit them in the Studio. TL adding the keys in a separate pull request: it would hold this story for a four-line change nobody else edits |
+| T4 | Where the group-hiding rule for the size pills sits | **Inside `ShopSizes`** — fewer than two sizes draws nothing, heading included (so no "Size (EU)" over an empty grid). `FilterRail` keeps its own rule for the checkbox groups and also stays drawn when something is set but every group has one option, so "Clear all" is never unreachable (SC-13). A value ticked in a group that is not drawn still filters, still counts in "Filter (n)" and is still removed by "Clear all" | A shared "group" component for both: it would rewrite a component every dealer list imports |
+
+### 4.2 Four that follow
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| T5 | Does any rejection other than a 5xx or "no answer" get its own view? | **No.** Every rejection of a list read is "We could not load the shoes." (§2). Unlike the product page, which must tell a `404 not_found` from any other failure (item 13, H3), a list has no "not found": an empty list is a `200` | Showing "No pair matches that." for a `4xx`: a claim the page cannot make. Separate words for a `400`: a second error message nobody drew, for an address only a hand can produce |
+| T6 | A read of the options, the categories or the lines fails | **Not shown.** The list is the page's one job; the Colour and Size groups are not drawn while `product-filters` has not answered or has failed, and a heading named from a line or a category falls back to "All shoes" until its name arrives. No error view, no retry of its own | An error line in the rail: no criterion asks for it, it needs new words and a design nobody drew, and the visitor's way out is the same "Try again" or a reload. It can be its own story if the owner asks |
+| T7 | Does the backend need a way to be slow or to fail on request, so SC-22 to SC-30 can be shown? | **No.** The hold is request interception in the tester's browser; a 500 is an intercepted answer, or the database taken away (`set_db_available`); a 502 is the API stopped; "offline" is the browser's own. **No delay, fault or sleep route, header or query parameter is added to the backend**, and no storage flag stays in the frontend (§3) | A `?delay=` parameter or a `/v1/_debug/fail`: a production route that exists only for a test, and a way for a stranger to make the shop slow |
+| T8 | Is the number in "Filter (n)" or the `<N> matching` line asked of the server? | **No.** `n` is counted in the browser from the address — every ticked box and every pressed pill, one each; the search words and the sort are not counted. `<N>` is the list answer's `total`, drawn only once a list has arrived | A server-computed count of filters: a second reading of what the address already says |
+
+### 4.3 Conflicts with merged decisions
+
+None is overridden. Two interactions, stated so nobody finds them later:
+
+| Where | The interaction | Resolution |
+|---|---|---|
+| Item 4's services §6 ("Not changed: `src/lib/table.ts`, `FilterRail`") | Item 4's own backend PR leaves both files alone; this story edits them (T1) | Consistent. Item 4 §6 says in so many words that how "Clear all" removes the size is plan item 16's. The two pull requests touch different lines of `FilterRail` and `table.ts`: item 4's backend touches neither |
+| Item 4's services §6 ("the hook's own logic … is unchanged") | PR #40 changes `useShopList`: current-query-only answer, `retry()`, paging reset with the query, and the fault knobs in the mock (T2, §3) | Item 4's backend swap changes **imports** in `shop-list.ts`, not logic; #40 changes **logic**, not imports. The merge is mechanical and spelled out in §6 |
+
+## 5. What item 4's backend swap must keep (checked at its review, and at the catch-up of #40)
+
+Item 4's backend (PR #49) replaces the mock with the real client. The loading and error states of this story are only true if the real client behaves as the mock did on failure. Dev's work there, and the review's checks:
+
+| # | Rule | Why this story needs it |
+|---|---|---|
+| K1 | `listProducts(req)` is `api.get<Page<Product>>("products", toParams(req))` and **rejects** on a non-2xx answer, on a network failure and on an offline browser. It never `catch`es into `{ items: [], total: 0 }` | A resolved empty list is the empty state, "No pair matches that." — a false claim for a failed read (SC-25 to SC-28) |
+| K2 | `ApiError` propagates to `useShopList`; the page reads none of its fields (§2) | SC-25: no status, code or server message on the page |
+| K3 | `useShopList`'s logic from #40 survives the swap: only the answers of the current query are returned, `retry()` re-asks the same `(query, page)`, paging resets with the query, a stale failure is ignored. Only the two imports change | SC-11, SC-23, SC-26, SC-27, SC-30 |
+| K4 | `getProductFilters()` may still resolve to "no options" when its read fails (T6); `listProducts` may not | The rail must not grow an error the story did not ask for; the list must |
+| K5 | The lines are read with `pageSize: 20`, the header's, so `/shop` makes one request for them (item 4's T3) | Item 4's SC-22; the line stays in #40's `Shop.tsx` after the catch-up |
+| K6 | The mock file, with the `doi:mock` knobs, **and its test `src/test/shop-mock.test.ts` (added by fix 1, §3.1)** are deleted; no code reads `doi:mock`; the `vi.mock` path in `src/test/shop-list.test.tsx` points at the new client | T7: the product carries no switch for failure or delay; a test of a deleted file fails the suite |
+
+## 6. Ordering: how the two pull requests meet
+
+Story §3 says: build only after item 4 has merged. The facts that make that concrete:
+
+- PR #40's branch was cut from **item 4's UI branch** (PR #38), and its diff against `main` still shows item 4's frontend files. Item 4's backend PR (#49) was cut from `main` and re-applies #38's frontend files itself, with the mock left out. So the two do not merge in any order without a catch-up.
+- Write tools cannot merge `main` into a branch, and hand-copying `main`'s files is not accepted. **After #49 has merged, the pipeline catches #40 up with `main`.** If #38 merges first, the same applies: its mock is `git rm`ed at that merge.
+- Expected result of the catch-up, file by file (K1–K6 above are the review of it):
+
+| File | In #40 | On `main` after #49 | Resolution |
+|---|---|---|---|
+| `src/lib/mock/search-filters-and-sorting-served-by-the-api.ts` | fault knobs added; after fix 1 it reads the live shoes through `api.get` (§3.1) | deleted | Stays deleted; the knobs and the stand-in reading go with it |
+| `src/test/shop-mock.test.ts` | tests that mock (fix 1) | does not exist | Deleted with the mock; not carried into the caught-up branch |
+| `src/lib/shop-list.ts` | current-query-only answer, `retry()`, paging reset | imports the new client | #49's two imports, #40's logic |
+| `src/test/shop-list.test.tsx` | five new cases | `vi.mock` of the new client's path | #40's cases, #49's path |
+| `src/pages/Shop.tsx` | the page rewired for the states | lines read with `pageSize: 20` | #40's page, with `pageSize: 20` |
+| `src/lib/shop-request.ts` | item 4's file, unchanged by #40 | adds `toParams` | #49's |
+| `src/lib/table.ts`, `src/components/FilterRail.tsx`, `ShopResults`, `ShopNotice`, `ShopFilterToggle`, `ShopSizes`, `content.json` | this story's | untouched by #49 | #40's |
+
+- **Run local** runs `main` with #40 caught up. **Verify** reads SC-22 to SC-30 through request interception on that running site, and SC-25b with the database taken away. SC-19b (the dealer's list with `size=50`) needs a signed-in dealer; if the dealer sign-in story's backend (plan item 9) is not on `main` when Verify runs, SC-19b is reported as waiting for it, not as a failure of this story, and SC-19a (the unit test of the hook) is the evidence for the hook.
+
+## 7. Verification map
+
+| Criteria | Met by |
+|---|---|
+| SC-1 to SC-5, SC-6 to SC-10, SC-12, SC-13 | The UI PR (#40) and item 4's served list and `product-filters`; no contract of this file |
+| SC-11 (Back shows the first twelve) | The address is the whole state (ERD D1); the hook resets paging with the query (T2) |
+| SC-14 to SC-18, SC-19a | T1 |
+| SC-19b | T1; the dealer's list sends `size` as `limit` only (§4.1 T1) |
+| SC-20, SC-21 | §2 row 2: `200` with `total` 0 is the one road to the empty state |
+| SC-22 to SC-24 | §2 rows 3 and 4; §2.1 (the disabled button sends nothing) |
+| SC-25 to SC-30 | §2 rejection list, §2.1, K1–K3 |
+| SC-31, SC-32, SC-33 | T3; the UI PR |
+
+## 8. Contracts reused unchanged
+
+| What | Where | How this story uses it |
+|---|---|---|
+| Error envelope and the closed code catalog | `_base.md` §2.3 | Codes reachable here: `internal` (500), and `bad_request` (400) only for an address edited by hand. No new code; `unavailable` stays for `/healthz` and shutdown |
+| The list envelope and offset paging | `_base.md` §2.4 | `limit=12`, `page=n`; `total` is every match. No second scheme, no cursor |
+| One API client, one retry of a failed `GET`, 15 s limit | S3 §5.1 (`src/lib/api.ts`) | The shop never calls `fetch` itself and adds no timer and no retry of its own beyond the visitor's "Try again" |
+| Public reads, `Cache-Control: no-store` | S3 §1.3 | A failed read is never cached by the browser, so "Try again" and Back reach the server |
+| Idempotency, rate limits, background work, outbound calls | — | None: every read is naturally idempotent, no limit is added, nothing is queued, the API calls nobody |
+
+## 9. Hand-over
+
+| Who | What they must know |
+|---|---|
+| Dev, backend step of this story | **There is no backend work**: no route, handler, migration or fixture. The step has nothing to implement; the orchestrator may close it without a pull request |
+| Dev, item 4's backend (PR #49) | K1–K6 (§5). The mock and its `doi:mock` knobs are deleted there; nothing of #40 is needed to merge it |
+| Dev, the catch-up of #40 | The table of §6. Only imports, the mock's deletion **and its test `shop-mock.test.ts`'s**, `pageSize: 20` and the `vi.mock` path differ; do not carry the knobs, the stand-in reading of the shoes or the test of either |
+| Test lead | Count requests by §2.1 (a failing read is two requests, because of `api.ts`'s one retry); a failed list is the same view for every rejection (§2); the shop's one way to the empty state is `total` 0; fault, delay and offline come from interception, never from the product |
+| UI follow-ups from the review of PR #40 (not backend, not blocking) | "Clear all" sits between Price and the Size pills (SC-3 lists it last; the test cases do not pin the place); keyboard focus after "Try again" falls to the page when its button unmounts; a failure for `(query, page 1)` shows at once if the visitor returns to that query before another read settles (clearing the failure when the effect starts fixes it); `filtering` counts any unknown parameter; a long sort label can wrap at 320px beside "Filter (n)". Dev may take them in the catch-up or leave them; none changes a contract here |
 
