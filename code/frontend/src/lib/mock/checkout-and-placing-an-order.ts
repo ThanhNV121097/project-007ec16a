@@ -1,6 +1,8 @@
 import { collections } from "../../data";
+import type { CartLine } from "../cart";
 import type { OrderRequest, PaymentOption, Wire } from "../orders";
 import type { Product } from "../shop";
+import { placeOrder as keepForOrderPage } from "./orders";
 
 /**
  * THE CHECKOUT'S MOCK SHOP. Stands in for GET /v1/payment-options and
@@ -16,6 +18,12 @@ import type { Product } from "../shop";
  * The states the design never drew are driven from here, not from the page:
  * localStorage "doi:mock" = "server-error" answers 500, "payment-off" reports
  * VNPay unavailable. A size in a shoe's last-pairs list counts as two pairs.
+ *
+ * The Order page is still the design's mock (it reads src/lib/mock/orders.ts
+ * until "Order page and Pay now"), so each order this shop accepts is also
+ * kept there, unpaid, for the page the browser lands on to show. That bridge
+ * goes with this module; the browser's own store of placed orders is
+ * src/lib/orders.ts and never reads it.
  */
 const LOW_LEFT = 2;
 const DELAY = 900;
@@ -42,7 +50,6 @@ export async function getPaymentOptions(): Promise<{ items: PaymentOption[]; tot
   return { items: [vnpay], total: 1, page: 1, limit: 100 };
 }
 
-let next = 24818;
 const seen = new Map<string, { phone: string; order: unknown }>();
 
 const digits = (s: string) => s.replace(/\D/g, "");
@@ -76,11 +83,14 @@ export async function postOrder(req: OrderRequest, key: string): Promise<Wire> {
   const shoes = (collections().products ?? []) as unknown as Product[];
   const errors = refusals(req, shoes);
   if (Object.keys(errors).length > 0) return { status: 409, body: { error: "stock_conflict", message: "Some pairs are not available.", errors } };
-  const number = `DOI-${next++}`;
+  const lines: CartLine[] = req.items.map((it) => {
+    const p = shoes.find((s) => s.id === it.product);
+    return { id: it.product, name: p?.name ?? it.product, price: p?.price ?? 0, image: p?.image, variant: `EU ${it.size}`, qty: it.qty };
+  });
+  const kept = keepForOrderPage({ lines, payment: "vnpay", online: false, customer: req.customer, phone: req.phone, address: req.address, city: req.city, note: req.note });
   const order = {
-    id: number.toLowerCase(), number, placed_at: new Date().toISOString(), status: "placed", paid: false,
-    total: req.items.reduce((sum, it) => sum + (shoes.find((s) => s.id === it.product)?.price ?? 0) * it.qty, 0),
-    delivery_fee: 0, delivery: "standard", payment: "vnpay",
+    id: kept.id, number: kept.number, placed_at: kept.placed_at, status: kept.status, paid: kept.paid, total: kept.total,
+    delivery_fee: 0, delivery: kept.delivery, payment: kept.payment,
   };
   seen.set(key, { phone: req.phone, order });
   return { status: 201, body: { order, token: newToken(), payment_url: "" } };
