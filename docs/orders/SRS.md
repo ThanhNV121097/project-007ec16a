@@ -356,7 +356,7 @@ Behaviour:
 | AC-14 | The same | The visitor presses "Pay now" | The shop is asked for a fresh payment address and the browser goes to it; while waiting the button is disabled |
 | AC-15 | A paid VNPay order | The page loads | "Pay now" is not shown |
 | AC-16 | A cancelled VNPay order | The page loads | "Pay now" is not shown |
-| AC-17 | `POST /v1/orders/<id>/payment` for a cash-on-delivery order | It is called with the token | 409 |
+| AC-17 | `POST /v1/orders/<id>/payment` for a sample order whose way to pay is not VNPay | It is called with the token | 409 |
 | AC-18 | The same for a paid order | It is called with the token | 409 |
 | AC-19 | The same for a cancelled order | It is called with the token | 409 |
 | AC-20 | The same with no token | It is called | 404 |
