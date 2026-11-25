@@ -151,7 +151,7 @@ Behaviour:
 3. The order is saved with the number `DOI-<n>` and the id `doi-<n>`, where n is one more than the highest number held, never repeating; the status "placed"; not paid; and an expected date from the delivery option: the day the order is placed, in Vietnam time, plus the longest working days of the `standard` option (4 for "2–4"), skipping Saturdays and Sundays; an order placed on or after the shop's same-day cut-off (15:00) or on a weekend starts counting from the next working day.
 4. Each pair of the order keeps the unit price it was sold at, so a later price change does not change the order.
 5. An order can hold several pairs; the orders already on record, which hold one shoe each, keep working and show as orders of one pair.
-6. The answer holds the order (without phone, email, address or note), an order token only the answer carries, and a payment address — empty for cash on delivery (ORD-006).
+6. The answer holds the order (without phone, email, address or note), an order token only the answer carries, and a payment address — empty only while VNPay is not yet implemented or cannot give one (ORD-006).
 7. The order token cannot be guessed (at least 128 bits of randomness) and opens only this order.
 
 **Acceptance criteria**
