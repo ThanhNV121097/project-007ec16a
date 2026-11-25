@@ -404,7 +404,7 @@ Behaviour:
 
 1. `/shipping` shows the heading "Delivery", a lead ("Every pair leaves boxed, tagged and tracked, and delivery is free on every order."), and a picture.
 2. Two large figures sit on a hairline: "Free" with "Delivery on every order, whatever it comes to — that is every pair in the shop."; and the standard working days (for example "2–4") with "Working days by standard delivery, anywhere in Vietnam." The days come from the shop's terms. There is no third (express) figure.
-3. "Options and fees" is headed with the line "Orders placed before {cutoff} on a working day leave the same day." and a table with columns Option, Arrives, Where, Fee, one row per delivery option (name, time, where and how, fee right-aligned). The standard row shows "Free over {price}" under its fee.
+3. "Delivery options" is headed by a table with columns Option, Arrives, Where, Cost and one row, for the one delivery option: name, time, where and how, and in the Cost cell "Free" right-aligned (the site's own word for it, never `0 ₫`). There is no "Free over" line, no express row and no dispatch cut-off time on this page.
 4. "Questions about delivery" lists the shop's questions of topic "shipping" as closed rows opening onto answers, beside a "Track an order" pill to `/track`.
 
 **Acceptance criteria**
