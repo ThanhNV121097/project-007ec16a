@@ -83,7 +83,7 @@ Behaviour:
 | AC-10 | The shop cannot be reached | "Sign in" is pressed | "We cannot reach the server. Please try again." is shown and the button is enabled |
 | AC-11 | Five wrong tries were made | A sixth is made | "Too many tries. Please wait 15 minutes." is shown |
 | AC-12 | A dealer signed in | `/admin/sign-in` is opened | "Signed in as <email>. Continue" is shown and Continue goes to `/admin` |
-| AC-13 | A page of the customer site | It is searched for a link to the dealer area | Only the footer's "Dealer sign-in" is found |
+| AC-13 | A page of the customer site | It is searched for a link to `/admin` | Only the footer's "Dealer sign-in" is found; this holds until the customer-accounts story adds the header's "Account" entry (ACC-007), which links to `/account/sign-in`, never to `/admin`, and after it the footer's "Dealer sign-in" is still the only link to `/admin` |
 
 **Failure, boundary and permission behaviour**
 
