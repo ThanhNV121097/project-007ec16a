@@ -279,7 +279,7 @@ function useRemote(name: string, query: Query, off: boolean): Result {
 
 /** Lowercased and stripped of accents, so "Cửa Lò" is found by "cua lo". */
 function fold(v: unknown): string {
-  return String(v ?? "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  return String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 /**
@@ -376,8 +376,9 @@ export function useCollection<T extends { id: string } = Row>(name: string, quer
   return { ...out, items: out.items as unknown as T[] };
 }
 
+/** A record that is not there: the API's own `not_found`, not any 404 (a wrong address is a fault). */
 function isNotFound(e: unknown): boolean {
-  return e instanceof ApiError && e.status === 404;
+  return e instanceof ApiError && e.status === 404 && e.code === "not_found";
 }
 
 interface One {
