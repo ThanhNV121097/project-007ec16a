@@ -29,3 +29,13 @@ The brief of this project has no "WHAT THE FEATURES NEED" lines. The payment gat
 | Brief line | Requirements | What meets it |
 |---|---|---|
 | "a message form on the site — name, phone or email, message; the owner reads what is sent in Agent Team" | SITE-012 | The form on `/contact`: "Your name", "Phone or email", "Your message" and "Send message", sent to the owner's Agent Team inbox, with sending, sent, failed and not-connected states |
+
+## DECISIONS RECORDED AFTER THE BRIEF
+
+| Owner decision | Requirements | What meets it |
+|---|---|---|
+| "Free delivery" | SITE-016, SITE-007, SITE-009, ORD-001, ORD-003, DATA-001, DATA-003 | Every order ships free: one delivery record, no fee, threshold or express option; the total is the sum of the pairs |
+| "Online payment" | ORD-006, PAY-001, PAY-002, PAY-003, PAY-005 | VNPay is the only way to pay and no order can be completed without it; when its keys are missing checkout says so and places no order |
+| "no exchanges allowed" | SITE-010, SITE-006, ORD-001, ORD-007 | The Return policy page says no exchanges and states no window, condition, fee or refund |
+| "Staff and admins will post products and adjust product quantities" | ADMIN-010, ADMIN-015, ORD-005 | Staff type a plain count for each EU size; the last-pairs and sold-out lists and the stock total follow; the first design's shoes are placeholders |
+| "customers, staff, admin" | ADMIN-001 to ADMIN-004, ADMIN-030, ADMIN-031, ACC-001 to ACC-008 | Three roles in one users table; staff accounts managed by the admin; optional customer accounts with My account |
