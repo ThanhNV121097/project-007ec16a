@@ -348,8 +348,7 @@ Behaviour:
 | Field | Type | Required | Rule |
 |---|---|---|---|
 | Bag line: shoe id, name, price, picture, variant, quantity | read / write | yes | Browser-only |
-| Shop terms: free-delivery threshold | read | yes | |
-| Delivery option "standard": fee | read | yes | |
+| Delivery option "standard": fee | read | yes | Always 0; drawn as "Free" |
 
 **Requirement SITE-008 — Shoe size chart**
 
