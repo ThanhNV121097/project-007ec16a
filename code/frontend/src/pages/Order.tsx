@@ -6,6 +6,7 @@ import { formatDate, formatDateTime, formatPrice } from "../lib/format";
 import { usePlacedOrders } from "../lib/mock/orders";
 import { fill, type DeliveryOption, type Order as OrderRecord, type OrderStatus, type PaymentMethod, type Product } from "../lib/shop";
 import type { CartLine } from "../lib/cart";
+import Bleed from "../components/Bleed";
 import Disclosure from "../components/Disclosure";
 import OrderSteps from "../components/OrderSteps";
 import OutlinePill from "../components/OutlinePill";
@@ -117,7 +118,7 @@ export default function Order() {
             <span className="text-2xl tabular-nums text-ink">{formatPrice(view.total)}</span>
           </div>
         </div>
-        <aside className="flex flex-col gap-8 lg:col-span-5 lg:pl-8">
+        <Bleed as="aside" side="right" ground className="flex flex-col gap-8 py-8 lg:col-span-5">
           <div>
             <T k="pages.order.details" as="h2" className="text-lg text-ink" />
             <SpecList className="mt-4" items={[
@@ -137,7 +138,7 @@ export default function Order() {
             ) },
           ]} />
           <div><OutlinePill to="/shop"><T k="pages.cart.keep" /></OutlinePill></div>
-        </aside>
+        </Bleed>
       </div>
     </>
   );
