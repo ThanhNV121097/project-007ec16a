@@ -233,7 +233,7 @@ The order page opened with a token already held is not affected by a lookup lock
 
 **Order — dealer view** adds `phone`, `email`, `address`, `note` and `transaction_no` (VNPay's transaction number, `""` when none; read-only) to every order read by a dealer (single read and list; a list item has `product`, `size`, `qty` of the first pair and no `items`).
 
-**Pagination item for people** (`/v1/admin/staff`): `{ "id": uuid string, "name", "email", "role": "admin"|"staff", "is_active": boolean }`.
+**Team account** (an item of `/v1/admin/staff`): `{ "id": uuid string, "name", "email", "role": "admin"|"staff", "is_active": boolean }`.
 
 ### 2.9 Deviations from `api-conventions.md`
 
@@ -550,7 +550,7 @@ A new `order_tokens` row is made on every success; earlier tokens stay valid. No
 
 **Success** `200` `{"payment_url":"https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?…"}`.
 
-**The address** — built by the backend, no call to VNPay. Parameters (VNPay 2.1.0): `vnp_Version=2.1.0`, `vnp_Command=pay`, `vnp_TmnCode=<VNPAY_TMN_CODE>`, `vnp_Amount=<orders.total × 100>` (read from the database; the browser sends none), `vnp_CurrCode=VND`, `vnp_TxnRef=<reference>`, `vnp_OrderInfo="Thanh toan don hang DOI-24818"` (ASCII, no diacritics), `vnp_OrderType=other`, `vnp_Locale=en`, `vnp_ReturnUrl=<public origin>/payment/return`, `vnp_IpAddr=<client address>`, `vnp_CreateDate=<now, yyyyMMddHHmmss, Vietnam time>`, `vnp_ExpireDate=<placed_at + 30 minutes, same format>`, and last `vnp_SecureHash` = hex HMAC-SHA512, keyed with `VNPAY_HASH_SECRET`, of the other parameters sorted by name, each `name=value` with the value URL-encoded, joined by `&`. The reference is `<order number>-<n>` (`DOI-24818-1`, `-2`, …), `n` being the count of the order's attempts + 1 taken under the order's row lock, unique (`uq_payment_attempts_reference`), ≤ 100 characters; the return page may read the order number from it only to choose which stored token to ask with. The public origin is `PUBLIC_BASE_URL` when set, else `X-Forwarded-Proto` + `X-Forwarded-Host` (falling back to `Host`). The payment base address is `VNPAY_PAYMENT_URL` (default the sandbox's). Each call inserts a `payment_attempts` row (`provider`, `reference`, `amount`, `expires_at = placed_at + 30 minutes`).
+**The address** — built by the backend, no call to VNPay. Parameters (VNPay 2.1.0): `vnp_Version=2.1.0`, `vnp_Command=pay`, `vnp_TmnCode=<VNPAY_TMN_CODE>`, `vnp_Amount=<orders.total × 100>` (read from the database; the browser sends none), `vnp_CurrCode=VND`, `vnp_TxnRef=<reference>`, `vnp_OrderInfo="Thanh toan don hang DOI-24818"` (ASCII, no diacritics), `vnp_OrderType=other`, `vnp_Locale=en`, `vnp_ReturnUrl=<public origin>/payment/return`, `vnp_IpAddr=<client address>`, `vnp_CreateDate=<now, yyyyMMddHHmmss, Vietnam time>`, `vnp_ExpireDate=<placed_at + 30 minutes, same format>`, and last `vnp_SecureHash` = hex HMAC-SHA512, keyed with `VNPAY_HASH_SECRET`, of the other parameters (every `vnp_` field except `vnp_SecureHash` and `vnp_SecureHashType`) sorted by name, each `name=value` with the value URL-encoded as VNPay's reference code does (`application/x-www-form-urlencoded`: a space is `+`), joined by `&`; the same string is what goes in the address's query. The reference is `<order number>-<n>` (`DOI-24818-1`, `-2`, …), `n` being the count of the order's attempts + 1 taken under the order's row lock, unique (`uq_payment_attempts_reference`), ≤ 100 characters; the return page may read the order number from it only to choose which stored token to ask with. The public origin is `PUBLIC_BASE_URL` when set, else `X-Forwarded-Proto` + `X-Forwarded-Host` (falling back to `Host`). The payment base address is `VNPAY_PAYMENT_URL` (default the sandbox's). Each call inserts a `payment_attempts` row (`provider`, `reference`, `amount`, `expires_at = placed_at + 30 minutes`).
 
 | Code | HTTP | Trigger |
 |---|---|---|
@@ -619,7 +619,7 @@ Errors: `unauthenticated` 401, `forbidden` 403, `bad_request` 400, `internal` 50
 
 | # | Check | Answer |
 |---|---|---|
-| 1 | `vnp_SecureHash` present, and equal (constant-time, case-insensitive hex) to the HMAC-SHA512 of the other `vnp_` parameters (as §3.13), and `vnp_TmnCode` is ours; an empty query fails here | `97` "Invalid signature" |
+| 1 | `vnp_SecureHash` present, and equal (constant-time, case-insensitive hex) to the HMAC-SHA512 of the received `vnp_` parameters except `vnp_SecureHash` and `vnp_SecureHashType`, sorted and encoded exactly as §3.13 builds them, and `vnp_TmnCode` is ours; an empty query fails here | `97` "Invalid signature" |
 | 2 | `vnp_TxnRef` is the `reference` of a `payment_attempts` row (any earlier reference of an order qualifies) | `01` "Order not found" |
 | 3 | `vnp_Amount` is digits and `÷ 100` equals the attempt's `amount` (which equals the order's `total`) | `04` "Invalid amount" |
 | 4 | The order is not already paid | `02` "Order already confirmed" |
