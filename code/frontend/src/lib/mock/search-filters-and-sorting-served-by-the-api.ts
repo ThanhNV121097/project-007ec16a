@@ -8,7 +8,7 @@ import type { Page, PriceRange, ProductFilters, ProductsRequest, Sort } from "..
  * functions, and src/lib/shop-list.ts is the only file that imports this one.
  *
  * It answers as the story says the API does: every typed word is found in a
- * searched field (accents, case and "đ" ignored, the line's and the
+ * searched field (accents, case and the stroked d ignored, the line's and the
  * category's name included), "any of" within a filter and "and" between them,
  * an EU size matches only a pair that has it and has not sold it out, equal
  * values keep the records' order, `total` is every match.
@@ -63,7 +63,7 @@ const ORDER: Record<Sort, (a: Product, b: Product) => number> = {
   "-rating": (a, b) => (b.rating ?? 0) - (a.rating ?? 0),
 };
 
-/** `GET /v1/products?status=live&limit=12&page=n&…` */
+/** `GET /v1/products?status=live&limit=12&page=n&...` */
 export function listProducts(req: ProductsRequest): Promise<Page<Product>> {
   const hits = table<Product>("products").filter((p) => matches(p, req)).sort(ORDER[req.sort]);
   const start = (req.page - 1) * req.limit;
@@ -78,7 +78,7 @@ function sizeValue(s: string): number {
   return Number(whole) + (b ? a / b : 0);
 }
 
-/** The colour set's own order: black, white, pink, … */
+/** The colour set's own order: black, white, pink, ... */
 function colourOrder(): string[] {
   const options = schema.collections.products?.fields.find((f) => f.key === "colour")?.options ?? [];
   return options.map((o) => (typeof o === "string" ? o : o[0]));
