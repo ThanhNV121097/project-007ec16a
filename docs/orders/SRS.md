@@ -571,7 +571,7 @@ Behaviour:
 
 Behaviour:
 
-1. After 5 failed lookups for one order number, or from one network address, the sixth and later lookups of that order number, or from that address, are refused for 15 minutes counted from the fifth failure, whether or not they would have matched.
+1. After 5 failed lookups within 15 minutes of each other for one order number, or from one network address, the sixth and later lookups of that order number, or from that address, are refused for 15 minutes counted from the fifth failure, whether or not they would have matched. A right lookup neither adds to the count nor clears it.
 2. A lookup of a number that does not exist counts as a failure against that number and against the address like any other.
 3. A refused lookup answers 429 with a note of the wait. The page shows "Too many tries. Please wait 15 minutes, or message us with your order number."
 4. After the wait the count starts again.
