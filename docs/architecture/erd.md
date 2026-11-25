@@ -2075,6 +2075,8 @@ Raw session tokens (only the SHA-256, 32 bytes); the typed email of a failed sig
 <!-- story 13: Product page waits for the shoe before saying it is missing -->
 # ERD — Product page waits for the shoe before saying it is missing (plan item 13)
 
+> **Revision 2 (the design step ran again after "Site data from the database" merged, PR #39):** re-read against the merged `erd/site-data-from-the-database.md` and `internal/data`; the verdict is unchanged, no schema is added, and §5 is brought up to date.
+
 Module `site` · Requirement SITE-014 (with the not-found row of SITE-005; ADMIN-013 item 1 for the draft case) · Story `docs/site/stories/product-page-waits-for-the-shoe-before-saying-it-i.md` · UI PR #27 · Engine PostgreSQL 16.
 
 ## 1. Verdict: this story adds nothing to the schema
@@ -2120,7 +2122,7 @@ No migration is added and none is edited (convention `migrations`: a merged migr
 
 | Story | What it must know from this design |
 |---|---|
-| "Site data from the database" (S3) | Nothing to add to the schema. The behaviour this page needs from `useRecord` is in `services/product-page-waits-for-the-shoe-before-saying-it-i.md` §3 |
+| "Site data from the database" (S3) | Merged (PR #39). Nothing to add to the schema; its `useRecord` meets what this page needs (`services/product-page-waits-for-the-shoe-before-saying-it-i.md` §3.1) |
 | "Manage shoes, lines, categories, reviews and orders" | `products.status = 'draft'` must answer a visitor's `GET /v1/products/{id}` with the same 404 as an unknown id (services §5). No schema change is needed for it |
 | Dev (backend step of this story) | There is no backend work: no table, no endpoint, no migration. The step has nothing to implement |
 
