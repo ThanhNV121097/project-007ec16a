@@ -426,7 +426,7 @@ Check: interact_page
 
 **Scenario**: TC-52 — while the answer is awaited the button is disabled, says what is happening, and a second press sends nothing
 **Given**: ORDER-A held, unpaid; the `POST` answered after 2000 ms with (a) 200 `{"payment_url":"https://pay.example.test/x"}`; (b) 409 `{"error":"conflict","message":"x"}`; the log of requests on.
-**When**: `[data-testid='pay-now']` is pressed once; at 0.3 s, 1 s and 1.8 s the button is read and is clicked three more times, and Enter and Space are pressed with focus on the page's body and on the button's place; the page is read again at 3 s.
+**When**: `[data-testid='pay-now']` is pressed once; at 0.3 s, 1 s and 1.8 s the button is read and is clicked once more each time (three more clicks in all), and Enter and Space are pressed once each right after the first press, while the button is the last control that had focus; the page is read again at 3 s.
 **Then**: At every reading before the answer: the button has the `disabled` attribute and its text is exactly `Opening the payment page…`; its computed `opacity` is 0.6; `[data-testid='pay-now-error']` does not exist; the log holds exactly one `POST` after all the extra presses. At 3 s in (a) the address is `https://pay.example.test/x`; in (b) the failure line is shown and the button is enabled and reads `Pay now`.
 Traces: SC-28 (ORD-007 AC-14, item 8; story §9 "Pay now while waiting")
 Check: interact_page
