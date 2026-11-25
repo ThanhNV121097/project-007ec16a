@@ -100,7 +100,7 @@ export default function Order() {
           <T k="pages.order.items" as="h2" className="text-lg text-ink" />
           <ul className="mt-5 border-t border-line">
             {view.lines.map((l) => (
-              <li key={`${l.id}-${l.variant}`} className="flex gap-5 border-b border-line py-5">
+              <li key={`${l.id}-${l.variant}`} data-record={`products:${l.id}`} className="flex gap-5 border-b border-line py-5">
                 <Link to={`/shop/${l.id}`} className="w-24 shrink-0 sm:w-32" aria-label={l.name}><ProductImage src={l.image} alt={l.name} aspect="1/1" /></Link>
                 <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
                   <div className="min-w-0">
