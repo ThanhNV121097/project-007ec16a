@@ -937,7 +937,7 @@ Check: interact_page
 **When**: `/` is loaded; the computed style and bounding box of the entry, the search button and the bag button are read.
 **Then**: The entry's `text-overflow` is `ellipsis` and `overflow` is `hidden` (its text is wider than its box); the search and bag buttons' right edges are at most 1280px and on the same row as the entry; the page has no horizontal scroll.
 Traces: SC-35 ("A name of 100 characters is cut so the search and bag buttons stay on the bar")
-Check: measure_styles
+Check: interact_page (the customer is signed in through the page's own form, and the computed styles and bounding boxes are read through `interact_page`'s inspection of the page, because the state needs a session that a bare page measurement does not hold)
 
 **Scenario**: SC-35.4 — On its own address the entry is underlined and marked as the current page
 **Given**: A browser operated with `interact_page`: first signed out, then signed in as Lan through the page's own sign-in form (the second half needs a session, which a bare page measurement does not hold); 1280px.
