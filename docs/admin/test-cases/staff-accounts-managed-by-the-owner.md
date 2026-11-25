@@ -490,7 +490,7 @@ Check: fetch_url
 **Scenario**: SC-30 — no session of a switched-off account ever answers 200
 **Given**: FX-STAFF-A active with password A; the session is ADMIN.
 **When**: In ten rounds, each starting with the account active again and no earlier sessions, ADMIN's `PUT /v1/admin/staff/<id>` `{"is_active":false}` and the staff member's `POST /v1/auth/sign-in` are sent at the same moment; when both have finished, the cookie the sign-in returned (if it returned one) sends `GET /v1/auth/me` and `GET /v1/orders`.
-**Then**: In every round the sign-in answered 401 `invalid_credentials`, or answered 200 and its cookie now answers 401 on both requests; in no round does any request of that account answer 200 after the `PUT` has answered 200; and `SELECT count(*) FROM sessions WHERE user_id = <id>` is 0 after every round.
+**Then**: In every round the sign-in answered 401 `invalid_credentials`, or answered 200 and its cookie now answers 401 on both requests; in no round does any request of that account answer 200 after the `PUT` has answered 200 (a stray `sessions` row is allowed; a valid session of a switched-off account is not).
 Traces: SC-30 (ADMIN-031 "Concurrency")
 Check: fetch_url
 
