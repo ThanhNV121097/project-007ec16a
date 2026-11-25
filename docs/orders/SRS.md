@@ -71,12 +71,13 @@ Behaviour:
 | AC-5 | Pairs total 1.500.000 ₫ (under 2.000.000 ₫) | The page loads | The delivery row shows "Free"; Delivery reads "Free" and Total reads `1.500.000 ₫` |
 | AC-6 | The bag line was added at 3.000.000 ₫ and the shoe now costs 3.090.000 ₫ | The page loads | The summary line shows `3.090.000 ₫` |
 | AC-7 | One pair at 3.090.000 ₫, standard free | The page loads | Subtotal `3.090.000 ₫`, Delivery "Free", Total `3.090.000 ₫` |
-| AC-8 | Express chosen, one pair at 3.090.000 ₫ | The visitor presses the Express row | Delivery reads `50.000 ₫` and Total reads `3.140.000 ₫` |
-| AC-9 | Cash on delivery chosen | The visitor reads under the totals | "After you press Place order we confirm by text message; you pay the courier in cash when the box arrives." |
-| AC-10 | An online method chosen (VNPay) | The visitor reads under the totals | "After you press Place order you pay on the VNPay — ATM, Visa, Mastercard page; the order is marked paid at once and packed today." |
-| AC-11 | The page is loaded | The visitor reads the foot of the summary | The "Place order" button and the sentence "By placing the order you accept the delivery and returns terms on this site." |
-| AC-12 | An empty bag | `/checkout` loads | "Nothing to check out yet." with the line, the "Keep shopping" pill and the "New this month" row |
+| AC-8 | Two pairs at 3.090.000 ₫ and 1.500.000 ₫ | The page loads | Subtotal and Total both read `4.590.000 ₫` and Delivery reads "Free" |
+| AC-9 | The page is loaded | The visitor reads step 03 | One row, "VNPay — ATM, Visa, Mastercard", selected; no row for cash on delivery, bank transfer or MoMo |
+| AC-10 | VNPay is the way to pay | The visitor reads under the totals | "After you press Place order you pay on the VNPay — ATM, Visa, Mastercard page; we pack your order after the payment is confirmed." |
+| AC-11 | The page is loaded | The visitor reads the foot of the summary | The "Place order" button and the sentence "By placing the order you accept the delivery information and that exchanges are not accepted." |
+| AC-12 | An empty bag | `/checkout` loads | "Nothing to check out yet." with the line "Pick a pair — the size chart is one tap from every shoe.", the "Keep shopping" pill and the "New this month" row |
 | AC-13 | A completed checkout | The order's stored total is read | It equals the Total shown on the page when "Place order" was pressed |
+| AC-14 | VNPay's keys are not set (after the VNPay story) | `/checkout` loads with a pair in the bag | The VNPay row is shown with "Online payment is not available right now. Please try again later." in alert style under it, and "Place order" is disabled |
 
 **Failure, boundary and permission behaviour**
 
