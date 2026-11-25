@@ -229,7 +229,9 @@
         "stock_note": "across {n} shoes",
         "title": "Overview",
         "to_pack": "To pack",
-        "to_pack_note": "placed or confirmed"
+        "to_pack_note": "placed or confirmed",
+        "today_text": "{waiting} orders are waiting to be packed and {low} shoes are down to their last pairs. This month so far: {n} orders, {sales}.",
+        "today_title": "Today"
       },
       "products": {
         "category": "For",
