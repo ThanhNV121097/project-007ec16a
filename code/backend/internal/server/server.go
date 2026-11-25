@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/catalogue"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
@@ -31,11 +32,16 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	mux.HandleFunc("GET /healthz", health(pool, log))
 	// Feature modules mount here, one line each, e.g.
 	//   catalogue.Register(mux, pool, log)
+	svc := auth.New(pool, log)
+	svc.Register(mux)
 	data.Register(mux, pool, log)
 	catalogue.Register(mux, pool, log)
 	mux.HandleFunc("/", notFound)
 
-	var h http.Handler = mux
+	// The chain, outermost first: Recover, AccessLog, CORS, Resolve (who is
+	// signed in), the route recorder (for the access log), the mux.
+	var h http.Handler = httpx.RecordRoute(mux)
+	h = svc.Resolve()(h)
 	h = httpx.CORS(cfg.CORSAllowedOrigins)(h)
 	h = httpx.AccessLog(log)(h)
 	h = httpx.Recover(log)(h)

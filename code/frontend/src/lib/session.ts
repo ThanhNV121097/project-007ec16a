@@ -1,7 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
-import {
-  getMe, postSignIn, postSignOut, type Answer, type Role,
-} from "./mock/dealer-sign-in-and-protected-admin-area";
+import { ApiError, api } from "./api";
 
 /**
  * WHO IS SIGNED IN, as the shop's server says — and nothing else.
@@ -22,14 +20,17 @@ import {
  *   signIn(email, password)  resolves "ok", "wrong", "limited" or "unreachable".
  *   signOut()             ends the session on the server and here.
  *
- * The three calls go through the mock for now; the backend story points them
- * at `/v1/auth/*` through src/lib/api.ts (credentials: "include") and changes
- * nothing else in this file.
+ * The three calls go to `/v1/auth/*` through src/lib/api.ts, which sends the
+ * session cookie with every request.
  */
+
+/** What an account is: the shop's team is admin and staff. */
+export type Role = "admin" | "staff" | "customer";
+
 export interface Session {
   email: string;
   name: string;
-  /** What the server says this account is: the shop's team is admin and staff. */
+  /** What the server says this account is. */
   role: Role;
 }
 
@@ -72,13 +73,12 @@ function toSession(body: unknown): Session | null {
   return { email: v.email, name: v.name, role: v.role };
 }
 
-/** Asks the server who is signed in. An unreachable server is nobody. */
+/** Asks the server who is signed in. Any failure, a 401 or an unreachable server, is nobody. */
 async function check(): Promise<void> {
   const asked = epoch;
   let found: Session | null = null;
   try {
-    const answer = await getMe();
-    if (answer.status === 200) found = toSession(answer.body);
+    found = toSession(await api.get<unknown>("auth/me"));
   } catch {
     found = null;
   }
@@ -108,10 +108,12 @@ export function useSession(): Session | null {
   return useAuth().session;
 }
 
-/** The server's verdict on one sign-in attempt, as the word the form acts on. */
-function verdict(answer: Answer): SignInResult {
-  if (answer.status === 429) return "limited";
-  if (answer.status === 401 || answer.status === 422) return "wrong";
+/** The word the form acts on for a sign-in the server refused or could not answer. */
+function verdict(e: unknown): SignInResult {
+  if (e instanceof ApiError) {
+    if (e.status === 429) return "limited";
+    if (e.status === 401 || e.status === 422) return "wrong";
+  }
   return "unreachable";
 }
 
@@ -120,14 +122,14 @@ function verdict(answer: Answer): SignInResult {
  * answer; on any refusal nothing changes.
  */
 export async function signIn(email: string, password: string): Promise<SignInResult> {
-  let answer: Answer;
+  let body: unknown;
   try {
-    answer = await postSignIn(email.trim(), password);
-  } catch {
-    return "unreachable";
+    body = await api.post<unknown>("auth/sign-in", { email: email.trim(), password });
+  } catch (e) {
+    return verdict(e);
   }
-  const session = answer.status === 200 ? toSession(answer.body) : null;
-  if (!session) return verdict(answer);
+  const session = toSession(body);
+  if (!session) return "unreachable";
   epoch += 1;
   set({ phase: "ready", session });
   return "ok";
@@ -142,7 +144,7 @@ export async function signOut(): Promise<void> {
   epoch += 1;
   set({ phase: "ready", session: null });
   try {
-    await postSignOut();
+    await api.post("auth/sign-out");
   } catch {
     // Nothing more can be done from here.
   }

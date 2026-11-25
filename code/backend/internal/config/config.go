@@ -22,6 +22,13 @@ type Config struct {
 	// credentials. Empty (the default) switches CORS off: in deployment the
 	// browser reaches the API on its own origin under /api.
 	CORSAllowedOrigins []string
+	// AdminEmail and AdminPassword are the owner's settings the admin account
+	// is made from at start-up (auth.EnsureAdmin). Neither is required: the
+	// server starts without them and nobody can sign in as admin. The email is
+	// trimmed; the password is exactly as supplied. Neither is ever logged or
+	// put in an error.
+	AdminEmail    string
+	AdminPassword string
 }
 
 // Load reads the real environment.
@@ -40,6 +47,8 @@ func load(get func(string) string) (Config, error) {
 		Port:               port,
 		DatabaseURL:        dsn,
 		CORSAllowedOrigins: list(get("CORS_ALLOWED_ORIGINS")),
+		AdminEmail:         strings.TrimSpace(get("ADMIN_EMAIL")),
+		AdminPassword:      get("ADMIN_PASSWORD"),
 	}, nil
 }
 
