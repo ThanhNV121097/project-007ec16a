@@ -359,7 +359,7 @@ Check: manual — part (a) is an HTTP observation, but (b) needs a Go toolchain 
 **Scenario**: TC-44 — error answers never echo the typed email or password; no answer carries a hash or token
 **Given**: The admin and the fixtures exist; `DELETE FROM rate_limits` runs before and after. The typed values are the unique strings `probe-ZX81@example.com` and `Probe-Secret-ZX81`.
 **When**: Sign-in is attempted with them as a 401 (unknown account), a 422 (blank password with that email), a 400 (an undefined field added), a 429 (the address locked by five earlier failures), and a 415 (`text/plain`); then the admin's and `STAFF`'s successful sign-in and `/me` bodies, a sign-out answer and a 403 and a 401 on `GET /api/v1/orders` are read.
-**Then**: None of the 400, 401, 415, 422, 429 bodies or headers contains `probe-ZX81`, `Probe-Secret-ZX81` or the email in any case. No body of any of these answers contains `$argon2`, `password`, `hash`, `token`, a cookie value, or a field named `id`.
+**Then**: None of the 400, 401, 415, 422, 429 bodies or headers contains `probe-ZX81`, `Probe-Secret-ZX81` or the email in any case (the field *names* `errors.email` / `errors.password` of a 422 are the contract's and are not values). No body or header of any answer listed — error or success — contains `$argon2`, a cookie value or token, or a field named `id`; the success bodies of sign-in and `/me` contain no key `password`, `hash` or `token`.
 Traces: SC-20 (Security NFR; ambiguity 1)
 Check: fetch_url
 
