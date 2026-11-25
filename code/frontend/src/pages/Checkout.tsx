@@ -8,7 +8,7 @@ import { useDemo } from "../lib/demo";
 import { formatPrice } from "../lib/format";
 import { placeOrder } from "../lib/mock/orders";
 import { digitsOf, fill, type DeliveryOption, type PaymentMethod, type Product, type ShopTerms } from "../lib/shop";
-import Bleed from "../components/Bleed";
+import HeadPicture from "../components/HeadPicture";
 import Icon, { type IconName } from "../components/Icon";
 import EmptyBag from "../components/EmptyBag";
 import ProductImage from "../components/ProductImage";
@@ -51,6 +51,7 @@ export default function Checkout() {
     missing: useContent("pages.checkout.missing"),
     phoneBad: useContent("pages.checkout.phone_bad"),
     size: useContent("pages.checkout.line"),
+    headAlt: useContent("pages.checkout.head_alt"),
   };
   const [delivery, setDelivery] = useState("standard");
   const [payment, setPayment] = useState("cod");
@@ -93,14 +94,17 @@ export default function Checkout() {
 
   return (
     <>
-      <section className="flex flex-col gap-3 pb-8 pt-8 sm:flex-row sm:items-end sm:justify-between lg:pt-10">
+      <section className="grid gap-6 pb-8 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
+        <div className="flex flex-col justify-end gap-4 lg:col-span-6">
         <T k="pages.checkout.heading" as="h1" className="text-[length:var(--size-h1)] leading-[1.02] text-ink" />
-        <ol className="hidden items-center gap-6 pb-3 text-sm text-ink-soft lg:flex">
+        <ol className="hidden items-center gap-6 text-sm text-ink-soft lg:flex">
           {STEPS.map((k, i) => (
             <li key={k} className="flex items-baseline gap-2"><span className="tabular-nums">{String(i + 1).padStart(2, "0")}</span><T k={k} className="text-ink" /></li>
           ))}
         </ol>
-        <p className="flex items-center gap-2 pb-3 text-sm text-ink-soft"><Icon name="secure" size={16} className="shrink-0 text-ink" /><T k="pages.checkout.secure" /></p>
+        <p className="flex items-center gap-2 text-sm text-ink-soft"><Icon name="secure" size={16} className="shrink-0 text-ink" /><T k="pages.checkout.secure" /></p>
+        </div>
+        <HeadPicture src="/images/head-checkout.jpg" alt={words.headAlt} className="lg:col-span-6 lg:col-start-7" />
       </section>
       <Rule />
       <form onSubmit={place} noValidate className="grid gap-12 py-10 lg:grid-cols-12 lg:gap-8">
@@ -164,7 +168,7 @@ export default function Checkout() {
           </fieldset>
         </div>
 
-        <Bleed as="aside" side="right" ground className="py-8 lg:col-span-5">
+        <aside className="lg:col-span-5 lg:pl-8">
           <T k="pages.checkout.summary" as="h2" className="text-lg text-ink" />
           <ul className="mt-5 border-t border-line">
             {lines.map((l) => (
@@ -199,7 +203,7 @@ export default function Checkout() {
             <Icon name="lock" size={16} />{paying ? words.paying : <T k="pages.checkout.place" />}
           </button>
           <T k="pages.checkout.terms" as="p" className="mt-3 text-sm leading-relaxed text-ink-soft" />
-        </Bleed>
+        </aside>
       </form>
     </>
   );
