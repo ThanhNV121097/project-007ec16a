@@ -118,8 +118,8 @@ func TestABadParameterIsA400WithTheEnvelopeAndNoQuery(t *testing.T) {
 		"/v1/products?limit=0", "/v1/products?limit=-1", "/v1/products?limit=abc", "/v1/products?limit=1.5",
 		"/v1/lines?_source=owner", "/v1/products?_invented=x", "/v1/products?price_listed=US%24130",
 		"/v1/products?category=a%00b", "/v1/products?colour=%ff%fe", "/v1/products?released=0000-01-01",
-		"/v1/products?sort=zzz", "/v1/products?sort=price_listed", "/v1/orders?sort=phone", "/v1/products?price_from=abc",
-		"/v1/products?released_to=2026-13-40", "/v1/products?price_ranges=3000000", "/v1/orders?phone_from=1",
+		"/v1/products?sort=zzz", "/v1/products?sort=price_listed", "/v1/lines?sort=_source", "/v1/products?price_from=abc",
+		"/v1/products?released_to=2026-13-40", "/v1/products?price_ranges=3000000", "/v1/products?price_listed_from=1",
 		"/v1/products?q=" + strings.Repeat("a", 101), "/v1/products?q=%00", "/v1/products?size=%ff",
 	} {
 		rec := &recorder{row: fakeRow{total: 1, text: "[]"}}
@@ -157,10 +157,7 @@ func TestIgnoredParametersSendTheSameStatementAsNone(t *testing.T) {
 func TestPublicSQLNamesNoPrivateColumn(t *testing.T) {
 	forbidden := func(collection string) []string {
 		names := []string{"source", "invented"}
-		switch collection {
-		case "orders":
-			names = append(names, "phone", "email", "address", "note")
-		case "products":
+		if collection == "products" {
 			names = append(names, "price_listed")
 		}
 		return names
