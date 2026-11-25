@@ -33,15 +33,15 @@ func Recover(log *slog.Logger) Middleware {
 	}
 }
 
-// AccessLog writes one line per request: method, path (never the query
-// string, which can carry a token), status and duration.
+// AccessLog writes one line per request: the request id, method, path (never
+// the query string, which can carry a token), status and duration.
 func AccessLog(log *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rec, r)
-			log.Info("request", "method", r.Method, "path", r.URL.Path,
+			log.Info("request", "request_id", RequestIDFrom(r.Context()), "method", r.Method, "path", r.URL.Path,
 				"status", rec.status, "ms", time.Since(start).Milliseconds())
 		})
 	}
