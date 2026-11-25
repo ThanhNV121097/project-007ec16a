@@ -174,7 +174,7 @@ describe("the pairs and the details", () => {
     expect(screen.getByText("Lan Nguyen, Da Nang")).toBeInTheDocument();
     expect(screen.getByText("Standard · 2–4 working days · Free")).toBeInTheDocument();
     expect(screen.getByText("VNPay — ATM, Visa, Mastercard · paid")).toBeInTheDocument();
-    expect(container.textContent).not.toMatch(/0\s?₫|\bstandard\b|\bvnpay\b|Express|on delivery/);
+    expect(container.textContent).not.toMatch(/(^|[^\d.,])0\s?₫|\bstandard\b|\bvnpay\b|Express|on delivery/);
   });
 
   it("draws Carrier and Tracking number only when they are set", async () => {
