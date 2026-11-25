@@ -3,6 +3,7 @@ import { T, useContent, useList } from "../editable";
 import { usePageMeta } from "../seo";
 import { useCollection } from "../data";
 import { fill, type Line, type SizeRow } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import Disclosure from "../components/Disclosure";
 import FaqRows from "../components/FaqRows";
 import Rule from "../components/Rule";
@@ -64,7 +65,7 @@ export default function SizeChart() {
             </div>
           </div>
         </div>
-        <div className="lg:col-span-6 lg:col-start-7">
+        <Bleed side="right" ground className="py-8 lg:col-span-6 lg:col-start-7">
           <table className="w-full text-sm">
             <caption className="pb-4 text-left text-lg text-ink"><T k="pages.sizes.table" /></caption>
             <thead>
@@ -92,7 +93,7 @@ export default function SizeChart() {
             </tbody>
           </table>
           <T k="pages.sizes.note" as="p" className="mt-4 max-w-[60ch] text-xs leading-relaxed text-ink-soft" />
-        </div>
+        </Bleed>
       </section>
       <Rule />
       <section className="grid gap-8 py-12 lg:grid-cols-12">
