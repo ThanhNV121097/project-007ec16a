@@ -49,6 +49,7 @@ export default function Product() {
     count: useContent("pages.product.review_count"),
     bought: useContent("pages.product.bought"),
     fit: useContent<Record<string, string>>("pages.product.fit"),
+    fitMost: useContent<Record<string, string>>("pages.product.fit_most"),
     spec: useContent<Record<string, string>>("pages.product.spec"),
   };
 
@@ -181,7 +182,7 @@ export default function Product() {
               <p className="mt-6 text-[length:var(--size-h1)] leading-none tabular-nums text-ink">{item.rating}</p>
               <Rating value={item.rating ?? 0} className="mt-4" />
               <p className="mt-3 text-sm text-ink-soft">{fill(words.count, { n: item.review_count ?? reviews.length })}</p>
-              {mostFit && <p className="mt-1 text-sm text-ink-soft">{words.fit?.[mostFit]}</p>}
+              {mostFit && <p className="mt-1 text-sm text-ink-soft">{words.fitMost?.[mostFit]}</p>}
             </div>
             <ul className="border-t border-line lg:col-span-8">
               {reviews.map((r) => (
