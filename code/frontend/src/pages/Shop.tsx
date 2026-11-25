@@ -8,6 +8,7 @@ import { fill, inBand, PRICE_BANDS, sizeKey, sizesInStock, type Category, type L
 import Bleed from "../components/Bleed";
 import FilterRail from "../components/FilterRail";
 import Grid from "../components/Grid";
+import HeadPicture from "../components/HeadPicture";
 import Icon from "../components/Icon";
 import ProductCard from "../components/ProductCard";
 import Select from "../components/Select";
@@ -43,6 +44,8 @@ export default function Shop() {
   });
   const colourNames = useContent<Record<string, string>>("colours");
   const allTitle = useContent("pages.shop.heading");
+  const headImage = useContent("pages.shop.head_image");
+  const headAlt = useContent("pages.shop.head_alt");
   const resultsTitle = useContent("pages.shop.results");
   const searchLabel = useContent("pages.shop.search");
   const sortLabel = useContent("pages.shop.sort");
@@ -83,11 +86,14 @@ export default function Shop() {
 
   return (
     <>
-      <section className="flex items-end justify-between gap-6 pb-8 pt-8 lg:pt-10">
-        <h1 className="min-w-0 text-[length:var(--size-h1)] leading-[1.02] text-ink">{title}</h1>
-        <p data-testid="shop-count" className="shrink-0 pb-2 text-sm text-ink-soft">
-          <span data-count="" className="tabular-nums text-ink">{total}</span>{" "}<T k="pages.shop.count" />
-        </p>
+      <section className="grid gap-6 pb-8 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
+        <div className="flex flex-col justify-end gap-3 lg:col-span-6">
+          <h1 className="min-w-0 text-[length:var(--size-h1)] leading-[1.02] text-ink">{title}</h1>
+          <p data-testid="shop-count" className="text-sm text-ink-soft">
+            <span data-count="" className="tabular-nums text-ink">{total}</span>{" "}<T k="pages.shop.count" />
+          </p>
+        </div>
+        <HeadPicture src={oneCat?.image || headImage} alt={oneCat?.name || headAlt} className="lg:col-span-6 lg:col-start-7" />
       </section>
       <Bleed side="both" ground className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <form key={t.q} role="search" onSubmit={search} className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-md">
