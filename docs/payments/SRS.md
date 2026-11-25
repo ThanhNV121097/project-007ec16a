@@ -163,6 +163,7 @@ Behaviour:
 | AC-6 | A VNPay order the dealer cancelled at minute 5 | The check runs at minute 31 | Its pairs are not returned a second time |
 | AC-7 | A cancelled VNPay order | "Pay now" is pressed with its token | 409 |
 | AC-8 | Two checks run at the same moment | Both see an order to cancel | The order is cancelled once and its pairs return once |
+| AC-9 | A sample order from the first design, unpaid and placed more than 30 minutes ago | The check runs | It is unchanged |
 
 **Failure, boundary and permission behaviour**
 
