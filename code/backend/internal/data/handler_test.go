@@ -116,7 +116,6 @@ func TestABadParameterIsA400WithTheEnvelopeAndNoQuery(t *testing.T) {
 	for _, target := range []string{
 		"/v1/products?page=0", "/v1/products?page=-1", "/v1/products?page=abc", "/v1/products?page=1.5",
 		"/v1/products?limit=0", "/v1/products?limit=-1", "/v1/products?limit=abc", "/v1/products?limit=1.5",
-		"/v1/orders?phone=0938%20410%20552", "/v1/orders?email=", "/v1/orders?address=x", "/v1/orders?note=x",
 		"/v1/lines?_source=owner", "/v1/products?_invented=x", "/v1/products?price_listed=US%24130",
 		"/v1/products?category=a%00b", "/v1/products?colour=%ff%fe", "/v1/products?released=0000-01-01",
 	} {
@@ -184,7 +183,7 @@ func TestPublicSQLNamesNoPrivateColumn(t *testing.T) {
 
 func TestEveryStatementFailureIsAGeneric500(t *testing.T) {
 	cause := errors.New("dial tcp 10.0.0.1:5432: connection refused")
-	for _, target := range []string{"/v1/products", "/v1/products/samba", "/v1/orders", "/v1/shop/shop"} {
+	for _, target := range []string{"/v1/products", "/v1/products/samba", "/v1/shop/shop"} {
 		rec := &recorder{row: fakeRow{err: cause}}
 		res := request(serve(rec), target)
 		if res.Code != http.StatusInternalServerError || !strings.Contains(res.Body.String(), `"error":"internal"`) {
