@@ -125,7 +125,7 @@ uploads, overview, staff), `account` (customer account). A package exposes `Regi
 | `CORS_ALLOWED_ORIGINS` | backend | scaffold | empty in deployment; for `npm run dev` against a local API |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | backend | dealer sign-in | owner supplies in the console; password ≥ 10 chars |
 | `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET` | backend | VNPay story | owner supplies; sandbox first; never in a `VITE_*` variable |
-| `VNPAY_PAY_URL`, `PUBLIC_BASE_URL` | backend | VNPay story | production page address; override for the return/notice address when the proxy's `X-Forwarded-*` is not enough. Each is added to `.env.example` by that story |
+| `VNPAY_PAYMENT_URL`, `PUBLIC_BASE_URL` | backend | VNPay story | production page address; override for the return/notice address when the proxy's `X-Forwarded-*` is not enough. Each is added to `.env.example` by that story |
 | `VITE_API_URL` | frontend | data story | build time; unset means `/api`. Empty is not unset |
 | `POSTGRES_USER/PASSWORD/DB`, `BACKEND_PORT`, `FRONTEND_PORT`, `*_MEM_LIMIT`, `COMPOSE_PROFILES` | compose | root `.env.example` | local only |
 
