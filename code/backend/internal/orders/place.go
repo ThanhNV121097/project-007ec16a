@@ -198,9 +198,9 @@ func (s *service) place(ctx context.Context, key string, req orderRequest) (plac
 	lines := make([]stock.Line, 0, len(req.Items))
 	for _, it := range req.Items {
 		ids = append(ids, it.Product)
-		key := stock.Key{Product: it.Product, Size: it.Size}
-		keys = append(keys, key)
-		lines = append(lines, stock.Line{Key: key, Qty: it.Qty})
+		count := stock.Key{Product: it.Product, Size: it.Size}
+		keys = append(keys, count)
+		lines = append(lines, stock.Line{Key: count, Qty: it.Qty})
 	}
 	shoes, err := loadShoes(ctx, tx, ids)
 	if err != nil {
