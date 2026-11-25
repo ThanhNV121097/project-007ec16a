@@ -255,8 +255,15 @@ func TestListsPageFilterAndKeepTheSeedOrder(t *testing.T) {
 		"/v1/faqs?topic=returns": 2, "/v1/reviews?product=samba-og-w-core-black": 3,
 		"/v1/products?sizes_low=40": 2, "/v1/products?sizes_low=4": 0,
 		"/v1/products?price=3290000": 2, "/v1/products?rating=4.8": 4,
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 		"/v1/sizes?cm=21.6": 1, "/v1/delivery?fee=0": 1,
 		"/v1/products?zzz=1&q=samba&sort=-price&category=women,kids": 12,
+=======
+		"/v1/orders?status=shipped": 3, "/v1/orders?product=gazelle-indoor-solar-gold": 2,
+		"/v1/orders?qty=2": 1, "/v1/orders?placed_at=2026-11-23T16:05:00%2B07:00": 1,
+		"/v1/orders?eta=2026-11-26": 2, "/v1/sizes?cm=21.6": 1, "/v1/delivery?fee=0": 1,
+		"/v1/products?zzz=1&Category=men&sort=&q=%20": 12,
+>>>>>>> refs/heads/main
 	} {
 		code, body, raw := get(t, pool, target)
 		if code != 200 || body["total"] != want {

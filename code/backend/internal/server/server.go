@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/catalogue"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
@@ -32,7 +33,11 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	// Feature modules mount here, one line each, e.g.
 	//   catalogue.Register(mux, pool, log)
 	data.Register(mux, pool, log)
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 	orders.Register(mux, pool, log, orders.Options{})
+=======
+	catalogue.Register(mux, pool, log)
+>>>>>>> refs/heads/main
 	mux.HandleFunc("/", notFound)
 
 	var h http.Handler = httpx.CleanPaths(mux)
