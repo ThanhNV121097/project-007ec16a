@@ -39,7 +39,7 @@ func (s *service) create(w http.ResponseWriter, r *http.Request) {
 
 	faults := req.validate()
 	if err := s.checkSizes(r.Context(), req, faults); err != nil {
-		s.internal(w, "read the sizes of the named shoes", err)
+		s.internal(w, r, "read the sizes of the named shoes", err)
 		return
 	}
 	if len(faults) > 0 {
@@ -49,7 +49,7 @@ func (s *service) create(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.place(r.Context(), key, req)
 	if err != nil {
-		s.refuse(w, err)
+		s.refuse(w, r, err)
 		return
 	}
 
@@ -67,7 +67,7 @@ func (s *service) create(w http.ResponseWriter, r *http.Request) {
 // refuse maps what place gave back to the contract's answers. Anything it does not
 // know is a defect of this service, not a service that is briefly out: 500, with
 // a generic body and the cause in the log (never the key, token, phone or address).
-func (s *service) refuse(w http.ResponseWriter, err error) {
+func (s *service) refuse(w http.ResponseWriter, r *http.Request, err error) {
 	var invalid *invalidError
 	var short *stockError
 	switch {
@@ -78,7 +78,7 @@ func (s *service) refuse(w http.ResponseWriter, err error) {
 	case errors.Is(err, errKeyConflict):
 		httpx.Error(w, http.StatusConflict, "conflict", "That order key was already used for a different order.", nil)
 	default:
-		s.internal(w, "place order", err)
+		s.internal(w, r, "place order", err)
 	}
 }
 
