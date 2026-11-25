@@ -220,7 +220,7 @@ export default function Product() {
   const line = useRecord<Line>("lines", item?.line).item;
   const cat = useRecord<Category>("categories", item?.category).item;
   const terms = useRecord<ShopTerms>("shop", "shop").item;
-  const payments = useCollection<PaymentMethod>("payments", { pageSize: 10 }).items;
+  const vnpay = useRecord<PaymentMethod>("payments", "vnpay").item;
   const reviews = useCollection<Review>("reviews", { where: { product: id ?? "", status: "live" }, sort: "-date", pageSize: 3 }).items;
   const w = useWords();
 
@@ -250,7 +250,7 @@ export default function Product() {
             <Icon name="back" size={14} /><T k="pages.product.back" />
           </Link>
           <BuyBox key={item.id} item={item} meta={meta} siblings={siblings} cutoff={terms?.dispatch_cutoff ?? ""} w={w} />
-          <DetailRows item={item} line={line} cat={cat} terms={terms} payments={payments} w={w} />
+          <DetailRows item={item} line={line} cat={cat} terms={terms} payments={vnpay ? [vnpay] : []} w={w} />
         </div>
         <div className="order-first lg:order-none lg:w-7/12">
           <Bleed side="right">
