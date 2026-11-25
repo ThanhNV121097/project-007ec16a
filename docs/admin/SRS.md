@@ -699,6 +699,103 @@ Behaviour:
 |---|---|---|---|
 | The overview answer | read | yes | Dealer only |
 
+### 4.4 Staff accounts managed by the owner
+
+**Requirement ADMIN-030 — The staff page: the team's list, and adding a staff member**
+
+*As the* admin, *I want to* see the team's accounts and add a staff member, *so that* my staff can sign in and run the shop without sharing my password.
+
+Behaviour:
+
+1. `/admin/staff` is a page of the admin area with its own link "Staff" in the left menu, shown to the admin only. It shows the title "Staff", an "Add staff member" button and a table of the team's accounts — the admin's own and every staff member's: name, email, role ("Admin" or "Staff") and status ("Active" or "Switched off"), and for each staff row a menu with "Reset password", "Switch off" or "Switch on", and "Remove" (ADMIN-031). The admin's own row has no menu.
+2. "Add staff member" opens a dialog with "Name", "Email" and "Starting password" and the buttons "Cancel" and "Add". Name and email are required; the email must look like an email and must not belong to any other account (staff, admin or customer), compared without regard to case; the starting password has at least 10 characters. A refused field shows its sentence against that field and the dialog stays open with the typed values.
+3. A saved staff member appears in the table as "Active" and can at once sign in at `/admin/sign-in` with the email and the starting password; they reach `/admin` and may do everything in the admin area except this page.
+4. `GET /v1/admin/staff` answers the team's accounts (id, name, email, role, active) and never a password or a hash. `POST /v1/admin/staff` with name, email and password creates an account of role "staff" and answers 201 with the account, or 422 with `{"errors":{…}}` naming each field at fault. Both answer 401 with no session and 403 to staff and customers (ADMIN-004).
+5. Passwords are stored only as salted slow hashes and are never returned, shown or logged.
+6. A staff member who opens `/admin/staff` directly is sent to `/admin` and is never shown the list; a customer sees the team-only message (ADMIN-002 item 9); a visitor with no session goes to `/admin/sign-in`. The menu shows no "Staff" link to staff.
+7. While the list is awaited the page shows "Loading the staff…". When it cannot be fetched it shows "We could not load the staff." with a "Try again" button. When a save cannot reach the shop the dialog stays open with the typed values and shows "We could not save. Please try again."
+
+**Acceptance criteria**
+
+| # | Given | When | Then |
+|---|---|---|---|
+| AC-1 | The admin signed in | `/admin/staff` opens | The title "Staff", the "Add staff member" button and a table with the admin's own row (role Admin, Active) and one row per staff member are shown |
+| AC-2 | The same | "Lan Tran", `lan@example.com` and a 12-character password are added | 201; the table shows Lan Tran as Staff and Active |
+| AC-3 | The staff member just added | They sign in at `/admin/sign-in` | The address becomes `/admin` and `GET /v1/auth/me` says role `staff` |
+| AC-4 | An account with `lan@example.com` exists | `Lan@Example.com` is added | 422 naming `email`; nothing is added |
+| AC-5 | The dialog | A password of 9 characters, then of 10, is typed | 422 naming `password` the first time; the second is accepted |
+| AC-6 | The dialog | "Add" is pressed with no name | 422 naming `name`; the dialog stays open with the other values |
+| AC-7 | A staff session | `/admin/staff` is opened | The address becomes `/admin` and no list is drawn |
+| AC-8 | A staff session | `GET /v1/admin/staff` and `POST /v1/admin/staff` | 403 for each |
+| AC-9 | A customer session | `/admin/staff` is opened, and its endpoints are called | "This area is for the shop's team" is shown; the endpoints answer 403 |
+| AC-10 | No session | `GET /v1/admin/staff` | 401 |
+| AC-11 | The admin | `GET /v1/admin/staff` is read | No item holds a password or a hash |
+| AC-12 | An admin session, then a staff session | The left menu is read | "Staff" is in the first and absent from the second |
+| AC-13 | The staff answer takes 3 seconds | `/admin/staff` opens | "Loading the staff…" is shown, and no empty table |
+| AC-14 | The shop is down | "Add" is pressed | The dialog stays open with the typed values and "We could not save. Please try again." |
+
+**Failure, boundary and permission behaviour**
+
+| Case | Condition | Expected behaviour |
+|---|---|---|
+| Invalid input | A missing name, a bad or used email, a short password | 422 with a sentence per field (AC-4 to AC-6) |
+| Not permitted | Staff, customer or no session | 403 / 403 / 401 (AC-7 to AC-10) |
+| Upstream failure | The shop is unreachable | AC-14 |
+| Boundary | A password of exactly 10 characters | Accepted |
+| Conflict | Two adds of one email at the same moment | One is created; the other is refused as in AC-4 |
+
+**Data touched**
+
+| Field | Type | Required | Rule |
+|---|---|---|---|
+| Account: name, email, password hash, role, active | read / write | yes | Role "staff" for accounts made here; email unique across all roles |
+
+**Requirement ADMIN-031 — Reset a password, switch an account off or on, remove it, and never lock the owner out**
+
+*As the* admin, *I want to* reset a staff member's password, switch their account off and on, or remove it, *so that* a person who leaves or forgets cannot keep or lose access wrongly.
+
+Behaviour:
+
+1. `PUT /v1/admin/staff/<id>` changes a staff account's name, its active flag or its password (a new password of at least 10 characters replaces the old one); `DELETE /v1/admin/staff/<id>` removes it. Both are for the admin only: 401 with no session, 403 to staff and customers, 404 for an id that is not a staff account (a customer's id is 404 too).
+2. "Reset password" opens a dialog with "New password"; when saved, "Saved." shows, the old password no longer signs in and the new one does.
+3. "Switch off" asks "Switch off <name>?" first. Once confirmed the row reads "Switched off", the staff member's sessions end at once — their next request to any endpoint answers 401 and their open admin pages return to `/admin/sign-in` — and signing in with the right password is refused with "Wrong email or password.". "Switch on" lets them sign in again; the sessions that ended are not restored.
+4. "Remove" asks "Remove <name>?" first. Once confirmed the account is deleted and its sessions end at once; the email can be used again later. Nothing the person saved is removed.
+5. The shop is never left without an admin. A request to switch off, change the role of, or remove the admin account (any account of role "admin") is refused with 409 and the sentence "The admin account cannot be switched off, changed or removed." No endpoint changes an account's role: a body carrying `role` is refused with 422 naming `role`.
+6. After each action the table redraws from the shop's answer; a refusal shows its sentence in the dialog.
+
+**Acceptance criteria**
+
+| # | Given | When | Then |
+|---|---|---|---|
+| AC-1 | A staff member with password A | The admin resets it to a 12-character password B | "Saved." shows; A is refused at sign-in and B signs in |
+| AC-2 | The same | The new password has 9 characters | 422 naming `password`; A still signs in |
+| AC-3 | A signed-in staff member | The admin confirms "Switch off" for them | The row reads "Switched off"; the staff member's next request answers 401 and their page returns to `/admin/sign-in` |
+| AC-4 | The same account | Its right password is sent at sign-in | The same status and body as a wrong password |
+| AC-5 | The same account | The admin presses "Switch on" | The staff member signs in again; the earlier session is not valid |
+| AC-6 | A signed-in staff member | The admin confirms "Remove" | 204; the row is gone, the staff member's next request answers 401 and the same email can be added again |
+| AC-7 | The admin | `PUT` switches off the admin's own account | 409 "The admin account cannot be switched off, changed or removed."; the admin stays signed in and active |
+| AC-8 | The admin | `DELETE` is sent for the admin's own account | 409 with the same sentence; the account remains |
+| AC-9 | The admin | `PUT` carries `role: "admin"` for a staff account | 422 naming `role`; the role is unchanged |
+| AC-10 | A customer's account id | `PUT` and `DELETE` are sent | 404 for each |
+| AC-11 | A staff session | `PUT` and `DELETE` are sent | 403 for each |
+| AC-12 | The "Switch off" or "Remove" question | "Cancel" is pressed | Nothing changes |
+
+**Failure, boundary and permission behaviour**
+
+| Case | Condition | Expected behaviour |
+|---|---|---|
+| Not permitted | Staff, customer or no session | 403 / 403 / 401 (AC-11) |
+| Conflict | Switching off or removing the admin | 409 (AC-7, AC-8) |
+| Not found | An id that is not a staff account | 404 (AC-10) |
+| Concurrency | The admin switches an account off while its owner signs in | The sign-in either fails or its session ends at once; no session of a switched-off account stays valid |
+
+**Data touched**
+
+| Field | Type | Required | Rule |
+|---|---|---|---|
+| Account: name, active, password hash | write | per rule | Staff accounts only |
+| Sessions of the account | write | yes | Ended at once on switch-off, removal and password reset by the admin |
+
 ## 5. Screens
 
 | Screen | Section in the design | Functions it serves | States that must exist |
