@@ -22,7 +22,7 @@ Requirement ids are in `docs/{module}/SRS.md` (`SITE` → `site`, `DATA` → `da
 
 ## WHAT THE FEATURES NEED
 
-The brief of this project has no "WHAT THE FEATURES NEED" lines. The payment gateway the owner's business needs was decided in the plan: card payments go through VNPay (PAY-001 to PAY-005), with cash on delivery at launch (ORD-006) and VietQR and MoMo later (PAY-020 to PAY-022).
+The brief of this project has no "WHAT THE FEATURES NEED" lines. The payment gateway the owner's business needs was decided in the plan: card payments go through VNPay (PAY-001 to PAY-005), as the only way to pay at launch (ORD-006; the owner chose "Online payment", so there is no cash on delivery), with VietQR and MoMo later (PAY-020 to PAY-022).
 
 ## HOW CUSTOMERS GET IN TOUCH
 
