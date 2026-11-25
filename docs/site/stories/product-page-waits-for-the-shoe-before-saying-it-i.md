@@ -71,7 +71,7 @@ Each criterion narrows the SRS criterion in its brackets. `SC` is this story's n
 
 - **SC-5 [SITE-014 item 4; SITE-005 AC-1]:** The 2-second answer is the shoe. In the first paint after the answer the page shows the heading (`data-testid="product-name"`) with the shoe's name, the "All shoes" back link, the price, the size pills and "Add to bag" — no second wait — and the missing text has not been on the page at any moment since the address opened.
 - **SC-6 [SITE-014 item 4]:** The shoe's answer comes at 1 second and the answers for its line, category, shop terms, payment options, reviews and related pairs at 4 seconds. At 1 second the shoe is drawn (heading, price, sizes, "Add to bag"); the parts that depend on the other answers appear when theirs arrive; the missing text is never shown.
-- **SC-7 [SITE-005 AC-1, AC-9, AC-14]:** With the shoe answered at once, `/shop/samba-og-w-crystal-white` still reads as before: the heading is the shoe's name, the line reads `Samba · Women · IH9055`, the price reads `3.090.000 ₫`, the status line reads "In stock in all 8 sizes." for a shoe with 9 sizes and 1 sold out and none on last pairs, and choosing `38` then "Add to bag" puts one pair `EU 38` in the bag and opens the bag drawer.
+- **SC-7 [SITE-005 AC-1, AC-9, AC-14]:** With the shoe answered at once, `/shop/samba-og-w-crystal-white` still reads as before: the heading is the shoe's name, the line reads `Samba · Women · IH9055`, the price reads `3.090.000 ₫`, the status line under the sizes reads as SITE-005 AC-9 or AC-10 says for that shoe's own sizes, and choosing an in-stock size (for example `38`) then "Add to bag" puts one pair of that shoe in that size (`EU 38`) in the bag and opens the bag drawer.
 
 ### When the shop says "not found"
 
