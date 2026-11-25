@@ -19,7 +19,7 @@ shop has no sales, the "In stock" figures drift from the shelf, and every custom
 
 | Actor | Who they are | What they may do in this module |
 |---|---|---|
-| Customer | A visitor with no account who orders | Place an order; read an order they hold the order token for; look an order up by number and phone |
+| Customer | A visitor who orders, as a guest or signed in (`accounts` module) | Place an order; read an order they hold the order token for, or one linked to their own account; look an order up by number and phone |
 | Stranger | Anyone else, including a customer without the token | Learn nothing about any order |
 | Dealer | The shop owner or staff, signed in (`admin` module) | Read every order and its private details; list orders |
 | Payment provider | A gateway such as VNPay | Tells the shop a payment happened (`payments` module) |
