@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { T, useContent } from "../editable";
 import { usePageMeta } from "../seo";
-import { useCollection, useRecord } from "../data";
+import { useCollection } from "../data";
 import { lineKey, removeFromCart, setQuantity, useCart, type CartLine } from "../lib/cart";
 import { useDemo } from "../lib/demo";
 import { formatPrice } from "../lib/format";
-import { fill, type DeliveryOption, type Product, type ShopTerms } from "../lib/shop";
+import { fill, type Product } from "../lib/shop";
 import HeadPicture from "../components/HeadPicture";
 import EmptyBag from "../components/EmptyBag";
 import Icon from "../components/Icon";
@@ -25,8 +25,6 @@ export default function Cart() {
   const { lines: real } = useCart();
   const demo = useDemo();
   const products = useCollection<Product>("products", { where: { status: "live" }, pageSize: 500 }).items;
-  const terms = useRecord<ShopTerms>("shop", "shop").item;
-  const standard = useRecord<DeliveryOption>("delivery", "standard").item;
   const countText = useContent("pages.cart.count");
   const freeText = useContent("pages.cart.free");
   const removeText = useContent("pages.cart.remove");
@@ -40,7 +38,6 @@ export default function Cart() {
   const lines = showingExample ? example : real;
   const count = lines.reduce((n, l) => n + l.qty, 0);
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  const fee = terms && subtotal >= terms.free_delivery_from ? 0 : standard?.fee ?? 0;
 
   if (lines.length === 0) return <EmptyBag />;
 
@@ -85,8 +82,8 @@ export default function Cart() {
           <T k="pages.cart.summary" as="h2" className="text-lg text-ink" />
           <dl className="mt-5 border-t border-line text-sm">
             <div className="flex justify-between border-b border-line py-3"><dt className="text-ink-soft"><T k="pages.cart.subtotal" /></dt><dd className="tabular-nums text-ink">{formatPrice(subtotal)}</dd></div>
-            <div className="flex justify-between border-b border-line py-3"><dt className="text-ink-soft"><T k="pages.cart.delivery" /></dt><dd className="tabular-nums text-ink">{fee === 0 ? freeText : formatPrice(fee)}</dd></div>
-            <div className="flex items-baseline justify-between py-4"><dt className="text-ink"><T k="cart.total" /></dt><dd className="text-2xl tabular-nums text-ink">{formatPrice(subtotal + fee)}</dd></div>
+            <div className="flex justify-between border-b border-line py-3"><dt className="text-ink-soft"><T k="pages.cart.delivery" /></dt><dd className="tabular-nums text-ink">{freeText}</dd></div>
+            <div className="flex items-baseline justify-between py-4"><dt className="text-ink"><T k="cart.total" /></dt><dd className="text-2xl tabular-nums text-ink">{formatPrice(subtotal)}</dd></div>
           </dl>
           <Link to="/checkout" data-testid="cart-checkout"
             className="mt-2 flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-ink px-6 py-3.5 text-xs font-medium uppercase tracking-[0.14em] text-ground hover:opacity-85">
