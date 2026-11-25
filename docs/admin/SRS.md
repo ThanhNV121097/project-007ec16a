@@ -223,7 +223,7 @@ Behaviour:
 | AC-4 | No session | `POST /v1/uploads` | 401 |
 | AC-5 | No session | `GET /v1/admin/overview` | 401 |
 | AC-6 | No session | `PUT /v1/orders/<id>` | 401 |
-| AC-7 | A session with role "staff" (test fixture) | Each of the above | 403 |
+| AC-7 | A session with role "customer" | Each of the above | 403 |
 | AC-8 | No session | `GET /v1/products` | 200 (public read) |
 | AC-9 | A visitor | A write is tried on lines, categories, reviews, orders | 401 for each |
 
