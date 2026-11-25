@@ -451,13 +451,13 @@ Behaviour:
 
 | # | Given | When | Then |
 |---|---|---|---|
-| AC-1 | Exchange days 14, refund days 7 | `/returns` loads | The first figure reads `14`, the second `7`, the third `0 ₫`, each with its caption |
-| AC-2 | The stored exchange days are changed to 21 | The page loads | The first figure reads `21` |
-| AC-3 | The page loads | The visitor reads "How to exchange" | Steps 01, 02, 03 are titled "Message us", "Hand over the pair", "Wear the right size" |
-| AC-4 | The page loads | The visitor reads "What we ask" | Four conditions are listed, each with a tick |
-| AC-5 | Four questions of topic "returns" | The page loads | Four closed rows are shown, each opening onto its answer |
-| AC-6 | The page loads | The visitor presses "Start an exchange" | The address is `/contact` |
-| AC-7 | The page loads | The visitor reads the top | The heading is "Returns and size exchange" and the lead sentence is shown |
+| AC-1 | The page loads | The visitor reads the figures | The words `No`, `Size` and `Ask` are shown, each with its line: "Exchanges are not accepted.", "Check the size chart before you order.", "Call us, message us on Zalo or use the contact form." |
+| AC-2 | The page loads | The visitor searches the page text | The words "refund", "unworn", "original box", "within 7 days", "within 14 days" and "three working days" and the figure `0 ₫` appear nowhere on it, and no figure counts up |
+| AC-3 | The page loads | The visitor reads "What you can do" | Steps 01, 02, 03 are titled "Check your size", "Ask before you order", "Report a problem" |
+| AC-4 | The page loads | The visitor reads "In short" | Two lines are listed, each with a tick |
+| AC-5 | Two questions of topic "returns" (the size one and the wrong-or-damaged-delivery one) | The page loads | Two closed rows are shown under "Questions about exchanges", each opening onto its answer |
+| AC-6 | The page loads | The visitor presses "Contact us" | The address is `/contact` |
+| AC-7 | The page loads | The visitor reads the top | The heading is "No exchanges", the lead sentence is shown and the browser tab is titled "Return policy" |
 
 **Failure, boundary and permission behaviour**
 
