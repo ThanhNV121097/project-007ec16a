@@ -2,7 +2,7 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { useContent } from "../editable";
 import { fill } from "../lib/shop";
 import type { StaffAccount, StaffField, StaffInput, StaffPatch, StaffResult } from "../lib/staff";
-import { Button, Field, FormDialog, Input } from "./admin";
+import { Button, Field, FormDialog, Input } from "./admin/index";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
