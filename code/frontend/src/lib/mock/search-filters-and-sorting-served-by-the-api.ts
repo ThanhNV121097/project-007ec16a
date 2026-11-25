@@ -1,11 +1,21 @@
-import { collections, schema } from "../../data";
+import { schema } from "../../data";
+import { api, type Params } from "../api";
 import { sizesInStock, type Category, type Line, type Product } from "../shop";
 import type { Page, PriceRange, ProductFilters, ProductsRequest, Sort } from "../shop-request";
 
 /**
- * THE API'S ANSWERS, FROM THE DESIGN'S OWN RECORDS. Deleted in the backend
+ * THE API'S ANSWERS, FROM THE SITE'S OWN RECORDS. Deleted in the backend
  * step: `GET /v1/products` and `GET /v1/product-filters` replace the two
  * functions, and src/lib/shop-list.ts is the only file that imports this one.
+ *
+ * The shoes are read from the API itself (`GET /v1/products?status=live`,
+ * every page of them, on every call) and narrowed here, in the browser. They
+ * are NOT taken from the rows other pages have already put in src/data's
+ * store: that store is empty when /shop is the first page opened, and a list
+ * read from it said "no pair matches" for a catalogue that was there. A read
+ * that fails rejects, as the real client will, so a refused database, a
+ * stopped server or an offline browser is "could not load" and never an empty
+ * list.
  *
  * It answers as the story says the API does: every typed word is found in a
  * searched field (accents, case and the stroked d ignored, the line's and the
@@ -17,14 +27,45 @@ function fold(v: unknown): string {
   return String(v ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/đ/g, "d");
 }
 
-function table<T>(name: string): T[] {
-  return (collections()[name] ?? []) as unknown as T[];
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
-function later<T>(value: T, ms = 0): Promise<T> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(value), ms);
-  });
+/** The most rows the API serves in one page. */
+const CEILING = 100;
+
+/** Every row of a collection, a page after another; a failed page rejects, as `api.get` does. */
+async function everyRow<T>(name: string, params: Params = {}): Promise<T[]> {
+  const rows: T[] = [];
+  for (let page = 1; ; page += 1) {
+    const got = await api.get<{ items: T[]; total: number }>(name, { ...params, page, limit: CEILING });
+    rows.push(...got.items);
+    if (got.items.length === 0 || rows.length >= got.total) return rows;
+  }
+}
+
+/** The shoes on sale. The list and the options ask for the same thing, and `api.get` shares two identical requests made together. */
+function liveShoes(): Promise<Product[]> {
+  return everyRow<Product>("products", { status: "live" });
+}
+
+interface Names {
+  line: Map<string, string>;
+  category: Map<string, string>;
+}
+
+const NO_NAMES: Names = { line: new Map(), category: new Map() };
+
+/** The names of the lines and categories, read only when words were typed: a word may be a line's name. */
+async function namesFor(q: string): Promise<Names> {
+  if (fold(q).trim() === "") return NO_NAMES;
+  const [lines, categories] = await Promise.all([everyRow<Line>("lines"), everyRow<Category>("categories")]);
+  return {
+    line: new Map(lines.map((l) => [l.id, l.name])),
+    category: new Map(categories.map((c) => [c.id, c.name])),
+  };
 }
 
 /**
@@ -54,16 +95,14 @@ function inRanges(price: number, ranges: readonly PriceRange[]): boolean {
   return ranges.length === 0 || ranges.some((r) => (r.from === undefined || price >= r.from) && (r.to === undefined || price <= r.to));
 }
 
-function hasWords(p: Product, q: string): boolean {
+function hasWords(p: Product, q: string, names: Names): boolean {
   const words = fold(q).split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
-  const line = table<Line>("lines").find((l) => l.id === p.line)?.name;
-  const category = table<Category>("categories").find((c) => c.id === p.category)?.name;
-  const text = fold([p.name, p.model, p.colourway, p.code, line, category, p.description].join("\n"));
+  const text = fold([p.name, p.model, p.colourway, p.code, names.line.get(p.line), names.category.get(p.category), p.description].join("\n"));
   return words.every((w) => text.includes(w));
 }
 
-function matches(p: Product, req: ProductsRequest): boolean {
+function matches(p: Product, req: ProductsRequest, names: Names): boolean {
   const available = sizesInStock(p);
   return p.status === req.status
     && inAny(req.category, p.category)
@@ -71,7 +110,7 @@ function matches(p: Product, req: ProductsRequest): boolean {
     && inAny(req.colour, p.colour)
     && inRanges(p.price, req.price)
     && (req.size.length === 0 || req.size.some((s) => available.includes(s)))
-    && hasWords(p, req.q);
+    && hasWords(p, req.q, names);
 }
 
 /** A shoe with no rating comes last on "Best rated". */
@@ -83,12 +122,14 @@ const ORDER: Record<Sort, (a: Product, b: Product) => number> = {
 };
 
 /** `GET /v1/products?status=live&limit=12&page=n&...` */
-export function listProducts(req: ProductsRequest): Promise<Page<Product>> {
+export async function listProducts(req: ProductsRequest): Promise<Page<Product>> {
   const bad = trouble(req.page);
-  if (bad === "failed") return later(null).then(() => Promise.reject(new Error("The shoes could not be read")));
-  const hits = table<Product>("products").filter((p) => matches(p, req)).sort(ORDER[req.sort]);
+  if (bad === "failed") throw new Error("The shoes could not be read");
+  const [shoes, names] = await Promise.all([liveShoes(), namesFor(req.q)]);
+  if (bad === "slow") await wait(3000);
+  const hits = shoes.filter((p) => matches(p, req, names)).sort(ORDER[req.sort]);
   const start = (req.page - 1) * req.limit;
-  return later({ items: hits.slice(start, start + req.limit), total: hits.length, page: req.page, limit: req.limit }, bad === "slow" ? 3000 : 0);
+  return { items: hits.slice(start, start + req.limit), total: hits.length, page: req.page, limit: req.limit };
 }
 
 /** "36 2/3" as a number, so sizes sort the way a foot grows. */
@@ -106,11 +147,11 @@ function colourOrder(): string[] {
 }
 
 /** `GET /v1/product-filters`: every colour and size of the live shoes, whatever is filtered. */
-export function getProductFilters(): Promise<ProductFilters> {
-  const live = table<Product>("products").filter((p) => p.status === "live");
+export async function getProductFilters(): Promise<ProductFilters> {
+  const live = await liveShoes();
   const have = new Set(live.map((p) => p.colour));
-  return later({
+  return {
     colours: colourOrder().filter((c) => have.has(c)),
     sizes: [...new Set(live.flatMap((p) => p.sizes ?? []))].sort((a, b) => sizeValue(a) - sizeValue(b)),
-  });
+  };
 }
