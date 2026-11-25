@@ -81,4 +81,71 @@ describe("the shop's list", () => {
     expect(result.current).toMatchObject({ items: [], total: null, loading: false });
     expect(result.current.error?.message).toBe("500");
   });
+
+  it("shows nothing of the last list under a new query until its first page is in", async () => {
+    const { result, rerender } = setup();
+    await act(async () => calls[0].resolve(page(["a", "b"], 2)));
+    rerender({ q: { ...base, category: ["women"] } });
+    expect(result.current).toMatchObject({ items: [], total: null, loading: true, error: null });
+    await act(async () => calls[1].resolve(page(["w"], 1)));
+    expect(result.current.items.map((p) => p.id)).toEqual(["w"]);
+    expect(result.current).toMatchObject({ total: 1, loading: false });
+  });
+
+  it("keeps the shoes when the next page fails, and asks for that same page again", async () => {
+    const { result } = setup();
+    await act(async () => calls[0].resolve(page(["a", "b"], 3)));
+    act(() => result.current.loadMore());
+    expect(result.current.loading).toBe(true);
+    await act(async () => calls[1].reject(new Error("500")));
+    expect(result.current.items.map((p) => p.id)).toEqual(["a", "b"]);
+    expect(result.current).toMatchObject({ total: 3, loading: false, hasMore: true });
+    expect(result.current.error).not.toBeNull();
+
+    act(() => result.current.retry());
+    expect(result.current).toMatchObject({ error: null, loading: true });
+    expect(calls).toHaveLength(3);
+    expect(calls[2].req.page).toBe(2);
+    await act(async () => calls[2].resolve(page(["b", "c"], 3, 2)));
+    expect(result.current.items.map((p) => p.id)).toEqual(["a", "b", "c"]);
+    expect(result.current).toMatchObject({ error: null, loading: false, hasMore: false });
+  });
+
+  it("asks for the first page again after it failed, and fails again without skipping ahead", async () => {
+    const { result } = setup({ ...base, sort: "price" });
+    await act(async () => calls[0].reject(new Error("500")));
+    act(() => result.current.retry());
+    expect(result.current).toMatchObject({ items: [], total: null, loading: true, error: null });
+    expect(calls[1].req).toMatchObject({ page: 1, sort: "price" });
+    await act(async () => calls[1].reject(new Error("500")));
+    expect(result.current.error).not.toBeNull();
+    act(() => result.current.retry());
+    expect(calls[2].req.page).toBe(1);
+    await act(async () => calls[2].resolve(page(["a"], 1)));
+    expect(result.current).toMatchObject({ total: 1, loading: false, error: null });
+  });
+
+  it("ignores an older request's failure that arrives after a newer answer", async () => {
+    const { result, rerender } = setup();
+    rerender({ q: { ...base, category: ["women"] } });
+    rerender({ q: { ...base, category: ["women", "men"] } });
+    await act(async () => calls[2].resolve(page(["new"], 1)));
+    await act(async () => calls[1].reject(new Error("500")));
+    await act(async () => calls[0].reject(new Error("500")));
+    expect(result.current.error).toBeNull();
+    expect(result.current.items.map((p) => p.id)).toEqual(["new"]);
+  });
+
+  it("starts at the first page when the visitor comes back to an earlier query", async () => {
+    const { result, rerender } = setup();
+    await act(async () => calls[0].resolve(page(["a"], 30)));
+    act(() => result.current.loadMore());
+    await act(async () => calls[1].resolve(page(["b"], 30, 2)));
+    rerender({ q: { ...base, category: ["women"] } });
+    await act(async () => calls[2].resolve(page(["w"], 1)));
+    rerender({ q: base });
+    expect(calls[3].req.page).toBe(1);
+    await act(async () => calls[3].resolve(page(["a", "b"], 30)));
+    expect(result.current.items.map((p) => p.id)).toEqual(["a", "b"]);
+  });
 });
