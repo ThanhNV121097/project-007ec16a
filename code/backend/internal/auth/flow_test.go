@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/ratelimit"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -497,14 +498,8 @@ func TestALockThatBeganWhileTheHashRanRefusesTheRightPassword(t *testing.T) {
 	h := newHarness(t)
 	h.svc.verify = func(_ context.Context, encoded, plain string) (bool, error) {
 		// Five other failures land while this one hashes.
-		for scope, subject := range map[string]string{} {
-			_, _ = scope, subject
-		}
-		for k := range h.db.locks {
-			delete(h.db.locks, k)
-		}
 		h.db.mu.Lock()
-		h.db.locks["sign_in_email"+hex.EncodeToString(subjectOf("sign_in_email", "admin@example.com"))] = 600
+		h.db.locks[ratelimit.SignInEmail+hex.EncodeToString(ratelimit.Subject(ratelimit.SignInEmail, "admin@example.com"))] = 600
 		h.db.mu.Unlock()
 		return encoded == "hash:"+plain, nil
 	}
