@@ -34,6 +34,7 @@ export default function ColourDots({ label, items, current }: {
                   className={`block size-3.5 rounded-full border border-line outline-offset-2 transition-transform hover:scale-110 ${on ? "outline outline-1 outline-ink" : ""}`}
                   style={{ backgroundColor: c.swatch }}
                 />
+                <span className="sr-only">{c.name}</span>
               </Link>
             </li>
           );
