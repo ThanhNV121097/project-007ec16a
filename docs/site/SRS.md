@@ -418,7 +418,7 @@ Behaviour:
 | AC-5 | The same | The visitor reads the Standard row | "Free" is its only cost; no "Free over" line appears under it and no Express row exists |
 | AC-6 | Four questions of topic "shipping" | The page loads | Four closed rows are shown (one per such question), each opening onto its answer |
 | AC-7 | The page loads | The visitor presses "Track an order" | The address is `/track` |
-| AC-8 | The stored express fee is changed to 60.000 ₫ | The page loads | The Express row shows `60.000 ₫` |
+| AC-8 | The stored standard days are changed to "3–5" | The page loads | The second figure reads `3–5` and the row's Arrives cell shows the changed days |
 | AC-9 | A 390px window | The page loads | The table scrolls sideways inside its own box; the page itself has no horizontal scroll |
 
 **Failure, boundary and permission behaviour**
