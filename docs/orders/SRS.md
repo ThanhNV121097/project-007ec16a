@@ -56,7 +56,7 @@ Behaviour:
 4. Step 03 shows one way to pay as a row, already selected: icon, "VNPay — ATM, Visa, Mastercard" and its note (ORD-006). Cash on delivery, bank transfer and MoMo are not offered. When VNPay's keys are missing the row stays, "Online payment is not available right now. Please try again later." shows under it in alert style, and "Place order" is disabled.
 5. The summary "Your order" lists each pair: picture, name in capitals, `<variant> · Qty <n>`, line total; then Subtotal, Delivery ("Free", never `0 ₫`) and Total, which equals Subtotal. The prices are the shop's current prices, read when the page opens, not the price saved in the bag when the pair was added.
 6. Under the totals an information line says what happens next: "After you press Place order you pay on the <method name> page; we pack your order after the payment is confirmed."
-7. The "Place order" button has a lock icon; while an order is being placed it reads "Placing your order…" and is disabled. Under it: "By placing the order you accept the delivery and returns terms on this site."
+7. The "Place order" button has a lock icon; while an order is being placed it reads "Placing your order…" and is disabled. Under it: "By placing the order you accept the delivery information and that exchanges are not accepted."
 8. `/checkout` with an empty bag shows the heading "Nothing to check out yet.", the line "Pick a pair — the size chart is one tap from every shoe, and the first size exchange is free.", a "Keep shopping" pill, and "New this month" with up to four live new shoes.
 9. The total shown here is the total stored when the order is placed (ORD-003).
 
