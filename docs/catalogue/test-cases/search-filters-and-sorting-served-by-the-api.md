@@ -531,7 +531,7 @@ Check: interact_page
 **Scenario**: SC-33b — after any tick the list is back to its first twelve
 **Given**: The seed plus FX-LIVE30 (women 22, women Samba 21, size 38 available 23). `/shop` is open.
 **When**: Press "Show more" (24 cards); tick "Women"; read the cards and the count. Reload `/shop`, press "Show more", then tick the line "Samba"; read. Reload `/shop`, press "Show more", then press the size pill `38`; read.
-**Then**: After each tick or pill: exactly 12 cards (not 24), a "Show more" button is present, and the count reads `22 matching`, `26 matching` hmm
+**Then**: After each tick or pill: exactly 12 cards (not 24), all with different `href`s, a "Show more" button is present, and the count reads `22 matching` after "Women", `23 matching` after "Samba" and `23 matching` after the pill `38`. Pressing "Show more" once more after a tick shows 24 cards, so the earlier "Show more" pages did not survive the tick but the button still works.
 Traces: SC-33 (CAT-003 AC-20)
 Check: interact_page
 
