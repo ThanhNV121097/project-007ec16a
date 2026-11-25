@@ -193,7 +193,7 @@ let memory: StoredOrder[] = [];
 
 function onDisk(): StoredOrder[] {
   try {
-    const v = JSON.parse(localStorage.getItem(STORE) ?? \"null\") as unknown;
+    const v = JSON.parse(localStorage.getItem(STORE) ?? "null") as unknown;
     return Array.isArray(v) ? (v as StoredOrder[]) : [];
   } catch {
     return [];
