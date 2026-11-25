@@ -56,9 +56,9 @@ The one retry is `api.ts`'s, not the hook's: `api.get` tries a failed `GET` once
 | "Show more" | 1, the button disabled until it settles | A disabled button sends nothing, so a second press sends no second request (SC-24) |
 | "Try again" on a failed page 2 | 1 (2 if it fails again) | The **same** page: `page=2`, the same filters. Page 1's cards stay; none is repeated or skipped (SC-27) |
 | A filter changed while a request is in flight | 1 more | The earlier request is **not aborted** (`api.get` takes no signal); its answer or failure is dropped by the hook. A few concurrent `GET`s of twelve shoes is the whole cost |
-| Back from a shoe | 1 for the list, 1 for the options, 2 for the names | The list is re-read from the address and starts at its first twelve (SC-10, SC-11) |
+| Back from a shoe | 1 for the list, plus the options and the names the page reads on every visit | The list is re-read from the address and starts at its first twelve (SC-10, SC-11); nothing is restored from an earlier visit (ERD D1) |
 
-A list of twelve is a primary-key-ordered page of a stable sort (`ORDER BY <key>, seq`), so asking the same page again returns the same shoes unless the dealer changed the catalogue in between; the hook removes a shoe it already holds before appending, so a shifted offset can repeat nothing on screen (item 4 §2).
+A page is ordered by the sort key and then `seq`, a total order (item 4 §3.6), so asking the same page again returns the same shoes unless the dealer changed the catalogue in between; the hook drops a shoe it already holds before appending, so a shifted offset repeats nothing on screen (item 4 §2).
 
 ## 3. The mock, read and judged
 
