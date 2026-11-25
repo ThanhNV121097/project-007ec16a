@@ -757,7 +757,7 @@ Behaviour:
 
 Behaviour:
 
-1. `PUT /v1/admin/staff/<id>` changes a staff account's name, its active flag or its password (a new password of at least 10 characters replaces the old one); `DELETE /v1/admin/staff/<id>` removes it. Both are for the admin only: 401 with no session, 403 to staff and customers, 404 for an id that is not a staff account (a customer's id is 404 too).
+1. `PUT /v1/admin/staff/<id>` changes a staff account's name, its active flag or its password (a new password of at least 10 characters replaces the old one); `DELETE /v1/admin/staff/<id>` removes it. Both are for the admin only: 401 with no session, 403 to staff and customers, 404 for an id that is not a staff account (a customer's id is 404 too), except the admin account's own id, which answers the admin 409 (item 5 wins over this item).
 2. "Reset password" opens a dialog with "New password"; when saved, "Saved." shows, the old password no longer signs in and the new one does.
 3. "Switch off" asks "Switch off <name>?" first. Once confirmed the row reads "Switched off", the staff member's sessions end at once — their next request to any endpoint answers 401 and their open admin pages return to `/admin/sign-in` — and signing in with the right password is refused with "Wrong email or password.". "Switch on" lets them sign in again; the sessions that ended are not restored.
 4. "Remove" asks "Remove <name>?" first. Once confirmed the account is deleted and its sessions end at once; the email can be used again later. Nothing the person saved is removed.
