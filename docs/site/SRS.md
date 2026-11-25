@@ -28,6 +28,7 @@ works at phone width first. Without it a customer cannot choose a pair or trust 
 
 - The site as designed
 - Product page waits for the shoe before saying it is missing
+- Free delivery on every order, wording to match
 
 **Out of scope**
 
