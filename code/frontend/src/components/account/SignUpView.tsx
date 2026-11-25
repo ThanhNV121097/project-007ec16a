@@ -66,7 +66,7 @@ export default function SignUpView() {
   }
 
   return (
-    <AuthLayout title={W.signUp.title} lead={W.signUp.lead}>
+    <AuthLayout title={W.signUp.title} lead={W.signUp.lead} art="checkout">
       <form ref={form} noValidate onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
         <Field id="sign-up-name" label={W.labels.name} autoComplete="name" {...bind("name")} />
         <Field id="sign-up-email" label={W.labels.email} type="email" autoComplete="email" {...bind("email")} />
