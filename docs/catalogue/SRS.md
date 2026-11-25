@@ -54,7 +54,7 @@ Behaviour:
 6. `size=a,b` applies to shoes only: it keeps the shoes in which at least one of the given EU sizes is available — that is, listed in the shoe's sizes and not in its sold-out list. A size on its last pairs is still available.
 7. `total` is the number of every match across all pages, not the page's length.
 8. The conditions of one request apply together: `category=women&line=samba&size=38&price_to=2999999&q=og&sort=price`.
-9. A shoe of status "draft" and a review of status "hidden" are not in a visitor's results; a visitor who asks for them by status gets none.
+9. A shoe of status "draft" and a review of status "hidden" are kept out of the results by the `status=live` condition the pages send. That the API never shows them to a visitor, whatever is asked, belongs to the `admin` module (ADMIN-013).
 
 **Acceptance criteria**
 
