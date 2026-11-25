@@ -188,13 +188,17 @@ func TestRestartKeepsChangesAndInsertsNothing(t *testing.T) {
 func TestSeedMeetingAnExistingIDFailsLoudly(t *testing.T) {
 	pool := schemaPool(t)
 	ctx := context.Background()
+	// The schema the seed lands in is every migration stamped before it. A later
+	// migration (the per-size stock, the order checkout) assumes the seeded rows
+	// are there and rewrites the columns the seed fills, so it cannot run first.
+	const seedVersion = "20261125100200"
 	before := fstest.MapFS{}
 	entries, err := fs.ReadDir(migrations.FS, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".sql") && !strings.Contains(e.Name(), "seed_collections") {
+		if strings.HasSuffix(e.Name(), ".sql") && e.Name() < seedVersion {
 			data, err := fs.ReadFile(migrations.FS, e.Name())
 			if err != nil {
 				t.Fatal(err)
