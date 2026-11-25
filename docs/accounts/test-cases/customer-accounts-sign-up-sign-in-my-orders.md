@@ -627,11 +627,11 @@ Traces: SC-19 (ACC-001 AC-7, AC-8)
 Check: interact_page
 
 **Scenario**: SC-19.3 — Each error sentence has an alert icon, the danger colour and an alert role
-**Given**: The state of SC-19.1.
-**When**: The `[role=alert]` elements are inspected and their computed colour read, with `--danger` read from `:root`.
-**Then**: There are four `[role=alert]` elements (one per sentence), each with an icon element in front of the sentence, and each sentence's text colour equals the `--danger` token.
+**Given**: `/account/sign-up` loaded in a browser operated with `interact_page` (the state needs a pressed button, so a bare page measurement cannot reach it); every field empty.
+**When**: "Create account" is pressed; then, through `interact_page`'s inspection of the page, the `[role=alert]` elements and their computed `color` are read, together with the computed value of `--danger` on `:root`.
+**Then**: There are four `[role=alert]` elements (one per sentence), each with an icon element (an `svg` or an element with `aria-hidden="true"` that draws it) in front of the sentence, and each sentence's computed text colour equals the `--danger` token.
 Traces: SC-19 (last sentence); SC-39 (errors announced)
-Check: measure_styles
+Check: interact_page
 
 **Scenario**: SC-20.1 — A valid sign-up goes to `/account`, the header shows the name and the session survives a reload
 **Given**: R done. No account for `lan@example.com`. `/account/sign-up` loaded.
