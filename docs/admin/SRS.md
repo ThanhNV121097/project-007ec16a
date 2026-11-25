@@ -157,7 +157,7 @@ Behaviour:
 |---|---|---|---|
 | Session: account, role, created time, expiry | write | yes | 7 days; ended by sign-out |
 
-**Requirement ADMIN-003 — The dealer account and protection against guessing**
+**Requirement ADMIN-003 — The admin account, one sign-in for every role, and protection against guessing**
 
 *As the* owner, *I want* the dealer account to come from my own settings and to resist guessing, *so that* nobody else gets in.
 
