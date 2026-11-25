@@ -17,7 +17,7 @@ Written before the implementation exists, from the requirements and the story on
 | Loading and errors (SC-22 … SC-30) | **High** | They replace a blank page and a false "No pair matches that." with the truth; the first-page and second-page failures, offline, retry, and a stale failure are separate failure paths | Each state arranged for real (delay, 500, offline, recovery), what survives (the first twelve cards, the count), what must not show (the empty state, a count, a server message) |
 | Words, access and look (SC-31 … SC-33) | Medium | The owner edits the four strings in the Studio; announcements reach assistive technology; the design's tokens are a CI gate | Exact strings and their content keys, roles and attributes, computed type of the new states against the empty state's |
 
-No case is skipped for risk. The one criterion with no browser reading (the source of the strings and the lint gate) is `manual`, with its reason (§8).
+No case is skipped for risk. The three cases with no page reading (a hook's unit test, the source of the strings, the lint and token gate) are `manual`, each with its reason and a page-level case beside it (§15).
 
 ## 2. How to read this file
 
