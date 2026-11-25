@@ -172,7 +172,7 @@
       "description": "Who sells the shoes at Đôi, and how each pair is checked and sent.",
       "figures": {
         "lines": "adidas lines, from the 1950 Samba to this year's runners.",
-        "pairs": "Pairs in the shop today, each with its sizes in stock.",
+        "shoes": "Shoes in the shop today, each with its sizes in stock.",
         "rating": "Average rating from {n} reviews by people who bought here."
       },
       "first": "Every pair comes from the dealer's own stock, boxed with its tags and checked against the order before it is sent.",
