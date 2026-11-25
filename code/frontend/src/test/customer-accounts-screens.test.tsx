@@ -38,9 +38,17 @@ describe("the header's account entry (SC-35, SC-36)", () => {
   it("draws nothing while /v1/auth/me is asked, then Sign in, then the customer's name", async () => {
     render(<MemoryRouter><AccountEntry variant="bar" /></MemoryRouter>);
     expect(screen.queryByTestId("account-entry")).toBeNull();
+    // The bar keeps the width of "Sign in" while the shop is asked, but offers no link and hides it from everyone.
+    const pending = screen.getByTestId("account-entry-pending");
+    expect(pending).toHaveAttribute("aria-hidden", "true");
+    expect(pending).toHaveClass("invisible");
+    expect(screen.queryByRole("link")).toBeNull();
     const entry = await screen.findByTestId("account-entry");
+    expect(screen.queryByTestId("account-entry-pending")).toBeNull();
     expect(entry).toHaveTextContent("Sign in");
     expect(entry).toHaveAttribute("href", "/account/sign-in");
+    // `truncate` clips to the padding box, so the bar link keeps room under the line for its underline.
+    expect(entry).toHaveClass("truncate", "pb-3", "-mb-3", "underline-offset-8");
     await signedInAs("lan@example.com");
     await waitFor(() => expect(screen.getByTestId("account-entry")).toHaveTextContent("Lan Nguyen"));
     expect(screen.getByTestId("account-entry")).toHaveAttribute("href", "/account");
