@@ -1,8 +1,5 @@
 import { T, useContent, useList } from "../editable";
 import { usePageMeta } from "../seo";
-import { useRecord } from "../data";
-import { formatPrice } from "../lib/format";
-import { fill, type ShopTerms } from "../lib/shop";
 import HeadPicture from "../components/HeadPicture";
 import FaqRows from "../components/FaqRows";
 import Icon from "../components/Icon";
@@ -10,23 +7,17 @@ import OutlinePill from "../components/OutlinePill";
 import Rule from "../components/Rule";
 
 /**
- * RETURNS AND SIZE EXCHANGE: the promise set as three figures on a hairline
- * — days to exchange, days to return, what the first exchange costs — then
- * the three steps, the conditions, and the questions. Written for somebody
- * afraid the size will be wrong, which is most people buying shoes online.
+ * RETURN POLICY: exchanges are not accepted, said plainly. The owner gave no
+ * return window, shoe condition, return-shipping rule or refund terms, so
+ * none is stated here. Three words on a hairline, the steps, the short list
+ * and the questions; the contact route is where to ask or to report a wrong
+ * or damaged delivery.
  */
 export default function Returns() {
   usePageMeta("pages.returns.title", "pages.returns.description");
-  const terms = useRecord<ShopTerms>("shop", "shop").item;
-  const fig = useContent<Record<string, string>>("pages.returns.figures");
+  const figures = useList<{ big: string; line: string }>("pages.returns.figures");
   const steps = useList<{ title: string; text: string }>("pages.returns.steps");
   const rules = useList<{ text: string }>("pages.returns.rules");
-  const values = { n: terms?.exchange_days ?? "", refund: terms?.refund_days ?? "" };
-  const figures = [
-    { big: String(terms?.exchange_days ?? ""), line: fill(fig?.exchange ?? "", values) },
-    { big: String(terms?.refund_days ?? ""), line: fill(fig?.refund ?? "", values) },
-    { big: formatPrice(0), line: fill(fig?.free ?? "", values) },
-  ];
   return (
     <>
       <section className="grid gap-6 pb-10 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
@@ -39,9 +30,9 @@ export default function Returns() {
       <Rule />
       <section className="grid border-b border-line sm:grid-cols-3">
         {figures.map((f, i) => (
-          <div key={i} className={`py-10 ${i > 0 ? "border-t border-line sm:border-l sm:border-t-0 sm:pl-8" : "sm:pr-8"}`}>
-            <p data-count={i < 2 ? "" : undefined} className="text-[length:var(--size-h1)] leading-none tabular-nums tracking-tight text-ink">{f.big}</p>
-            <p className="mt-4 max-w-[28ch] text-sm leading-relaxed text-ink-soft">{f.line}</p>
+          <div key={f.big} className={`py-10 ${i > 0 ? "border-t border-line sm:border-l sm:border-t-0 sm:pl-8" : "sm:pr-8"}`}>
+            <T k={`pages.returns.figures.${i}.big`} as="p" className="text-[length:var(--size-h1)] leading-none tracking-tight text-ink" />
+            <T k={`pages.returns.figures.${i}.line`} as="p" className="mt-4 max-w-[28ch] text-sm leading-relaxed text-ink-soft" />
           </div>
         ))}
       </section>
