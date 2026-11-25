@@ -350,8 +350,8 @@ Behaviour:
 | AC-8 | A 390px window | The page loads | The five steps are a vertical list |
 | AC-9 | Carrier "GHN", tracking "GHN-PT27XM" set | The page loads | "Carrier" shows `GHN` and "Tracking number" shows `GHN-PT27XM` |
 | AC-10 | Carrier and tracking empty | The page loads | Neither row is drawn |
-| AC-11 | A paid cash-on-delivery order | The page loads | "Payment" reads `Cash on delivery · paid` |
-| AC-12 | An unpaid cash-on-delivery order | The page loads | "Payment" reads `Cash on delivery · to pay on delivery`; no "Pay now" |
+| AC-11 | A paid VNPay order | The page loads | "Payment" reads `VNPay — ATM, Visa, Mastercard · paid` |
+| AC-12 | The VNPay story has not landed; an unpaid order | The visitor presses "Pay now" | The shop answers 409 "online payment is not available yet" and the page shows "We could not open the payment page. Please try again." |
 | AC-13 | An unpaid VNPay order | The page loads | "Payment" reads `VNPay — ATM, Visa, Mastercard · awaiting payment`, and "Pay now" is shown |
 | AC-14 | The same | The visitor presses "Pay now" | The shop is asked for a fresh payment address and the browser goes to it; while waiting the button is disabled |
 | AC-15 | A paid VNPay order | The page loads | "Pay now" is not shown |
