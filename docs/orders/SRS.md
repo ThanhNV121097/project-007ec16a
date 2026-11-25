@@ -37,7 +37,7 @@ shop has no sales, the "In stock" figures drift from the shelf, and every custom
 - Charging a card, VNPay's notice, the Payment result page, cancelling unpaid online orders after 30 minutes — belong to the `payments` module.
 - The dealer's moving an order to confirmed / packed / shipped / delivered / cancelled, setting carrier, tracking number and expected date — belongs to the `admin` module; this module only shows the result. Nobody marks an order paid by hand: only VNPay's notice does.
 - Bank transfer (VietQR) and MoMo as ways to pay — belong to the later `payments` story; their rows stay in the records and are not offered at checkout until then.
-- Customer accounts and a signed-in order history — not in the brief; "Ordered on this phone" is built from tokens kept in this browser.
+- Customer accounts and a signed-in order history — belong to the `accounts` module; this module keeps guest checkout, the order token, "Ordered on this phone" and the lookup by number and phone working unchanged for a guest.
 - Email or text confirmations — not in the brief or the plan; the design's words say a text message is sent, which this module does not build (open question 4).
 
 ## 4. Functional requirements
