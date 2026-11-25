@@ -12,8 +12,14 @@ import { fill, sizesInStock, type Line, type Product } from "../lib/shop";
  * how many sizes are left. No border, no shadow, no badge: the card is the
  * link, and the pointer shows the front pair.
  */
-export default function ProductCard({ product, tilt = false }: { product: Product; tilt?: boolean }) {
-  const line = useRecord<Line>("lines", product.line).item;
+export default function ProductCard({ product, tilt = false, line: given }: {
+  product: Product;
+  tilt?: boolean;
+  /** The shoe's line when the page already holds the lines (the shop does), so a page of cards makes no request of its own; null when it is not there yet. */
+  line?: Line | null;
+}) {
+  const found = useRecord<Line>("lines", given === undefined ? product.line : undefined).item;
+  const line = given === undefined ? found : given;
   const note = fill(useContent("card.sizes"), { n: sizesInStock(product).length });
   return (
     <Link
