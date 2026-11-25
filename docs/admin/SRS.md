@@ -201,7 +201,7 @@ Behaviour:
 
 | Field | Type | Required | Rule |
 |---|---|---|---|
-| Dealer account: email, password hash, role | write | yes | One account from the settings |
+| Account: email, name, password hash, role (admin, staff or customer), active | write | yes | The admin from the settings; staff by the admin (ADMIN-030); customers by sign-up (`accounts` module) |
 | Failure counts per email and per address | write | yes | Reset after the wait |
 
 **Requirement ADMIN-004 — Every dealer endpoint answers 401 or 403**
