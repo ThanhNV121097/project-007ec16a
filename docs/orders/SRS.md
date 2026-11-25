@@ -504,7 +504,7 @@ Behaviour:
 Behaviour:
 
 1. `/track` shows the heading "Track an order", the lead "Type the order number from your confirmation message and the phone number you ordered with.", a picture, and a form: "Order number" (placeholder `DOI-24817`), "Phone", and a "Find my order" button with an arrow.
-2. "What each step means" shows five closed rows — Placed, Confirmed, Packed, On its way, Delivered — each opening onto its sentence ("We have the order and are checking the pair against it." / "Paid, or confirmed by phone for cash on delivery; the pair is set aside for you." / "Boxed with its tags and our receipt, waiting for the courier." / "With GHN or GHTK; the tracking number is on the order's page." / "In your hands. The size exchange window starts today.").
+2. "What each step means" shows five closed rows — Placed, Confirmed, Packed, On its way, Delivered — each opening onto its sentence ("We have the order and are checking the pair against it." / "Paid online; the pair is set aside for you." / "Boxed with its tags and our receipt, waiting for the courier." / "With GHN or GHTK; the tracking number is on the order's page." / "In your hands. The size exchange window starts today.").
 3. Under them the four promises in compact form, and, when this browser holds orders, "Ordered on this phone" (ORD-023).
 4. "While you wait" holds the line "Most orders arrive in two to four working days. If yours is late or the number is not found, message us with the order number.", a "Message us" pill to `/contact`, and the shop's questions of topic "orders" and "shipping" as closed rows.
 
