@@ -32,11 +32,13 @@ export default function SizeChart() {
 
   return (
     <>
-      <section className="grid gap-12 pb-12 pt-8 lg:grid-cols-12 lg:gap-8 lg:pt-10">
+      <Bleed as="section" side="both" ground className="grid gap-5 pb-10 pt-10 lg:grid-cols-12 lg:gap-8">
+        <T k="pages.sizes.heading" as="h1" className="-ml-[var(--bleed)] pl-[var(--bleed)] text-[length:var(--size-h1)] leading-[1.02] text-ink lg:col-span-6" />
+        <T k="pages.sizes.lead" as="p" className="max-w-[40ch] self-end text-sm leading-relaxed text-ink-soft lg:col-span-5 lg:col-start-8" />
+      </Bleed>
+      <section className="grid gap-12 pb-12 pt-10 lg:grid-cols-12 lg:gap-8">
         <div className="lg:col-span-5">
-          <T k="pages.sizes.heading" as="h1" className="max-w-[10ch] text-[length:var(--size-h1)] leading-[1.02] text-ink" />
-          <T k="pages.sizes.lead" as="p" className="mt-5 max-w-[40ch] text-sm leading-relaxed text-ink-soft" />
-          <ol className="mt-8 border-t border-line">
+          <ol className="border-t border-line">
             {steps.map((s, i) => (
               <li key={i} className="flex gap-4 border-b border-line py-4 text-sm text-ink">
                 <span className="w-6 shrink-0 tabular-nums text-ink-soft">{String(i + 1).padStart(2, "0")}</span>
@@ -65,7 +67,7 @@ export default function SizeChart() {
             </div>
           </div>
         </div>
-        <Bleed side="right" ground className="py-8 lg:col-span-6 lg:col-start-7">
+        <div className="lg:col-span-6 lg:col-start-7">
           <table className="w-full text-sm">
             <caption className="pb-4 text-left text-lg text-ink"><T k="pages.sizes.table" /></caption>
             <thead>
@@ -93,7 +95,7 @@ export default function SizeChart() {
             </tbody>
           </table>
           <T k="pages.sizes.note" as="p" className="mt-4 max-w-[60ch] text-xs leading-relaxed text-ink-soft" />
-        </Bleed>
+        </div>
       </section>
       <Rule />
       <section className="grid gap-8 py-12 lg:grid-cols-12">
