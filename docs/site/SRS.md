@@ -168,7 +168,7 @@ Behaviour:
 4. "Who it's for" shows one tile per category (picture, name in capitals, "{n} in the shop", one-line blurb) linking to the shop narrowed to that category, plus a final "Gifts" tile — "{n} in the shop" counting live shoes under 3,000,000 ₫, line "Pairs under 3.000.000 ₫, sent with no price inside." — linking to `/shop?price=under-3m`.
 5. "By line" shows the heading, the line "Five adidas lines, from the 1950 Samba to this year's runners.", and one row per line: name, "Since {year}" (hidden below 640px; empty when the line has no year), "{n} in the shop", an arrow; each row links to the shop narrowed to that line.
 6. Counts "{n} in the shop" count live shoes of that category or line.
-7. The page ends with the four promises: Free delivery ("{days} working days, anywhere in Vietnam."), "{n}-day size exchange" ("The first exchange is on us, both ways."), Cash on delivery ("Open the box and check the pair before you pay."), Genuine adidas ("Every pair boxed, tagged and sent with our receipt."), with days and n taken from the shop's terms.
+7. The page ends with the four promises: Free delivery ("{days} working days, anywhere in Vietnam."), "No exchanges" ("Check the size chart before you order."), "Pay online" ("Card, domestic ATM card or QR, through VNPay."), Genuine adidas ("Every pair boxed, tagged and sent with our receipt."), with days taken from the shop's terms. No promise mentions cash on delivery, a fee or a threshold.
 
 **Acceptance criteria**
 
