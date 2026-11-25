@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The sandbox may run with NODE_ENV=production, whose React has no act().
 vi.hoisted(() => {
