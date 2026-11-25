@@ -10,11 +10,7 @@ const calls = vi.hoisted(() => {
   return [] as { req: ProductsRequest; resolve: (p: Page<Product>) => void; reject: (e: Error) => void }[];
 });
 
-<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
-vi.mock("../lib/mock/search-filters-and-sorting-served-by-the-api", () => ({
-=======
 vi.mock("../lib/search-filters-and-sorting-served-by-the-api", () => ({
->>>>>>> refs/heads/main
   listProducts: (req: ProductsRequest) => new Promise<Page<Product>>((resolve, reject) => {
     calls.push({ req, resolve, reject });
   }),
@@ -79,8 +75,6 @@ describe("the shop's list", () => {
     expect(result.current.items.map((p) => p.id)).toEqual(["w"]);
   });
 
-<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
-=======
   it("starts an earlier query again from its first page", async () => {
     const { result, rerender } = setup();
     await act(async () => calls[0].resolve(page(["a"], 30)));
@@ -94,14 +88,12 @@ describe("the shop's list", () => {
     expect(result.current.items.map((p) => p.id)).toEqual(["a"]);
   });
 
->>>>>>> refs/heads/main
   it("shows no list and no total for a request that failed", async () => {
     const { result } = setup();
     await act(async () => calls[0].reject(new Error("500")));
     expect(result.current).toMatchObject({ items: [], total: null, loading: false });
     expect(result.current.error?.message).toBe("500");
   });
-<<<<<<< refs/heads/feature/shop-phone-filters-clear-all-loading-and-errors-ui
 
   it("shows nothing of the last list under a new query until its first page is in", async () => {
     const { result, rerender } = setup();
@@ -169,6 +161,4 @@ describe("the shop's list", () => {
     await act(async () => calls[3].resolve(page(["a", "b"], 30)));
     expect(result.current.items.map((p) => p.id)).toEqual(["a", "b"]);
   });
-=======
->>>>>>> refs/heads/main
 });
