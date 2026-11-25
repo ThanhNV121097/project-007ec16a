@@ -235,7 +235,7 @@ Behaviour:
 | AC-10 | The query changes while an older answer is still in flight | The older answer arrives last | `items` still shows the newer query's records |
 | AC-11 | `useRecord("products","nope")` | The server answers 404 | `item` is undefined, `loading` is false, `error` is null |
 | AC-12 | The server asked for `limit=500` answers `limit` 100 | `useCollection` computes `pages` | It uses 100: 130 matches give 2 pages |
-| AC-13 | The repository after the change | Its files are listed | `src/data/` holds only `index.ts` and `schema.json`; the change set touches no file outside `src/data/` |
+| AC-13 | The repository after the change | Its files are listed | `src/data/` holds only `index.ts` and `schema.json`; the change set adds `src/lib/api.ts`, deletes the other JSON files and edits no other file (no component, page, style or content file) |
 | AC-14 | The project | It is type-checked and built | Both succeed with no component edited |
 | AC-15 | `VITE_API_URL` is `https://api.example.test` | A collection is read | The request goes to `https://api.example.test/v1/<collection>` |
 
