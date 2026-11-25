@@ -163,7 +163,7 @@ Behaviour:
 
 Behaviour:
 
-1. When the server starts it makes sure one account exists with the email `ADMIN_EMAIL` and the role "admin", with `ADMIN_PASSWORD` as its password, stored only as a salted slow hash. If the account exists and the password setting changed, the stored password is replaced.
+1. When the server starts it makes sure one account exists with the email `ADMIN_EMAIL` and the role "admin", with `ADMIN_PASSWORD` as its password, stored only as a salted slow hash. If the account exists and the password setting changed, the stored password is replaced. It makes no staff or customer account: staff are added by the admin (ADMIN-030) and customers sign up themselves (`accounts` module).
 2. The owner supplies both settings in the console.
 3. A password shorter than 10 characters is refused at start: the account is not made or changed, the server still starts and logs why.
 4. When `ADMIN_EMAIL` or `ADMIN_PASSWORD` is not set, no account is made and signing in is refused for everyone.
