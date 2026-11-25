@@ -209,7 +209,7 @@ Behaviour:
 
 Behaviour:
 
-1. Only `src/data/index.ts` changes. Every name it exports today stays exported with the same signature and the same returned fields: `useCollection`, `useRecord`, `schema`, `setCollection`, `collections`, and the types `Source`, `Row`, `Field`, `Collection`, `Filter`, `Query`. No component or page file is edited.
+1. Of the files the pages and components import, only `src/data/index.ts` changes. Every name it exports today stays exported with the same signature and the same returned fields: `useCollection`, `useRecord`, `schema`, `setCollection`, `collections`, and the types `Source`, `Row`, `Field`, `Collection`, `Filter`, `Query`. No component or page file is edited. The one new file is `src/lib/api.ts`, the project's single API client (base URL, same-origin cookies, the error envelope read into an `ApiError`, a 15-second timeout, one retry of a failed `GET`), which `index.ts` calls and which every later story that talks to the API builds on (`docs/architecture/overview.md` §5).
 2. The API's address is `import.meta.env.VITE_API_URL`, or `/api` when it is not set. Calls are same-origin so a session cookie travels with them.
 3. `useCollection(name, query)` asks for the first page when it mounts. Its `where` entries become `<field>=<value>`; an array becomes `<field>=a,b`; a range becomes `<field>_from` and `<field>_to`; empty filters are left out; `q` and `sort` are sent as given; `pageSize` becomes `limit`.
 4. It returns `{ items, total, pages, page, hasMore, loading, error, loadMore }`. `items` holds the pages loaded so far; `loadMore()` asks for the next page and appends it; `total` is the API's `total`, never `items.length`. When the query names a `page`, `items` is that one page alone and `hasMore` is false.
@@ -235,7 +235,7 @@ Behaviour:
 | AC-10 | The query changes while an older answer is still in flight | The older answer arrives last | `items` still shows the newer query's records |
 | AC-11 | `useRecord("products","nope")` | The server answers 404 | `item` is undefined, `loading` is false, `error` is null |
 | AC-12 | The server asked for `limit=500` answers `limit` 100 | `useCollection` computes `pages` | It uses 100: 130 matches give 2 pages |
-| AC-13 | The repository after the change | Its files are listed | `src/data/` holds only `index.ts` and `schema.json`; the change set touches no file outside `src/data/` |
+| AC-13 | The repository after the change | Its files are listed | `src/data/` holds only `index.ts` and `schema.json`; the change set adds `src/lib/api.ts`, deletes the other JSON files and edits no other file (no component, page, style or content file) |
 | AC-14 | The project | It is type-checked and built | Both succeed with no component edited |
 | AC-15 | `VITE_API_URL` is `https://api.example.test` | A collection is read | The request goes to `https://api.example.test/v1/<collection>` |
 
