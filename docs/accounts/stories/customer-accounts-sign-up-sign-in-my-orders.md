@@ -49,7 +49,7 @@ Other actors this story touches:
 - **Unlinking an order, moving it to another account, cancelling or returning an order from My account, several saved addresses, wish lists** — not in the SRS and no screen in the design.
 - **Going back to the page the visitor came from after signing in or up** — sign-up, sign-in and the team's redirect always land on `/account` or `/admin`, as the SRS says.
 - **A list of customers or a customer's name on the dealer's order page** — the `admin` module; this story gives the dealer nothing new.
-- **Owner-editable wording in the Studio.** SRS open question 4 asks for the new copy in the site's content, but `overview.md` §5 freezes `src/content.json` for stories (parallel stories would collide in it). The words in this story live in its components; the existing words (the Account link's neighbours, "Keep shopping", "We can't find that order.") keep coming from `content.json` untouched. A later chore can move them.
+- **Owner-editable wording in the Studio.** SRS open question 4 asks for the new copy in the site's content, but `overview.md` §5 freezes `src/content.json` for stories (parallel stories would collide in it). The words in this story live in its components; the existing words (the header's five links and help links, "Keep shopping", "We can't find that order.") keep coming from `content.json` untouched. A later chore can move them.
 - **A CSRF token** — `SameSite=Lax`, JSON-only bodies and read-only `GET`s are the defence (`services.md` §2.2), as in the sign-in story.
 
 ## 5. UI scope
