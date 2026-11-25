@@ -43,7 +43,7 @@ func mustUser(t *testing.T, pool *pgxpool.Pool, email, password string, role Rol
 	if err != nil {
 		t.Fatal(err)
 	}
-	u, err := CreateUser(context.Background(), pool, NewUser{Email: email, Name: strings.Title(string(role)), Role: role, PasswordHash: hash})
+	u, err := CreateUser(context.Background(), pool, NewUser{Email: email, Name: strings.ToUpper(string(role)[:1]) + string(role)[1:], Role: role, PasswordHash: hash})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestEnsureAdminMakesChangesAndLeavesAnUnchangedRowAlone(t *testing.T) {
 	}
 	session := func() {
 		mustExec(t, pool, `INSERT INTO sessions (user_id, token_hash, expires_at)
-			SELECT id, sha256(gen_random_uuid()::text::bytea), now() + interval '1 day' FROM users WHERE role = 'admin'`)
+			SELECT id, sha256(convert_to(gen_random_uuid()::text, 'UTF8')), now() + interval '1 day' FROM users WHERE role = 'admin'`)
 	}
 
 	if err := EnsureAdmin(ctx, pool, "Dealer@Example.com", "Dealer-Pass1", log); err != nil {
@@ -204,7 +204,7 @@ func TestIssueSessionInsertsNothingForAnAccountThatChanged(t *testing.T) {
 	if err != nil || len(token) != 43 {
 		t.Fatalf("a good account: %q %v", token, err)
 	}
-	if n := countRows(t, pool, `SELECT count(*) FROM sessions WHERE user_id = $1 AND expires_at - created_at = interval '7 days'`, u.ID); n != 1 {
+	if n := countRows(t, pool, `SELECT count(*) FROM sessions WHERE user_id = $1 AND expires_at = created_at + interval '7 days'`, u.ID); n != 1 {
 		t.Errorf("the session is not seven days long: %d", n)
 	}
 	hashed, _ := tokenHash(token)
