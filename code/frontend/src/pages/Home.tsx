@@ -59,7 +59,7 @@ export default function Home() {
               <div data-magnetic="">
                 <OutlinePill to={`/shop/${lead.id}`} testid="home-lead"><T k="pages.home.lead_cta" /></OutlinePill>
               </div>
-              <p className="flex items-center gap-2 text-xs text-ink-soft">
+              <p className="flex items-center gap-2 text-sm text-ink-soft">
                 <Icon name="check" size={16} className="shrink-0 text-ink" />
                 {fill(inStockText, { n: sizesInStock(lead).length })}
               </p>
@@ -95,22 +95,22 @@ export default function Home() {
       <section className="py-10">
         <Grid count={cats.length + 1} max={4}>
           {cats.map((c) => (
-            <Link key={c.id} to={`/shop?category=${c.id}`} data-record={`categories:${c.id}`} className="group block">
+            <Link key={c.id} to={`/shop?category=${c.id}`} data-record={`categories:${c.id}`} className="group flex h-full flex-col">
               <ProductImage src={c.image} alt={c.name} aspect="1/1" />
-              <span className="mt-3 flex flex-col gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+              <span className="mt-3 flex flex-col gap-1 text-[0.8125rem] font-medium uppercase tracking-[0.1em] text-ink sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                 <span className="underline-offset-4 group-hover:underline">{c.name}</span>
                 <span className="shrink-0 tabular-nums">{fill(pairsText, { n: all.filter((p) => p.category === c.id).length })}</span>
               </span>
-              <span className="mt-1 block text-xs text-ink-soft">{c.blurb}</span>
+              <span className="mt-1 block text-sm text-ink-soft">{c.blurb}</span>
             </Link>
           ))}
-          <Link to="/shop?price=under-3m" className="group block">
+          <Link to="/shop?price=under-3m" className="group flex h-full flex-col">
             <ProductImage src={giftImage} alt={giftName} aspect="1/1" />
-            <span className="mt-3 flex flex-col gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+            <span className="mt-3 flex flex-col gap-1 text-[0.8125rem] font-medium uppercase tracking-[0.1em] text-ink sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
               <span className="underline-offset-4 group-hover:underline">{giftName}</span>
               <span className="shrink-0 tabular-nums">{fill(pairsText, { n: gifts })}</span>
             </span>
-            <span className="mt-1 block text-xs text-ink-soft">{fill(giftLine, { price: formatPrice(giftLimit) })}</span>
+            <span className="mt-1 block text-sm text-ink-soft">{fill(giftLine, { price: formatPrice(giftLimit) })}</span>
           </Link>
         </Grid>
       </section>
@@ -126,8 +126,8 @@ export default function Home() {
             <li key={l.id} data-record={`lines:${l.id}`} className="border-b border-line">
               <Link to={`/shop?line=${l.id}`} className="group flex items-baseline gap-4 py-5">
                 <span className="min-w-0 flex-1 text-2xl tracking-tight text-ink underline-offset-8 group-hover:underline sm:text-3xl">{l.name}</span>
-                <span className="hidden w-24 text-xs tabular-nums text-ink-soft sm:block">{l.since ? fill(sinceText, { year: l.since }) : ""}</span>
-                <span className="w-20 text-right text-xs tabular-nums text-ink-soft">{fill(pairsText, { n: all.filter((p) => p.line === l.id).length })}</span>
+                <span className="hidden w-28 text-sm tabular-nums text-ink-soft sm:block">{l.since ? fill(sinceText, { year: l.since }) : ""}</span>
+                <span className="w-28 text-right text-sm tabular-nums text-ink-soft">{fill(pairsText, { n: all.filter((p) => p.line === l.id).length })}</span>
                 <Icon name="arrow" size={18} className="shrink-0 self-center text-ink transition-transform group-hover:translate-x-1" />
               </Link>
             </li>
