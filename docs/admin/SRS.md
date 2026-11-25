@@ -787,7 +787,7 @@ Behaviour:
 |---|---|---|
 | Not permitted | Staff, customer or no session | 403 / 403 / 401 (AC-11) |
 | Conflict | Switching off or removing the admin | 409 (AC-7, AC-8) |
-| Not found | An id that is not a staff account | 404 (AC-10) |
+| Not found | An id that is not a staff account (the admin's own id is not this case: 409, AC-7, AC-8) | 404 (AC-10) |
 | Concurrency | The admin switches an account off while its owner signs in | The sign-in either fails or its session ends at once; no session of a switched-off account stays valid |
 
 **Data touched**
