@@ -544,10 +544,10 @@ Check: interact_page
 
 **Scenario**: SC-34b — `size` on the shop is never read as a page size
 **Given**: The seed plus FX-LIVE30; 23 shoes have size 38 available.
-**When**: Open `/shop?size=38`; read the cards and the count; list the requests to `/api/v1/products`.
-**Then**: 12 cards (not 23), the count reads `23 matching`, a "Show more" button is present, and every shoe request carries `limit=12` (never `limit=38`).
+**When**: Open `/shop?size=38` in a browser session whose request log can be read back; read the cards and the count; read the request log for `/api/v1/products`.
+**Then**: 12 cards (not 23), the count reads `23 matching`, a "Show more" button is present, and every request to `/api/v1/products` in the log carries `limit=12` (never `limit=38`) and `size=38` as a filter.
 Traces: SC-34 (CAT-003 AC-4; story §10.2)
-Check: render_url
+Check: interact_page
 
 **Scenario**: SC-35a — women's Samba in 38 under 3.000.000 ₫ is exactly one pair
 **Given**: The seed.
