@@ -403,8 +403,8 @@ Behaviour:
 | # | Given | When | Then |
 |---|---|---|---|
 | AC-1 | No session | `GET /v1/orders` | 401 |
-| AC-2 | A session that is not the dealer's | `GET /v1/orders` | 403 |
-| AC-3 | The dealer's session | `GET /v1/orders` | 200 with the paged list |
+| AC-2 | A customer session | `GET /v1/orders` | 403 |
+| AC-3 | An admin session, and a staff session | `GET /v1/orders` | 200 with the paged list for each |
 | AC-4 | An order exists | `GET /v1/orders/<id>` with no token and no session | 404 |
 | AC-5 | The same, with the order's own token | `GET /v1/orders/<id>` | 200 with the order, without `phone`, `email`, `address`, `note` |
 | AC-6 | The same, with another order's token | `GET /v1/orders/<id>` | 404 |
