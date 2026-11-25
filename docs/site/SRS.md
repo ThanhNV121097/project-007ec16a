@@ -19,7 +19,7 @@ works at phone width first. Without it a customer cannot choose a pair or trust 
 
 | Actor | Who they are | What they may do in this module |
 |---|---|---|
-| Visitor | Anyone with the address; there are no customer accounts | Read every page, fill the bag, use search, send a message |
+| Visitor | Anyone with the address, as a guest or signed in as a customer (customer accounts are in `docs/accounts/SRS.md`) | Read every page, fill the bag, use search, send a message |
 | Dealer | The shop owner or staff | Read the messages visitors send, in Agent Team; change copy and colours in the Studio |
 
 ## 3. Scope
