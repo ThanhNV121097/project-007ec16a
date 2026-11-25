@@ -469,7 +469,7 @@ Behaviour:
 
 | Field | Type | Required | Rule |
 |---|---|---|---|
-| Shop terms: exchange days, refund days | read | yes | |
+| Return policy words (heading, lead, figures, steps, list) | read | yes | From the site's content file; the owner edits them in the Studio. The shop's terms hold no exchange or refund days |
 | Questions: topic, question, answer | read | no | Topic "returns" |
 
 **Requirement SITE-011 — About page**
