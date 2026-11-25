@@ -125,10 +125,6 @@ type Collection struct {
 	// From is the FROM clause, the table aliased t.
 	From    string
 	Columns []Column
-	// TeamOnly puts the collection's LIST behind a dealer session (admin or
-	// staff): 401 with no session, 403 for a customer. The record route is not
-	// affected.
-	TeamOnly bool
 	// Search is the condition one typed word must meet, written over the
 	// searched fields only (never a private column); {w} stands for the word,
 	// folded by the database. A record matches when every word meets it.
@@ -225,12 +221,6 @@ func build(name, from string, cols ...Column) *Collection {
 	return &Collection{Name: name, From: from, Columns: append(cols, bookkeeping()...)}
 }
 
-// teamOnly marks a collection whose list only the shop's team may read.
-func teamOnly(c *Collection) *Collection {
-	c.TeamOnly = true
-	return c
-}
-
 // over is the search condition of a collection whose words are looked for in
 // some of its own columns: the columns are joined by a space (so a word never
 // straddles two of them), folded, and searched with strpos — which reads % and
@@ -261,29 +251,6 @@ var registry = []*Collection{
 	build("lines", "lines t",
 		text("id"), text("name"), text("blurb"), nullable(col("since", Int)), text("fit_note")).
 		searching(over("name", "blurb")),
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
-=======
-	teamOnly(build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
-		text("id"), text("number"),
-		Column{Name: "placed_at", Kind: Instant,
-			Select: "to_char(t.placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD\"T\"HH24:MI:SS') || '+07:00'",
-			Filter: "t.placed_at"},
-		text("status"),
-		Column{Name: "product", Kind: Text, Select: "coalesce(oi.product_id,'')", Filter: "oi.product_id", Nullable: true},
-		Column{Name: "size", Kind: Text, Select: "coalesce(oi.size,'')", Filter: "oi.size", Nullable: true},
-		Column{Name: "qty", Kind: Int, Select: "coalesce(oi.qty,0)", Filter: "oi.qty", Nullable: true},
-		col("total", Int),
-		ref("payment", "payment_method_id"), col("paid", Bool), ref("delivery", "delivery_option_id"),
-		text("carrier"), text("tracking"),
-		Column{Name: "eta", Kind: Date, Select: "coalesce(to_char(t.eta,'YYYY-MM-DD'),'')", Filter: "t.eta", Nullable: true},
-		text("customer"),
-		private("phone"), private("email"), private("address"),
-		text("city"),
-		private("note")).
-		// The order number and the customer's name, and nothing else: a phone,
-		// an e-mail, an address or a note is never searched.
-		searching(over("number", "customer"))),
->>>>>>> refs/heads/main
 	build("payments", "payment_methods t",
 		text("id"), text("name"), text("note"), col("online", Bool), text("icon")).
 		searching(over("name", "note")),
