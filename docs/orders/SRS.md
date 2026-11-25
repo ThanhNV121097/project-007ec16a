@@ -361,7 +361,7 @@ Behaviour:
 | AC-19 | The same for a cancelled order | It is called with the token | 409 |
 | AC-20 | The same with no token | It is called | 404 |
 | AC-21 | An order of two pairs | The page loads | Both pairs are listed under "In this order", each with `<variant> · Qty <n>` and its line price, and the total is the stored total |
-| AC-22 | Delivery "Standard · 2–4 working days", customer "Lan Nguyen", city "Da Nang" | The page loads | "Delivering to" reads `Lan Nguyen, Da Nang` and "Delivery" reads `Standard · 2–4 working days` |
+| AC-22 | Delivery "Standard · 2–4 working days", customer "Lan Nguyen", city "Da Nang" | The page loads | "Delivering to" reads `Lan Nguyen, Da Nang` and "Delivery" reads `Standard · 2–4 working days · Free` |
 | AC-23 | The page loads | The visitor opens "Need to change something?" and "Wrong size?" | Their sentences and the links "Message us" (`/contact`) and "How exchanges work" (`/returns`) are shown |
 | AC-24 | The order answer is slow (2 seconds) | The page opens with a valid token | "We can't find that order." is not shown before the answer arrives |
 | AC-25 | The page loads | The visitor reads it | The order's address, phone, email and note appear nowhere on the page |
