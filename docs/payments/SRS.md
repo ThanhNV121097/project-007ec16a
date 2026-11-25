@@ -210,7 +210,7 @@ Behaviour:
 | AC-9 | The address says success but the order is unpaid and the notice never arrives | The page and the order are read after 60 seconds | The order is unpaid |
 | AC-10 | A 390px window | The page opens | The heading, the line and the buttons fit with no horizontal scroll |
 | AC-11 | The design's flow with VNPay | A pair is chosen, checkout is completed with VNPay and a sandbox payment is made | The browser ends on `/payment/return` and then, through "View your order", on the order |
-| AC-12 | The page is open | Its text is read | It uses the site's header and footer and its own words only from the states above |
+| AC-12 | The page is open | The visitor looks at it | The site's header and footer surround it and its heading is the page's one h1 |
 | AC-13 | A customer who closed the tab at VNPay's page | The order page is opened within 30 minutes | "Pay now" is shown |
 | AC-14 | The change set of this story | It is listed | It adds the result page and its route line in `src/App.tsx`, and backend files; it edits no page of the Checkout story (`Checkout.tsx`, `Order.tsx`) |
 
