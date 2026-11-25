@@ -1,12 +1,23 @@
 [
   { "path": "/", "name": "Home" },
-  { "path": "/shop", "name": "Shop" },
-  { "path": "/shop/:id", "name": "Product", "example": "/shop/linen-overshirt" },
+  { "path": "/shop", "name": "Shoes" },
+  { "path": "/shop/:id", "name": "Shoe", "example": "/shop/samba-og-w-core-black" },
+  { "path": "/size-chart", "name": "Size chart" },
+  { "path": "/cart", "name": "Bag" },
+  { "path": "/checkout", "name": "Checkout" },
+  { "path": "/orders/:id", "name": "Order", "example": "/orders/doi-24817" },
+  { "path": "/track", "name": "Track an order" },
+  { "path": "/shipping", "name": "Delivery" },
+  { "path": "/returns", "name": "Returns" },
   { "path": "/about", "name": "About" },
   { "path": "/contact", "name": "Contact" },
   { "path": "/admin/sign-in", "name": "Sign in" },
   { "path": "/admin", "name": "Overview", "auth": true, "dashboard": true },
+  { "path": "/admin/orders", "name": "Orders", "auth": true, "dashboard": true },
+  { "path": "/admin/orders/:id", "name": "Order", "example": "/admin/orders/doi-24817", "auth": true, "dashboard": true },
   { "path": "/admin/products", "name": "Products", "auth": true, "dashboard": true },
-  { "path": "/admin/products/:id", "name": "Product", "example": "/admin/products/linen-overshirt", "auth": true, "dashboard": true },
-  { "path": "/admin/kinds", "name": "Kinds", "auth": true, "dashboard": true }
+  { "path": "/admin/products/:id", "name": "Product", "example": "/admin/products/samba-og-w-core-black", "auth": true, "dashboard": true },
+  { "path": "/admin/lines", "name": "Lines", "auth": true, "dashboard": true },
+  { "path": "/admin/categories", "name": "Categories", "auth": true, "dashboard": true },
+  { "path": "/admin/reviews", "name": "Reviews", "auth": true, "dashboard": true }
 ]

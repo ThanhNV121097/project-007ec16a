@@ -1,165 +1,617 @@
 {
-  "site": {
-    "name": "Sample & Co.",
-    "logo": "",
-    "description": "Clothes and a few things for the house, made to be worn and used for years.",
-    "locale": "vi-VN"
+  "card": {
+    "sizes": "{n} sizes in stock"
   },
-  "nav": {
-    "links": [
-      {
-        "label": "Shop",
-        "href": "/shop"
-      },
-      {
-        "label": "About",
-        "href": "/about"
-      },
-      {
-        "label": "Contact",
-        "href": "/contact"
-      }
-    ],
-    "cta": {
-      "label": "Shop",
-      "href": "/shop"
-    },
-    "menu": {
-      "open": "Open menu",
-      "close": "Close menu"
-    }
+  "cart": {
+    "empty": "Nothing in your bag yet.",
+    "pay": "Check out",
+    "title": "Your bag",
+    "total": "Total"
   },
-  "hero": {
-    "eyebrow": "",
-    "headline": "",
-    "sub": "",
-    "cta": {
-      "label": "",
-      "href": "/shop"
-    }
-  },
-  "footer": {
-    "line": "Sample & Co. — clothes and things for the house. Orders by message.",
-    "admin": "Shop sign-in"
-  },
-  "credits": {
-    "label": "Photos"
+  "colours": {
+    "black": "Black",
+    "blue": "Blue",
+    "brown": "Brown",
+    "green": "Green",
+    "grey": "Grey",
+    "pink": "Pink",
+    "purple": "Purple",
+    "white": "White",
+    "yellow": "Yellow"
   },
   "contact": {
-    "heading": "Ask us anything",
-    "phone": "",
-    "zalo": "",
-    "email": "",
     "address": "",
-    "hours": "",
     "dock": {
       "call": "Call us",
       "zalo": "Message us on Zalo"
     },
+    "email": "",
     "form": {
-      "name": "Your name",
-      "reply_to": "Phone or email",
+      "fields": {},
       "message": "Your message",
-      "send": "Send",
+      "name": "Your name",
+      "offline": "This form is not connected yet — please try again later.",
+      "reply_to": "Phone or email",
+      "send": "Send message",
       "sending": "Sending…",
-      "sent": "Thank you — we have your message and will answer soon.",
-      "offline": "This form is not connected yet — call or message us instead.",
-      "fields": {}
+      "sent": "Thank you — we have your message and will answer the same working day."
+    },
+    "heading": "Ask about a size or an order",
+    "hours": "",
+    "phone": "",
+    "zalo": ""
+  },
+  "credits": {
+    "label": "Photos"
+  },
+  "footer": {
+    "about": [
+      {
+        "href": "/about",
+        "label": "About Đôi"
+      },
+      {
+        "href": "/cart",
+        "label": "Your bag"
+      },
+      {
+        "href": "/admin/sign-in",
+        "label": "Dealer sign-in"
+      }
+    ],
+    "about_heading": "The shop",
+    "admin": "Dealer sign-in",
+    "help": [
+      {
+        "href": "/size-chart",
+        "label": "Size chart"
+      },
+      {
+        "href": "/shipping",
+        "label": "Delivery"
+      },
+      {
+        "href": "/returns",
+        "label": "Returns and exchange"
+      },
+      {
+        "href": "/track",
+        "label": "Track an order"
+      },
+      {
+        "href": "/contact",
+        "label": "Contact"
+      }
+    ],
+    "help_heading": "Help",
+    "independent": "Đôi is an independent dealer. adidas, Samba, Gazelle, Handball Spezial, Adizero and Megaride are trademarks of adidas AG; this shop is not adidas and is not run by adidas.",
+    "line": "Đôi — genuine adidas, chosen online and delivered across Vietnam, with a size chart on every pair and a free first size exchange.",
+    "shop": [
+      {
+        "href": "/shop",
+        "label": "All shoes"
+      },
+      {
+        "href": "/shop?category=women",
+        "label": "Women"
+      },
+      {
+        "href": "/shop?category=men",
+        "label": "Men"
+      },
+      {
+        "href": "/shop?category=kids",
+        "label": "Kids"
+      },
+      {
+        "href": "/shop?price=under-3m",
+        "label": "Gifts"
+      }
+    ],
+    "shop_heading": "Shop"
+  },
+  "hero": {
+    "cta": {
+      "href": "/shop",
+      "label": ""
+    },
+    "eyebrow": "",
+    "headline": "",
+    "sub": ""
+  },
+  "nav": {
+    "bag": "Your bag",
+    "cta": {
+      "href": "/shop",
+      "label": "All shoes"
+    },
+    "links": [
+      {
+        "href": "/shop?category=women",
+        "label": "Women"
+      },
+      {
+        "href": "/shop?category=men",
+        "label": "Men"
+      },
+      {
+        "href": "/shop?category=kids",
+        "label": "Kids"
+      },
+      {
+        "href": "/size-chart",
+        "label": "Size chart"
+      },
+      {
+        "href": "/track",
+        "label": "Track order"
+      }
+    ],
+    "menu": {
+      "close": "Close menu",
+      "open": "Open menu"
+    },
+    "search": "Search the shoes",
+    "search_go": "Search",
+    "search_lines": "Start from a line",
+    "search_placeholder": "Samba, Gazelle, pink, a style code…"
+  },
+  "orders": {
+    "cancelled": "This order was cancelled. Nothing was charged; money paid online is back within three working days.",
+    "steps": {
+      "confirmed": "Confirmed",
+      "delivered": "Delivered",
+      "packed": "Packed",
+      "placed": "Placed",
+      "shipped": "On its way"
     }
   },
   "pages": {
-    "home": {
-      "title": "Sample & Co.",
-      "description": "Clothes and a few things for the house, made to be worn and used for years.",
-      "eyebrow": "This season",
-      "lead_cta": "See it",
-      "more": "Looking for more?",
-      "more_cta": "The whole shop",
-      "statement": "A small shop for things you keep: cut plainly, made well, and mended when they need it.",
-      "statement_cta": "About the shop"
-    },
-    "shop": {
-      "title": "Shop",
-      "description": "Everything in the shop, by kind.",
-      "heading": "Shop",
-      "count": "things",
-      "filter_kind": "Kind",
-      "clear": "Show everything",
-      "empty": "Nothing in the shop matches that.",
-      "previous": "Previous",
-      "next": "Next"
-    },
-    "product": {
-      "back": "Back to the shop",
-      "missing": "That is not in the shop any more.",
-      "colour": "Colour",
-      "size": "Size",
-      "ask": "Ask about this",
-      "details": "Details",
-      "care": "Care",
-      "delivery": "Delivery and returns",
-      "delivery_text": "Sent within two working days. If it is not right, send it back within fourteen days, unworn, and we refund it.",
-      "spec_kind": "Kind",
-      "spec_material": "Made of",
-      "spec_sizes": "Sizes",
-      "spec_colours": "Colours",
-      "related": "Looking for more?"
-    },
     "about": {
-      "title": "About",
-      "description": "Who makes the things in the shop, and how.",
-      "statement": "From one rail of shirts to a shop for things you keep.",
-      "first": "Everything here is made in small runs by workshops we visit. When a run sells out we make it again or we do not — nothing is marked down to clear a shelf.",
-      "second": "We would rather sell you one shirt you wear for ten years than three you replace. Bring anything back and we will mend it.",
-      "cta": "See the shop"
-    },
-    "contact": {
-      "title": "Contact",
-      "description": "How to reach the shop.",
-      "lead": "Message us about a size, an order or a repair. We answer the same day.",
-      "about": "You are asking about",
-      "phone": "Phone",
-      "email": "Email",
-      "address": "Find us",
-      "hours": "Open"
+      "cta": "See the shoes",
+      "description": "Who sells the shoes at Đôi, and how each pair is checked and sent.",
+      "figures": {
+        "lines": "adidas lines, from the 1950 Samba to this year's runners.",
+        "rating": "Average rating from {n} reviews by people who bought here.",
+        "shoes": "Shoes in the shop today, each with its sizes in stock."
+      },
+      "first": "Every pair comes from the dealer's own stock, boxed with its tags and checked against the order before it is sent.",
+      "first_alt": "Boxes stacked in a stockroom",
+      "second": "We started for friends who could not find their size in the shops near them. We still answer every size question ourselves, the same working day.",
+      "second_alt": "Gift boxes ready to wrap",
+      "statement": "Đôi sells genuine adidas, one pair at a time, to people who would rather not guess their size.",
+      "title": "About Đôi"
     },
     "admin": {
+      "categories": {
+        "note": "Who the shoes are for. Each category's picture and line are shown on the home page.",
+        "search": "Search categories",
+        "title": "Categories"
+      },
+      "lines": {
+        "note": "The adidas lines the shop sorts its shoes into. Each line's fit note is shown on the size chart.",
+        "search": "Search lines",
+        "title": "Lines"
+      },
       "nav": {
-        "overview": "Overview",
         "catalogue": "Catalogue",
-        "products": "Products",
-        "kinds": "Kinds"
+        "categories": "Categories",
+        "lines": "Lines",
+        "orders": "Orders",
+        "overview": "Overview",
+        "products": "Shoes",
+        "reviews": "Reviews",
+        "sales": "Sales"
+      },
+      "orders": {
+        "cancelled": "Cancelled",
+        "payment": "Payment",
+        "search": "Search by number or customer",
+        "status": "Status",
+        "summary": "{customer} in {city} ordered {qty} × {product}, EU {size}, on {date} — {total}.",
+        "title": "Orders"
       },
       "overview": {
-        "title": "Overview",
-        "products": "Products",
-        "drafts": "still in draft",
-        "kinds": "Kinds",
+        "chart_title": "Sales, last 14 days",
+        "col_kind": "For",
+        "col_product": "Shoe",
+        "col_stock": "In stock",
+        "lines_title": "Pairs sold by line",
         "low": "Running low",
-        "low_note": "under ten left",
-        "worth": "Stock on the shelf",
-        "worth_note": "at the prices shown",
-        "low_title": "Running low",
         "low_none": "Nothing is running low.",
-        "col_product": "Product",
-        "col_kind": "Kind",
-        "col_stock": "In stock"
+        "low_note": "last pairs left",
+        "low_sizes": "Last pairs in {sizes}",
+        "low_title": "Running low",
+        "orders_note": "{n} orders",
+        "recent_title": "Latest orders",
+        "sales": "Sales this month",
+        "stock": "Pairs in stock",
+        "stock_note": "across {n} shoes",
+        "title": "Overview",
+        "to_pack": "To pack",
+        "to_pack_note": "placed or confirmed",
+        "today_text": "{waiting} orders are waiting to be packed and {low} shoes are down to their last pairs. This month so far: {n} orders, {sales}.",
+        "today_title": "Today"
       },
       "products": {
-        "title": "Products",
-        "search": "Search by name",
+        "category": "For",
+        "draft": "Draft",
+        "live": "On sale",
+        "search": "Search by name or style code",
         "status": "Status",
-        "live": "Live",
-        "draft": "Draft"
+        "title": "Shoes"
       },
-      "kinds": {
-        "title": "Kinds"
+      "reviews": {
+        "hidden": "Hidden",
+        "live": "Shown",
+        "search": "Search reviews",
+        "status": "Status",
+        "title": "Reviews"
       },
       "signin": {
-        "title": "Welcome back",
-        "description": "Sign in to run the shop.",
-        "note": "Ask the shop's owner for an account."
+        "description": "Sign in to see orders, stock and sales.",
+        "image_alt": "Boxes stacked in a stockroom",
+        "inside": [
+          {
+            "text": "Orders to confirm, pack and send, newest first."
+          },
+          {
+            "text": "Stock for every pair, size by size, and what sold this month."
+          },
+          {
+            "text": "The sizes running out, before a customer finds them gone."
+          }
+        ],
+        "note": "Accounts are for the dealer and staff. Ask the owner for one.",
+        "title": "Đôi — dealer sign-in"
       }
+    },
+    "cart": {
+      "count": "{n} in your bag",
+      "delivery": "Delivery",
+      "description": "The pairs in your bag, delivery and the total, before you check out.",
+      "each": "{price} each",
+      "empty_heading": "Your bag is empty.",
+      "empty_line": "Pick a pair — the size chart is one tap from every shoe, and the first size exchange is free.",
+      "free": "Free",
+      "head_alt": "Gift boxes ready to wrap",
+      "heading": "Your bag",
+      "keep": "Keep shopping",
+      "pay_line": "Pay by cash on delivery, bank transfer, VNPay or MoMo at the next step.",
+      "remove": "Remove",
+      "subtotal": "Subtotal",
+      "suggest": "New this month",
+      "summary": "Summary",
+      "title": "Your bag"
+    },
+    "checkout": {
+      "address": "Street address, ward, district",
+      "city": "City or province",
+      "description": "Your address, delivery and payment for your adidas order.",
+      "empty": "Nothing to check out yet.",
+      "head_alt": "A parcel sealed with packing tape",
+      "heading": "Checkout",
+      "line": "{variant} · Qty {qty}",
+      "missing": "Fill in your name, street address and city.",
+      "name": "Full name",
+      "next_cod": "After you press Place order we confirm by text message; you pay the courier in cash when the box arrives.",
+      "next_online": "After you press Place order you pay on the {method} page; the order is marked paid at once and packed today.",
+      "note": "Note for the courier (optional)",
+      "paying": "Placing your order…",
+      "phone": "Phone",
+      "phone_bad": "Check the phone number — we text you when the pair is on its way.",
+      "place": "Place order",
+      "secure": "Your details travel over a secure connection.",
+      "step_contact": "Contact and address",
+      "step_delivery": "Delivery",
+      "step_payment": "Payment",
+      "summary": "Your order",
+      "terms": "By placing the order you accept the delivery and returns terms on this site.",
+      "title": "Checkout"
+    },
+    "contact": {
+      "about": "You are asking about",
+      "address": "Shop",
+      "description": "Ask Đôi about a size, an order or a gift.",
+      "email": "Email",
+      "form_heading": "Send a message",
+      "head_alt": "Boxes stacked in a stockroom",
+      "hours": "Hours",
+      "lead": "Send a message about a size, an order or a gift. We answer {reply}.",
+      "phone": "Phone",
+      "quick": [
+        {
+          "href": "/size-chart",
+          "label": "Find your size"
+        },
+        {
+          "href": "/shipping",
+          "label": "Delivery times and fees"
+        },
+        {
+          "href": "/returns",
+          "label": "Returns and size exchange"
+        },
+        {
+          "href": "/track",
+          "label": "Track an order"
+        }
+      ],
+      "quick_heading": "Already answered",
+      "title": "Contact",
+      "zalo": "Zalo"
+    },
+    "home": {
+      "colour": "Colour",
+      "description": "Genuine adidas Samba, Gazelle, Handball Spezial, Adizero and Megaride, chosen online and delivered across Vietnam.",
+      "eyebrow": "Featured pair · New this month",
+      "for_heading": "Who it's for",
+      "gift_image": "/images/ref/category-gifts.jpg",
+      "gift_line": "Pairs under {price}, sent with no price inside.",
+      "gift_name": "Gifts",
+      "headline": "Samba OG Black Crystal",
+      "in_stock": "In stock in {n} sizes",
+      "lead_cta": "See this pair",
+      "lines_heading": "By line",
+      "lines_line": "Five adidas lines, from the 1950 Samba to this year's runners.",
+      "new_cta": "All shoes",
+      "new_heading": "New this month",
+      "pairs": "{n} in the shop",
+      "since": "Since {year}",
+      "title": "adidas shoes, delivered"
+    },
+    "order": {
+      "change": "Need to change something?",
+      "change_link": "Message us",
+      "change_text": "Send us the order number and what to change; the address or the size can change until the order is packed.",
+      "description": "Where your order is, what is in it and when it arrives.",
+      "details": "Delivery and payment",
+      "done": "Delivered. If the size is not right, the exchange is free the first time.",
+      "due": "to pay on delivery",
+      "eta": "Expected by {date}.",
+      "headline": {
+        "cancelled": "This order was cancelled.",
+        "confirmed": "Your order is confirmed.",
+        "delivered": "Your order was delivered.",
+        "packed": "Your order is packed.",
+        "placed": "We have your order.",
+        "shipped": "Your order is on its way."
+      },
+      "items": "In this order",
+      "missing": "We can't find that order.",
+      "missing_line": "Check the number in your confirmation message, then look it up with the phone you ordered with.",
+      "number": "Order {number} · placed {date}",
+      "paid": "paid",
+      "spec": {
+        "carrier": "Carrier",
+        "delivery": "Delivery",
+        "payment": "Payment",
+        "to": "Delivering to",
+        "tracking": "Tracking number"
+      },
+      "thanks": "Thank you — your order is placed.",
+      "title": "Your order",
+      "track_cta": "Track an order",
+      "wrong": "Wrong size?",
+      "wrong_link": "How exchanges work",
+      "wrong_text": "Exchange it within the exchange window; the first exchange is free."
+    },
+    "product": {
+      "add": "Add to bag",
+      "ask": "Ask about this pair",
+      "back": "All shoes",
+      "bought": "Bought EU {size} · {fit}",
+      "choose": "Choose a size first.",
+      "colour": "Colour",
+      "delivery": "Delivery \u0026 returns",
+      "delivery_link": "Delivery",
+      "delivery_text": "Free standard delivery in {days} working days, sent the same day if you order before {cutoff}. Exchange the size within {n} days, or return it unworn within {refund} days for a refund.",
+      "description": "Pictures, sizes in stock, details, delivery and what buyers said about this adidas pair.",
+      "details": "Details",
+      "fit": {
+        "large": "Runs large",
+        "small": "Runs small",
+        "true": "True to size"
+      },
+      "fit_most": {
+        "large": "Most say it runs large.",
+        "small": "Most say it runs small.",
+        "true": "Most say it is true to size."
+      },
+      "missing": "That pair is not in the shop any more.",
+      "payments": "Payment options",
+      "related": "Looking for more?",
+      "related_cta": "More",
+      "returns_link": "Returns and exchange",
+      "review_count": "{n} reviews",
+      "reviews": "What buyers said",
+      "size": "Size (EU)",
+      "size_chart": "Size chart",
+      "spec": {
+        "care": "Care",
+        "code": "Style code",
+        "colourway": "Colourway",
+        "fit": "Fit",
+        "for": "For",
+        "line": "Line",
+        "lining": "Lining",
+        "sole": "Sole",
+        "upper": "Upper"
+      },
+      "stock_all": "In stock in all {n} sizes.",
+      "stock_in": "In stock in EU {size}. Sent today if you order before {cutoff}.",
+      "stock_low": "Last pairs in EU {size} — order soon.",
+      "stock_some": "In stock in {n} sizes. Last pairs in {low}.",
+      "title": "A pair at Đôi"
+    },
+    "returns": {
+      "contact_cta": "Start an exchange",
+      "description": "How to exchange a size or return a pair for a refund.",
+      "faq_heading": "Questions about returns",
+      "figures": {
+        "exchange": "Days to exchange a size, counted from delivery.",
+        "free": "For your first size exchange: we pay the courier both ways.",
+        "refund": "Days to return an unworn pair for a refund."
+      },
+      "head_alt": "Hands packing a cardboard box to send",
+      "heading": "Returns and size exchange",
+      "lead": "Buying shoes online means guessing a size once. If the guess is wrong, this is how we put it right.",
+      "rules": [
+        {
+          "text": "Worn indoors only, with clean soles."
+        },
+        {
+          "text": "In the original box, with its tags and paper."
+        },
+        {
+          "text": "Within the exchange or return window, counted from the day it arrived."
+        },
+        {
+          "text": "Reduced pairs can be exchanged for another size but not refunded."
+        }
+      ],
+      "rules_heading": "What we ask",
+      "steps": [
+        {
+          "text": "Send the order number and the size you want through the contact form.",
+          "title": "Message us"
+        },
+        {
+          "text": "Put it back in its box; the courier collects it and brings the new size.",
+          "title": "Hand over the pair"
+        },
+        {
+          "text": "A refund goes back to your bank account or wallet within three working days.",
+          "title": "Wear the right size"
+        }
+      ],
+      "steps_heading": "How to exchange",
+      "title": "Returns and exchange"
+    },
+    "shipping": {
+      "columns": {
+        "fee": "Fee",
+        "option": "Option",
+        "time": "Arrives",
+        "where": "Where"
+      },
+      "cutoff": "Orders placed before {cutoff} on a working day leave the same day.",
+      "description": "What delivery costs, how long it takes and where express reaches.",
+      "faq_heading": "Questions about delivery",
+      "figures": {
+        "express": "Working day by express in {cities}.",
+        "free": "Standard delivery on every order over {price} — that is every pair in the shop.",
+        "standard": "Working days by standard delivery, anywhere in Vietnam."
+      },
+      "free_from": "Free over {price}",
+      "head_alt": "Motorbikes on a city street in the morning",
+      "heading": "Delivery",
+      "lead": "Every pair leaves boxed, tagged and tracked. Here is what it costs and how long it takes.",
+      "options_heading": "Options and fees",
+      "title": "Delivery",
+      "track_cta": "Track an order"
+    },
+    "shop": {
+      "band_between": "{a} – {b}",
+      "band_over": "{a} and over",
+      "band_under": "Under {a}",
+      "clear": "Clear all",
+      "count": "matching",
+      "description": "Every adidas pair at Đôi, narrowed by who it's for, line, colour, price and EU size.",
+      "empty": "No pair matches that.",
+      "empty_line": "Try another size or fewer filters — or ask us, and we will tell you when it comes in.",
+      "filter_colour": "Colour",
+      "filter_for": "For",
+      "filter_line": "Line",
+      "filter_price": "Price",
+      "filter_size": "Size (EU)",
+      "filters": "Filter",
+      "head_alt": "A pair of Samba OG in crystal white, close up",
+      "head_image": "/images/ref/category-gifts.jpg",
+      "heading": "All shoes",
+      "more": "Show more",
+      "results": "Results for “{q}”",
+      "search": "Search by name, line, colour or code",
+      "sort": "Sort",
+      "sort_high": "Price, high to low",
+      "sort_low": "Price, low to high",
+      "sort_newest": "Newest first",
+      "sort_rated": "Best rated",
+      "title": "All shoes"
+    },
+    "sizes": {
+      "answer_line": "UK {uk} · US men {us_m} · US women {us_w}",
+      "answer_size": "EU {eu}",
+      "columns": {
+        "cm": "cm",
+        "eu": "EU",
+        "uk": "UK",
+        "us_m": "US men",
+        "us_w": "US women"
+      },
+      "description": "The adidas size chart in EU, UK, US and centimetres, with a box that finds your size from your foot length.",
+      "faq_heading": "Questions about size",
+      "fit_heading": "How each line fits",
+      "head_alt": "A tape measure marked in centimetres",
+      "heading": "Find your size",
+      "hint": "Type a length such as 24.5 to see your size.",
+      "input": "Your foot length",
+      "lead": "adidas makes shoes in thirds of an EU size. Measure your foot once and the chart does the rest.",
+      "note": "Lengths are foot lengths from adidas's own chart. Kids' grade-school sizes start at EU 35 1/2 and follow the same lengths.",
+      "steps": [
+        {
+          "text": "Stand on a sheet of paper in the afternoon, heel against a wall, in the socks you will wear."
+        },
+        {
+          "text": "Mark the tip of your longest toe and measure from the wall to the mark in centimetres."
+        },
+        {
+          "text": "Type the longer of your two feet below; between two sizes, take the larger."
+        }
+      ],
+      "table": "adidas sizes, adults and older kids",
+      "title": "Size chart",
+      "too_big": "That is beyond the chart — message us and we will check the pair for you."
+    },
+    "track": {
+      "contact_cta": "Message us",
+      "description": "Find your order with its number and your phone.",
+      "faq_heading": "While you wait",
+      "head_alt": "A cardboard parcel on a wooden table",
+      "heading": "Track an order",
+      "help": "Most orders arrive in two to four working days. If yours is late or the number is not found, message us with the order number.",
+      "lead": "Type the order number from your confirmation message and the phone number you ordered with.",
+      "not_found": "No order matches that number and phone. Check both, or message us.",
+      "number": "Order number",
+      "phone": "Phone",
+      "placeholder": "DOI-24817",
+      "steps": {
+        "confirmed": "Paid, or confirmed by phone for cash on delivery; the pair is set aside for you.",
+        "delivered": "In your hands. The size exchange window starts today.",
+        "packed": "Boxed with its tags and our receipt, waiting for the courier.",
+        "placed": "We have the order and are checking the pair against it.",
+        "shipped": "With GHN or GHTK; the tracking number is on the order's page."
+      },
+      "steps_heading": "What each step means",
+      "submit": "Find my order",
+      "title": "Track an order",
+      "yours": "Ordered on this phone"
     }
+  },
+  "promises": {
+    "cod_line": "Open the box and check the pair before you pay.",
+    "cod_title": "Cash on delivery",
+    "delivery_line": "{days} working days, anywhere in Vietnam.",
+    "delivery_title": "Free delivery",
+    "exchange_line": "The first exchange is on us, both ways.",
+    "exchange_title": "{n}-day size exchange",
+    "genuine_line": "Every pair boxed, tagged and sent with our receipt.",
+    "genuine_title": "Genuine adidas"
+  },
+  "site": {
+    "description": "Đôi is an independent online dealer of genuine adidas shoes for men, women and kids, with free delivery and a 14-day size exchange.",
+    "locale": "vi-VN",
+    "logo": "",
+    "name": "Đôi"
   }
 }

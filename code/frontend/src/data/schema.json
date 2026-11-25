@@ -1,124 +1,144 @@
 {
   "collections": {
     "products": {
-      "label": "Products",
+      "label": "Shoes",
       "fields": [
-        {
-          "key": "image",
-          "label": "Photograph",
-          "type": "image",
-          "section": "Basics"
-        },
-        {
-          "key": "name",
-          "label": "Name",
-          "type": "text",
-          "required": true,
-          "section": "Basics"
-        },
-        {
-          "key": "category",
-          "label": "Kind",
-          "type": "ref:categories",
-          "section": "Basics"
-        },
-        {
-          "key": "price",
-          "label": "Price",
-          "type": "price",
-          "currency": "VND",
-          "section": "Basics"
-        },
-        {
-          "key": "stock",
-          "label": "In stock",
-          "type": "number",
-          "section": "Basics"
-        },
-        {
-          "key": "status",
-          "label": "Status",
-          "type": "text",
-          "options": [
-            [
-              "draft",
-              "Draft"
-            ],
-            [
-              "live",
-              "Live"
-            ]
-          ],
-          "section": "Basics"
-        },
-        {
-          "key": "featured",
-          "label": "Opens the home page",
-          "type": "bool",
-          "hint": "One product at a time is shown at full size on the home page.",
-          "section": "Basics"
-        },
-        {
-          "key": "description",
-          "label": "Description",
-          "type": "longtext",
-          "section": "Basics"
-        },
-        {
-          "key": "colours",
-          "label": "Colours",
-          "type": "list",
-          "hint": "A colour's plain name: navy, olive, cream.",
-          "section": "Details"
-        },
-        {
-          "key": "sizes",
-          "label": "Sizes",
-          "type": "list",
-          "section": "Details"
-        },
-        {
-          "key": "material",
-          "label": "Made of",
-          "type": "text",
-          "section": "Details"
-        },
-        {
-          "key": "care",
-          "label": "Care",
-          "type": "longtext",
-          "section": "Details"
-        },
-        {
-          "key": "image_back",
-          "label": "A second picture",
-          "type": "image",
-          "section": "More pictures",
-          "hint": "The back, or the thing in use."
-        },
-        {
-          "key": "image_detail",
-          "label": "A detail",
-          "type": "image",
-          "section": "More pictures",
-          "hint": "A close picture of the fabric or the finish."
-        }
+        { "key": "image", "label": "Side view", "type": "image", "section": "Pictures" },
+        { "key": "image_back", "label": "Front pair", "type": "image", "section": "Pictures", "hint": "Shown under the pointer on a card, and second in the gallery." },
+        { "key": "image_detail", "label": "Back pair", "type": "image", "section": "Pictures" },
+        { "key": "name", "label": "Name", "type": "text", "required": true, "section": "Basics" },
+        { "key": "model", "label": "Model", "type": "text", "section": "Basics", "hint": "Pairs with the same model are shown as colour dots on each other's page." },
+        { "key": "line", "label": "Line", "type": "ref:lines", "section": "Basics" },
+        { "key": "category", "label": "For", "type": "ref:categories", "section": "Basics" },
+        { "key": "price", "label": "Price", "type": "price", "currency": "VND", "required": true, "section": "Basics" },
+        { "key": "price_listed", "label": "Price on the source page", "type": "text", "hidden": true },
+        { "key": "status", "label": "Status", "type": "text", "options": [["live", "On sale"], ["draft", "Draft"]], "section": "Basics" },
+        { "key": "featured", "label": "Opens the home page", "type": "bool", "section": "Basics", "hint": "One pair at a time. Change the home page headline with it." },
+        { "key": "is_new", "label": "New this month", "type": "bool", "section": "Basics" },
+        { "key": "description", "label": "Description", "type": "longtext", "section": "Basics" },
+        { "key": "code", "label": "Style code", "type": "text", "section": "Details" },
+        { "key": "colourway", "label": "Colourway", "type": "text", "section": "Details" },
+        { "key": "colour", "label": "Main colour", "type": "text", "options": [["black", "Black"], ["white", "White"], ["pink", "Pink"], ["purple", "Purple"], ["brown", "Brown"], ["yellow", "Yellow"], ["blue", "Blue"], ["grey", "Grey"], ["green", "Green"]], "section": "Details" },
+        { "key": "swatch", "label": "Dot colour", "type": "text", "hidden": true },
+        { "key": "upper", "label": "Upper", "type": "text", "section": "Details" },
+        { "key": "lining", "label": "Lining", "type": "text", "section": "Details" },
+        { "key": "sole", "label": "Sole", "type": "text", "section": "Details" },
+        { "key": "fit", "label": "Fit", "type": "text", "section": "Details" },
+        { "key": "care", "label": "Care", "type": "longtext", "section": "Details" },
+        { "key": "released", "label": "In the shop since", "type": "text", "section": "Details" },
+        { "key": "sizes", "label": "Sizes (EU)", "type": "list", "section": "Stock" },
+        { "key": "sizes_low", "label": "Last pairs in", "type": "list", "section": "Stock", "hint": "Sizes with one or two pairs left." },
+        { "key": "sizes_out", "label": "Sold out in", "type": "list", "section": "Stock" },
+        { "key": "stock", "label": "Pairs in stock", "type": "number", "section": "Stock" },
+        { "key": "rating", "label": "Rating", "type": "number", "section": "Reviews" },
+        { "key": "review_count", "label": "Reviews", "type": "number", "section": "Reviews" },
+        { "key": "_invented", "label": "Invented fields", "type": "list", "hidden": true }
+      ]
+    },
+    "lines": {
+      "label": "Lines",
+      "fields": [
+        { "key": "name", "label": "Name", "type": "text", "required": true },
+        { "key": "blurb", "label": "One line about it", "type": "longtext" },
+        { "key": "since", "label": "First made", "type": "number" },
+        { "key": "fit_note", "label": "How it fits", "type": "longtext" },
+        { "key": "_invented", "label": "Invented fields", "type": "list", "hidden": true }
       ]
     },
     "categories": {
-      "label": "Kinds",
+      "label": "Categories",
       "fields": [
-        {
-          "key": "name",
-          "label": "Name",
-          "type": "text",
-          "required": true
-        },
-        {
-          "key": "blurb",
-          "label": "One line about it",
-          "type": "longtext"
-        }
+        { "key": "image", "label": "Picture", "type": "image" },
+        { "key": "name", "label": "Name", "type": "text", "required": true },
+        { "key": "blurb", "label": "One line about it", "type": "longtext" }
+      ]
+    },
+    "reviews": {
+      "label": "Reviews",
+      "fields": [
+        { "key": "product", "label": "Shoe", "type": "ref:products", "required": true },
+        { "key": "name", "label": "Customer", "type": "text", "required": true },
+        { "key": "rating", "label": "Stars", "type": "number" },
+        { "key": "date", "label": "Date", "type": "text" },
+        { "key": "size_bought", "label": "Size bought", "type": "text" },
+        { "key": "fit", "label": "How it fit", "type": "text", "options": [["small", "Runs small"], ["true", "True to size"], ["large", "Runs large"]] },
+        { "key": "body", "label": "Review", "type": "longtext" },
+        { "key": "status", "label": "Status", "type": "text", "options": [["live", "Shown"], ["hidden", "Hidden"]] }
+      ]
+    },
+    "orders": {
+      "label": "Orders",
+      "fields": [
+        { "key": "number", "label": "Order number", "type": "text", "required": true, "section": "Order" },
+        { "key": "placed_at", "label": "Placed", "type": "text", "section": "Order" },
+        { "key": "status", "label": "Status", "type": "text", "options": [["placed", "Placed"], ["confirmed", "Confirmed"], ["packed", "Packed"], ["shipped", "Shipped"], ["delivered", "Delivered"], ["cancelled", "Cancelled"]], "section": "Order" },
+        { "key": "product", "label": "Shoe", "type": "ref:products", "section": "Order" },
+        { "key": "size", "label": "Size (EU)", "type": "text", "section": "Order" },
+        { "key": "qty", "label": "Pairs", "type": "number", "section": "Order" },
+        { "key": "total", "label": "Total", "type": "price", "currency": "VND", "section": "Order" },
+        { "key": "payment", "label": "Payment", "type": "text", "options": [["cod", "Cash on delivery"], ["bank", "Bank transfer"], ["vnpay", "VNPay"], ["momo", "MoMo"]], "section": "Order" },
+        { "key": "paid", "label": "Paid", "type": "bool", "section": "Order" },
+        { "key": "delivery", "label": "Delivery", "type": "text", "options": [["standard", "Standard"], ["express", "Express"]], "section": "Delivery" },
+        { "key": "carrier", "label": "Carrier", "type": "text", "section": "Delivery" },
+        { "key": "tracking", "label": "Tracking number", "type": "text", "section": "Delivery" },
+        { "key": "eta", "label": "Expected", "type": "text", "section": "Delivery" },
+        { "key": "customer", "label": "Customer", "type": "text", "section": "Customer" },
+        { "key": "phone", "label": "Phone", "type": "text", "private": true, "section": "Customer" },
+        { "key": "email", "label": "Email", "type": "text", "private": true, "section": "Customer" },
+        { "key": "address", "label": "Address", "type": "text", "private": true, "section": "Customer" },
+        { "key": "city", "label": "City or province", "type": "text", "section": "Customer" },
+        { "key": "note", "label": "Internal note", "type": "longtext", "private": true, "section": "Customer" }
+      ]
+    },
+    "shop": {
+      "label": "Shop terms",
+      "fields": [
+        { "key": "free_delivery_from", "label": "Free standard delivery from", "type": "price", "currency": "VND" },
+        { "key": "standard_days", "label": "Standard delivery, working days", "type": "text" },
+        { "key": "express_days", "label": "Express delivery, working days", "type": "text" },
+        { "key": "express_cities", "label": "Express covers", "type": "text" },
+        { "key": "dispatch_cutoff", "label": "Same-day dispatch before", "type": "text" },
+        { "key": "exchange_days", "label": "Days to exchange a size", "type": "number" },
+        { "key": "refund_days", "label": "Days to return for a refund", "type": "number" },
+        { "key": "reply_time", "label": "Messages answered within", "type": "text" },
+        { "key": "rating", "label": "Average rating", "type": "number" },
+        { "key": "review_count", "label": "Reviews in all", "type": "number" }
+      ]
+    },
+    "delivery": {
+      "label": "Delivery options",
+      "fields": [
+        { "key": "name", "label": "Name", "type": "text", "required": true },
+        { "key": "days", "label": "Arrives in", "type": "text" },
+        { "key": "fee", "label": "Fee", "type": "price", "currency": "VND" },
+        { "key": "note", "label": "Where and how", "type": "longtext" }
+      ]
+    },
+    "payments": {
+      "label": "Ways to pay",
+      "fields": [
+        { "key": "name", "label": "Name", "type": "text", "required": true },
+        { "key": "note", "label": "What happens", "type": "longtext" },
+        { "key": "online", "label": "Paid online", "type": "bool" },
+        { "key": "icon", "label": "Icon", "type": "text", "hidden": true }
+      ]
+    },
+    "faqs": {
+      "label": "Questions",
+      "fields": [
+        { "key": "topic", "label": "Page", "type": "text", "options": [["shipping", "Delivery"], ["returns", "Returns"], ["sizing", "Sizes"], ["payment", "Payment"], ["orders", "Orders"]] },
+        { "key": "question", "label": "Question", "type": "text", "required": true },
+        { "key": "answer", "label": "Answer", "type": "longtext" }
+      ]
+    },
+    "sizes": {
+      "label": "Size chart",
+      "fields": [
+        { "key": "eu", "label": "EU", "type": "text", "required": true },
+        { "key": "uk", "label": "UK", "type": "text" },
+        { "key": "us_m", "label": "US men", "type": "text" },
+        { "key": "us_w", "label": "US women", "type": "text" },
+        { "key": "cm", "label": "Foot length, cm", "type": "number" }
       ]
     }
   }

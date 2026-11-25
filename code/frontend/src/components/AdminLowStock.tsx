@@ -1,42 +1,31 @@
 import { Link } from "react-router-dom";
-import { Badge } from "./admin";
-import { nameIn } from "./admin/fields";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import type { Product } from "../lib/shop";
+import ProductImage from "./ProductImage";
+import { fill, type Product } from "../lib/shop";
 
 /**
- * What is running low, on the overview: a short table, least first, each row
- * opening the product. Not a <DataTable> — that is a whole list with its
- * paging and its export, and this is seven rows that answer one question.
+ * What is running low, on the overview: the shoes down to their last pairs,
+ * least first, each a link to the product — its picture, its name, the sizes
+ * running out and how many pairs are left.
  */
-export default function AdminLowStock({ rows, labels }: {
+export default function AdminLowStock({ rows, sizesText }: {
   rows: readonly Product[];
-  /** The three column headings, from content.json so the owner can change them. */
-  labels: readonly [string, string, string];
+  /** The sizes line, from content.json so the owner can change it; {sizes} is filled in. */
+  sizesText: string;
 }) {
-  const sorted = [...rows].sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0)).slice(0, 8);
   return (
-    <Table>
-      <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead>{labels[0]}</TableHead>
-          <TableHead>{labels[1]}</TableHead>
-          <TableHead className="text-right">{labels[2]}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sorted.map((p) => (
-          <TableRow key={p.id}>
-            <TableCell>
-              <Link to={`/admin/products/${p.id}`} className="font-medium text-ink hover:underline">{p.name}</Link>
-            </TableCell>
-            <TableCell className="text-ink-soft">{nameIn("categories", p.category)}</TableCell>
-            <TableCell className="text-right">
-              <Badge tone={(p.stock ?? 0) === 0 ? "danger" : "neutral"}>{p.stock ?? 0}</Badge>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <ul className="divide-y divide-line">
+      {rows.map((p) => (
+        <li key={p.id}>
+          <Link to={`/admin/products/${p.id}`} className="flex items-center gap-3 py-2.5 hover:bg-wash">
+            <span className="w-10 shrink-0"><ProductImage src={p.image} alt={p.name} aspect="1/1" /></span>
+            <span className="min-w-0 flex-1 text-sm">
+              <span className="block font-medium text-ink">{p.name}</span>
+              <span className="block text-ink-soft">{fill(sizesText, { sizes: (p.sizes_low ?? []).join(", ") })}</span>
+            </span>
+            <span className="shrink-0 text-sm tabular-nums text-ink">{p.stock ?? 0}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

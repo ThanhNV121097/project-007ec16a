@@ -7,28 +7,35 @@ import SiteHeader from "./components/SiteHeader";
 import { useSession } from "./lib/session";
 import About from "./pages/About";
 import AdminKinds from "./pages/AdminKinds";
+import AdminLines from "./pages/AdminLines";
+import AdminOrder from "./pages/AdminOrder";
+import AdminOrders from "./pages/AdminOrders";
 import AdminOverview from "./pages/AdminOverview";
 import AdminProduct from "./pages/AdminProduct";
 import AdminProducts from "./pages/AdminProducts";
+import AdminReviews from "./pages/AdminReviews";
 import AdminSignIn from "./pages/AdminSignIn";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import Contact from "./pages/Contact";
 import Home from "./pages/Home";
+import Order from "./pages/Order";
 import Product from "./pages/Product";
+import Returns from "./pages/Returns";
+import Shipping from "./pages/Shipping";
 import Shop from "./pages/Shop";
+import SizeChart from "./pages/SizeChart";
+import Track from "./pages/Track";
 
 /**
  * Two sites in one address: the shop a customer visits, and the side the
- * shop runs itself from.
- *
- * They do not share a shell. A customer's page sits between the hairline
- * header and the footer; a management page sits in <DashboardLayout>, which
- * each of them brings with it, and never under a marketing header. So the
- * shop's routes are children of one layout route and the management routes
- * are not.
+ * dealer runs it from. They do not share a shell: a customer's page sits
+ * between the hairline header and the footer; a management page sits in
+ * <DashboardLayout>, which each of them brings with it.
  */
 function Shell() {
   return (
-    <div className="min-h-screen bg-ground font-body text-ink">
+    <div className="min-h-screen overflow-x-clip bg-ground font-body text-ink">
       {/* The motion the owner chose, on every page (src/motion). */}
       <Motion />
       <SiteHeader />
@@ -39,12 +46,7 @@ function Shell() {
   );
 }
 
-/**
- * The management area's door. Through the scaffold's own session
- * (src/lib/session.ts) and nothing else: the Studio and the walk sign a
- * visitor in by writing THAT session, and a page gated on any other is drawn
- * and walked signed out.
- */
+/** The management area's door, through the scaffold's own session (src/lib/session.ts). */
 function SignedIn({ children }: { children: ReactNode }) {
   return useSession() ? <>{children}</> : <Navigate to="/admin/sign-in" replace />;
 }
@@ -56,14 +58,25 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:id" element={<Product />} />
+        <Route path="/size-chart" element={<SizeChart />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/orders/:id" element={<Order />} />
+        <Route path="/track" element={<Track />} />
+        <Route path="/shipping" element={<Shipping />} />
+        <Route path="/returns" element={<Returns />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
       </Route>
       <Route path="/admin/sign-in" element={<AdminSignIn />} />
       <Route path="/admin" element={<SignedIn><AdminOverview /></SignedIn>} />
+      <Route path="/admin/orders" element={<SignedIn><AdminOrders /></SignedIn>} />
+      <Route path="/admin/orders/:id" element={<SignedIn><AdminOrder /></SignedIn>} />
       <Route path="/admin/products" element={<SignedIn><AdminProducts /></SignedIn>} />
       <Route path="/admin/products/:id" element={<SignedIn><AdminProduct /></SignedIn>} />
-      <Route path="/admin/kinds" element={<SignedIn><AdminKinds /></SignedIn>} />
+      <Route path="/admin/lines" element={<SignedIn><AdminLines /></SignedIn>} />
+      <Route path="/admin/categories" element={<SignedIn><AdminKinds /></SignedIn>} />
+      <Route path="/admin/reviews" element={<SignedIn><AdminReviews /></SignedIn>} />
     </Routes>
   );
 }

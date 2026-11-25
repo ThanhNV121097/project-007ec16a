@@ -143,7 +143,7 @@ export function Field({ label, hint, error, children, className, group }: {
 }
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <UiInput {...props} className={cn("bg-surface font-normal", props.className)} />;
+  return <UiInput {...props} className={cn("appearance-none bg-surface font-normal", props.className)} />;
 }
 
 export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -234,7 +234,7 @@ export function Toggle({ checked, onChange, label, hint }: {
         <span className="font-medium text-ink">{label}</span>
         {hint && <span className="text-xs text-ink-soft">{hint}</span>}
       </span>
-      <Switch checked={checked} onCheckedChange={onChange} />
+      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
     </Label>
   );
 }

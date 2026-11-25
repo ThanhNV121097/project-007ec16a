@@ -1,24 +1,57 @@
 [
   {
-    "name": "From the home page to the whole shop",
+    "name": "Choose a pair, pay with MoMo and see the order placed",
     "steps": [
-      { "action": "open", "path": "/" },
-      { "action": "click", "selector": "[data-testid='home-more']" },
-      { "action": "expect", "selector": "[data-testid='shop-count']" }
+      { "action": "open", "path": "/shop/samba-og-w-crystal-white" },
+      { "action": "click", "selector": "[data-testid='size-38']" },
+      { "action": "click", "selector": "[data-testid='add-to-bag']" },
+      { "action": "expect", "selector": "[data-testid='bag-count']", "text": "1" },
+      { "action": "open", "path": "/cart" },
+      { "action": "click", "selector": "[data-testid='cart-checkout']" },
+      { "action": "type", "selector": "#checkout-name", "value": "Lan Nguyen" },
+      { "action": "type", "selector": "#checkout-phone", "value": "0912345678" },
+      { "action": "type", "selector": "#checkout-address", "value": "12 Example Street, Ward 1" },
+      { "action": "type", "selector": "#checkout-city", "value": "Da Nang" },
+      { "action": "click", "selector": "[data-testid='pay-momo']" },
+      { "action": "click", "selector": "[data-testid='place-order']" },
+      { "action": "expect", "selector": "[data-testid='order-status']", "text": "Thank you" }
     ]
   },
   {
-    "name": "Open one thing and read about it",
+    "name": "Search the shoes and narrow them by size",
     "steps": [
       { "action": "open", "path": "/shop" },
-      { "action": "click", "selector": "[data-testid='card-linen-overshirt']" },
-      { "action": "expect", "selector": "[data-testid='product-name']", "text": "Linen Overshirt" }
+      { "action": "type", "selector": "#shop-search", "value": "samba" },
+      { "action": "press", "selector": "#shop-search", "key": "Enter" },
+      { "action": "click", "selector": "[data-testid='filter-size-38']" },
+      { "action": "expect", "selector": "[data-testid='shop-count']" },
+      { "action": "click", "selector": "[data-testid='card-samba-og-w-wonder-quartz']" },
+      { "action": "expect", "selector": "[data-testid='product-name']", "text": "Samba OG" }
     ]
   },
   {
-    "name": "Ask the shop about one thing",
+    "name": "Track an order by its number",
     "steps": [
-      { "action": "open", "path": "/shop/linen-overshirt" },
+      { "action": "open", "path": "/track" },
+      { "action": "type", "selector": "#order-number", "value": "DOI-24817" },
+      { "action": "type", "selector": "#order-phone", "value": "0938 410 552" },
+      { "action": "click", "selector": "[data-testid='track-submit']" },
+      { "action": "expect", "selector": "[data-testid='order-status']", "text": "on its way" }
+    ]
+  },
+  {
+    "name": "Find a size from a foot length",
+    "steps": [
+      { "action": "open", "path": "/size-chart" },
+      { "action": "type", "selector": "#foot-length", "value": "25" },
+      { "action": "expect", "selector": "[data-testid='size-answer']", "text": "40 2/3" }
+    ]
+  },
+  {
+    "name": "Ask the shop about one pair",
+    "steps": [
+      { "action": "open", "path": "/" },
+      { "action": "click", "selector": "[data-testid='home-lead']" },
       { "action": "click", "selector": "[data-testid='product-ask']" },
       { "action": "expect", "selector": "[data-testid='contact-heading']" }
     ]

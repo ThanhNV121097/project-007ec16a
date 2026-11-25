@@ -1,1 +1,58 @@
-[]
+[
+  {
+    "path": "/images/about-lacing.jpg",
+    "author": "sweetlouise",
+    "source": "Pixabay",
+    "license": "Pixabay Content License",
+    "page": "https://pixabay.com/photos/cans-containers-cardboard-boxes-3992897/",
+    "subject": "cans, containers, cardboard boxes, gift, decorative, surprise, gifts, packaging, paper, cardboard"
+  },
+  {
+    "path": "/images/about-stockroom.jpg",
+    "author": "TungArt7",
+    "source": "Pixabay",
+    "license": "Pixabay Content License",
+    "page": "https://pixabay.com/photos/swollen-box-storage-warehouse-10172907/",
+    "subject": "swollen box, storage, warehouse, stack stack, packaging, logistics logistics, shipping shipping, moving moving, consumers, transparency, container, delivery, cargo, business, industry, brown, parcel, supply chain, commercial, handle with care, piles, wholesale, trade, boxes, office"
+  },
+  {
+    "path": "/images/head-checkout.jpg",
+    "author": "phily_shotz",
+    "source": "Pixabay",
+    "license": "Pixabay Content License",
+    "page": "https://pixabay.com/photos/duct-tape-packaging-package-5501773/",
+    "subject": "duct tape, packaging, package, parcel tape, carton, transport, delivery, box, shipping, shipment, duct tape, duct tape, duct tape, duct tape, duct tape, package, shipment, shipment, shipment, shipment, shipment"
+  },
+  {
+    "path": "/images/head-delivery.jpg",
+    "author": "yamabon",
+    "source": "Pixabay",
+    "license": "Pixabay Content License",
+    "page": "https://pixabay.com/photos/road-city-motorcycle-morning-6281973/",
+    "subject": "road, city, motorcycle, morning, sunlight, motorbike, vehicle, pavement, street, highway, urban, road, road, road, motorcycle, motorcycle, motorcycle, motorcycle, motorcycle, motorbike, street, highway, highway, highway, highway"
+  },
+  {
+    "path": "/images/head-returns.jpg",
+    "author": "AhmedAlMaslamani",
+    "source": "Pixabay",
+    "license": "Pixabay Content License",
+    "page": "https://pixabay.com/photos/packaging-clothing-folding-box-10506185/",
+    "subject": "packaging, clothing, folding, box, hands, at home, e-commerce, shipping service, ready to ship, fashion, personal touch, home office, casual wear, office style, premium materials, customer care, tidying up, inventory, clothing delivery"
+  },
+  {
+    "path": "/images/head-size-chart.jpg",
+    "author": "qimono",
+    "source": "Pixabay",
+    "license": "Pixabay Content License",
+    "page": "https://pixabay.com/photos/measurement-millimeter-centimeter-1476913/",
+    "subject": "measurement, millimeter, centimeter, meter, feet, foot, inch, inches, distance, numbers, red, white, black, investigate, check, tool, ruler, tape, measure, work, equipment, instrument, measuring, length, line, measuring tape, slim, tape measure, accuracy, precision, size, evaluation, handy, improvement, precise, long, scale, measurement, measurement, measurement, distance, distance, ruler, ruler, ruler, ruler, measure, measure, measure, measure, measure, length, length, measuring tape, tape measure, size"
+  },
+  {
+    "path": "/images/head-track.jpg",
+    "author": "ha11ok",
+    "source": "Pixabay",
+    "license": "Pixabay Content License",
+    "page": "https://pixabay.com/photos/space-wood-deliver-logistics-4967335/",
+    "subject": "space, wood, deliver, logistics, receive, transportation, business, logistic, transfer, courier, office, paper, pack, send, fragile, service, object, container, carton, box, storage, shipping, cardboard, parcel, package, brown office, brown box, brown service, logistics, courier, courier, box, box, box, parcel, parcel, parcel, parcel, parcel, package, package"
+  }
+]
