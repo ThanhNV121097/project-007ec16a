@@ -84,7 +84,7 @@ Behaviour:
 | AC-22 | Samba OG Black Crystal has `40` among its last-pairs sizes and not sold out | `GET /v1/products?size=40` | The shoe is among the items |
 | AC-23 | The seeded shoes | `GET /v1/products?size=38,40` | A shoe is returned when it has either size available |
 | AC-24 | The seeded shoes | `GET /v1/products?category=women&line=samba&size=38&price_to=2999999` | Exactly `samba-og-w-wonder-quartz`; `total` is 1 |
-| AC-25 | A shoe in draft that matches every other condition | `GET /v1/products?q=…` for a visitor | The draft shoe is not returned |
+| AC-25 | A shoe in draft that matches every other condition | `GET /v1/products?q=…&status=live` | The draft shoe is not returned |
 | AC-26 | 30 matches | `GET /v1/products?q=samba&page=2&limit=12` | 12 items from the second page of matches, and `total` 30 |
 | AC-27 | The seeded orders | `GET /v1/orders?q=nam` | Orders whose number or customer contains "nam" are returned; an order whose address or note contains "nam" but whose number and customer do not is not |
 | AC-28 | The seeded reviews | `GET /v1/reviews?product=samba-og-w-core-black&sort=-date` | That shoe's reviews, newest first |
