@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { T, useContent, useList } from "../editable";
 import { useCart } from "../lib/cart";
 import { closeBag, openBag, useBagOpen } from "../lib/bag";
@@ -26,6 +26,8 @@ export default function SiteHeader() {
   const { count } = useCart();
   const bagOpen = useBagOpen();
   const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+  const here = `${pathname}${search}`;
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [words, setWords] = useState("");
@@ -45,10 +47,10 @@ export default function SiteHeader() {
         <div className="flex items-center gap-4 lg:gap-8">
           <nav className="hidden items-center gap-7 text-sm lg:flex" aria-label="Main">
             {links.map((l, i) => (
-              <NavLink key={l.href} to={l.href} end
-                className={({ isActive }) => `text-ink underline-offset-8 hover:underline ${isActive ? "underline" : ""}`}>
+              <Link key={l.href} to={l.href} aria-current={here === l.href ? "page" : undefined}
+                className={`text-ink underline-offset-8 hover:underline ${here === l.href ? "underline" : ""}`}>
                 <T k={`nav.links.${i}.label`} />
-              </NavLink>
+              </Link>
             ))}
           </nav>
           <div className="-mr-2 flex items-center">
