@@ -5,7 +5,6 @@ import { useRecord } from "../data";
 import { fill, type ShopTerms } from "../lib/shop";
 import ContactForm from "../components/ContactForm";
 import Icon from "../components/Icon";
-import Rule from "../components/Rule";
 import SpecList from "../components/SpecList";
 
 /**
@@ -64,7 +63,6 @@ export default function Contact() {
           <ContactForm />
         </div>
       </section>
-      <Rule />
     </>
   );
 }
