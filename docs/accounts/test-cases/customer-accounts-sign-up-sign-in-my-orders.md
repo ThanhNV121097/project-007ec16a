@@ -409,7 +409,7 @@ Check: fetch_url
 **When**: `POST /v1/orders` once with Minh's cookie and once with the Admin's; then read `orders.account_id` of both with `set_db_state`; then `GET /v1/account/orders` as Lan.
 **Then**: Both answer 201; both rows have `account_id` NULL; neither appears in Lan's list.
 Traces: SC-11 (ACC-005 AC-7, item 5)
-Check: fetch_url (UNVERIFIED for the call itself if no VNPay keys are set; the rule is then read from the Go tests)
+Check: fetch_url (the VNPay keys are a precondition of the run, §0.2; if they are missing the call itself is UNVERIFIED, naming the missing keys, and is not passed from the Go tests)
 
 **Scenario**: SC-12.1 — An order placed with no session is a guest order that can still be tracked
 **Given**: No cookie.
