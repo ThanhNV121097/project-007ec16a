@@ -705,7 +705,7 @@ Behaviour:
 | Shop terms | read | yes | No free-delivery threshold, express days or express cities |
 | Sample orders: delivery, delivery fee, total | read | yes | Total is the sum of the pairs |
 | Words: bag line, promises, payment question, Delivery page, contact link | read | yes | From the site's content file |
-| Words: shipping answer `f-delivery-time`, order-number answer `f-orders-number`, `vnpay` payment note, review r-04 | read | yes | From the site's data files; each loses the sentence or clause named in item 5 |
+| Words: shipping answer `f-delivery-time`, order-number answer `f-orders-number`, `vnpay` payment note, reviews r-04 and r-07 | read | yes | From the site's data files; each loses the sentence or clause named in item 5 |
 
 ## 5. Screens
 
