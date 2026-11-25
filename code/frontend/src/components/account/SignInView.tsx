@@ -63,7 +63,7 @@ export default function SignInView() {
   }
 
   return (
-    <AuthLayout title={W.signIn.title}>
+    <AuthLayout title={W.signIn.title} art="track">
       <form ref={form} noValidate onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
         <Field id="sign-in-email" label={W.labels.email} type="email" autoComplete="username" {...bind("email")} />
         <Field id="sign-in-password" label={W.labels.password} type="password" autoComplete="current-password" {...bind("password")} />
