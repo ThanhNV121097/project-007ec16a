@@ -123,12 +123,12 @@ Codes: `unauthenticated` 401, `forbidden` 403, `unsupported_media_type` 415, `ba
 ### 3.1 Packages and who imports whom
 
 ```
-account  ──►  auth, orders, ratelimit(none directly), httpx
+account  ──►  auth, orders, ratelimit (Hit, for sign-up only), httpx
 orders   ──►  auth (FromContext, Role constants — in the handlers only), ratelimit, stock, httpx
 auth     ──►  ratelimit, httpx
 ```
 
-No cycle: `auth` never imports `orders` or `account`; `orders` never imports `account`. **`internal/account` contains no SQL at all.** It reads and writes `users` only through `auth` functions, and `orders` only through `orders` functions, so "a package never imports another package's store" (`_base.md` §1.1) holds and each table keeps its one writer. This is also the answer to the story's question "how does `GET /v1/orders/{id}` find the session of the customer the order is linked to without importing another package's store": the `orders` handler asks `auth` **who the caller is** (`auth.FromContext`, a public function of the package that owns sessions) and passes the id as a plain string in `Access.AccountID`; the SQL that compares it with `orders.account_id` is `orders`' own. `orders` imports `auth` from this story on (the checkout design said its handler "does not import `auth`" only because the package did not exist yet; "Dealer sign-in" and this story both add the import, as the checkout design's own ownership table anticipated).
+No cycle: `auth` never imports `orders` or `account`; `orders` never imports `account`. **`internal/account` contains no SQL at all.** It reads and writes `users` only through `auth` functions, and `orders` only through `orders` functions, so "a package never imports another package's store" (`_base.md` §1.1) holds and each table keeps its one writer. This is also the answer to the story's question "how does `GET /v1/orders/{id}` find the session of the customer the order is linked to without importing another package's store": the `orders` handler asks `auth` **who the caller is** (`auth.FromContext`, a public function of the package that owns sessions) and passes the id as a plain string in `Access.AccountID`; the SQL that compares it with `orders.account_id` is `orders`' own. `orders` imports `auth` from this story on (the checkout design said its handler "does not import `auth`" only because the package did not exist yet; "Dealer sign-in" and this story both add the import, as the checkout design's dependency table anticipated: "Add `Dealer` and `AccountID` to the `access` struct").
 
 Signatures below are the **shape**: where the merged `orders` or `auth` code already uses package functions over a `q`, or methods on a service `Register` builds, the new functions follow that convention; what is passed and returned is the contract.
 
