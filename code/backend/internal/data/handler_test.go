@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -54,22 +53,12 @@ func (r *recorder) QueryRow(_ context.Context, sql string, args ...any) pgx.Row 
 
 func quiet() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
-// serve is the reader as a dealer sees it: the orders list needs a session, so
-// every test that is not about access signs in as an admin.
-func serve(db Querier) http.Handler { return serveAs(db, auth.Admin) }
-
-// serveAs mounts the reader with the given role already resolved; an empty role
-// is a visitor with no session.
-func serveAs(db Querier, role auth.Role) http.Handler {
+// serve is the reader as a visitor with no session sees it: every collection it
+// serves is public.
+func serve(db Querier) http.Handler {
 	mux := http.NewServeMux()
 	Register(mux, db, quiet())
-	if role == "" {
-		return mux
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		u := auth.User{ID: "u1", Email: "team@example.com", Role: role, Active: true}
-		mux.ServeHTTP(w, r.WithContext(auth.WithUser(r.Context(), u)))
-	})
+	return mux
 }
 
 func request(h http.Handler, target string) *httptest.ResponseRecorder {
@@ -248,43 +237,25 @@ func TestARecordIsTheBareObject(t *testing.T) {
 	}
 }
 
-// SC-17: the orders list is the team's. No session is 401, a customer 403, a
-// dealer 200 — and a refused caller never reaches the database. The shoes stay
-// public, and so does the record route that the checkout story replaces.
-func TestTheOrdersListIsForTheTeamOnly(t *testing.T) {
-	for _, c := range []struct {
-		role auth.Role
-		want int
-		code string
-	}{
-		{"", http.StatusUnauthorized, "unauthenticated"},
-		{auth.Customer, http.StatusForbidden, "forbidden"},
-		{auth.Staff, http.StatusOK, ""},
-		{auth.Admin, http.StatusOK, ""},
-	} {
-		rec := &recorder{row: fakeRow{total: 1, text: "[]"}}
-		res := request(serveAs(rec, c.role), "/v1/orders")
-		if res.Code != c.want {
-			t.Errorf("role %q: %d %s, want %d", c.role, res.Code, res.Body, c.want)
-		}
-		if c.want != http.StatusOK {
-			if !strings.Contains(res.Body.String(), `"error":"`+c.code+`"`) || strings.Contains(res.Body.String(), "items") {
-				t.Errorf("role %q: the refusal is %s", c.role, res.Body)
-			}
-			if len(rec.sqls) != 0 {
-				t.Errorf("role %q: a refused request reached the database", c.role)
-			}
+// Orders are no collection of this reader: neither the list nor a record of
+// them is a route here (internal/orders serves both, behind its own guards), and
+// the shoes stay public.
+func TestOrdersAreNotServedHereAndTheShoesStayPublic(t *testing.T) {
+	for _, target := range []string{"/v1/orders", "/v1/orders/doi-24817"} {
+		rec := &recorder{row: fakeRow{total: 1, text: "{}"}}
+		if res := request(serve(rec), target); res.Code != http.StatusNotFound || len(rec.sqls) != 0 {
+			t.Errorf("%s: %d, want 404 and no statement", target, res.Code)
 		}
 	}
-	for _, target := range []string{"/v1/products", "/v1/lines", "/v1/orders/doi-24817"} {
+	for _, target := range []string{"/v1/products", "/v1/lines", "/v1/products/samba"} {
 		rec := &recorder{row: fakeRow{total: 1, text: "{}"}}
-		if res := request(serveAs(rec, ""), target); res.Code != http.StatusOK {
+		if res := request(serve(rec), target); res.Code != http.StatusOK {
 			t.Errorf("%s with no session: %d, want 200", target, res.Code)
 		}
 	}
 }
 
-func TestOnlyTheTwentyReadRoutesExist(t *testing.T) {
+func TestOnlyTheEighteenReadRoutesExist(t *testing.T) {
 	h := serve(&recorder{})
 	for _, c := range []struct{ method, path string }{
 		{http.MethodPost, "/v1/products"}, {http.MethodDelete, "/v1/products/samba"}, {http.MethodPut, "/v1/lines/samba"},
