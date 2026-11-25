@@ -7,6 +7,16 @@ import FaqRows from "../components/FaqRows";
 import OutlinePill from "../components/OutlinePill";
 import Rule from "../components/Rule";
 
+/** The three oversized figures, from the shop's own terms. */
+function figuresOf(terms: ShopTerms | undefined, fig: Record<string, string>, free: string, values: Record<string, string>) {
+  const t = terms ?? ({} as Partial<ShopTerms>);
+  return [
+    { big: free, line: fill(fig.free ?? "", values) },
+    { big: t.standard_days ?? "", line: fill(fig.standard ?? "", values) },
+    { big: t.express_days ?? "", line: fill(fig.express ?? "", values) },
+  ];
+}
+
 /**
  * DELIVERY: the three things a buyer asks — what it costs, how long, how
  * fast it can be — set as oversized figures on a hairline, then the options
@@ -26,11 +36,8 @@ export default function Shipping() {
     cities: terms?.express_cities ?? "",
     cutoff: terms?.dispatch_cutoff ?? "",
   };
-  const figures = [
-    { big: free, line: fill(fig?.free ?? "", values) },
-    { big: terms?.standard_days ?? "", line: fill(fig?.standard ?? "", values) },
-    { big: terms?.express_days ?? "", line: fill(fig?.express ?? "", values) },
-  ];
+  const figures = figuresOf(terms, fig ?? {}, free, values);
+  const cutoffLine = fill(useContent("pages.shipping.cutoff"), values);
   return (
     <>
       <section className="grid gap-6 pb-10 pt-8 lg:grid-cols-12 lg:pt-10">
@@ -49,7 +56,7 @@ export default function Shipping() {
       <section className="grid gap-8 py-12 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <T k="pages.shipping.options_heading" as="h2" className="text-[length:var(--size-h2)] leading-[1.1] text-ink" />
-          <p className="mt-3 max-w-[34ch] text-sm leading-relaxed text-ink-soft">{fill(useContent("pages.shipping.cutoff"), values)}</p>
+          <p className="mt-3 max-w-[34ch] text-sm leading-relaxed text-ink-soft">{cutoffLine}</p>
         </div>
         <div className="overflow-x-auto lg:col-span-8">
           <table className="w-full min-w-[32rem] text-sm">
