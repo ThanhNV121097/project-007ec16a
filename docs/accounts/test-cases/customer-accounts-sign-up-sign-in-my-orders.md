@@ -26,6 +26,7 @@ Case ids are `SC-<n>.<k>`: the story criterion it serves and a running number. A
 - **R — reset the counters.** `DELETE FROM rate_limits` with `set_db_state`. Sign-up is limited to 10 attempts an hour per address and sign-in to 5 failures per 15 minutes, and every case of this file makes calls from the same address, so a case that depends on a counter starts with R and a case that does not depend on one must not be starved by an earlier one: run R before every case that signs up, signs in wrongly or looks an order up wrongly.
 - **Clean accounts.** Before a case that signs up Lan, Bao or Minh, delete their `users` rows (and so their sessions) with `set_db_state` unless the case says they already exist. Orders made for a case are deleted after it (`order_items` and `order_tokens` first).
 - **Placing an order.** `POST /v1/orders` with a fresh `Idempotency-Key` (a new UUID) and the body of `services.md` §3.10: one line of the Shoe in its Size, `"delivery":"standard"`, `"payment":"vnpay"`, `customer`, `phone`, `address`, `city`. If the run has no VNPay keys the shop answers 503 `payment_unavailable` and no order can be placed through the API: the order is then inserted with `set_db_state` (an `orders` row with its `order_items`, an `order_tokens` row holding the SHA-256 of a token the case knows, `account_id` as the case says) and the case notes that. The cases that are about *placing* an order (SC-11, SC-12, SC-37, SC-38) then report UNVERIFIED for the part that needs the real call and say so.
+- **Run precondition — VNPay keys.** The VNPay merchant settings (the merchant's terminal code and hash secret — environment settings the owner supplies, never returned by an API) must be set in the run before verification starts. These cases are only fully verified by really placing an order — SC-11 (an order placed while signed in is linked), SC-12 (a guest order and an order placed after the session ended), SC-37.4 (placing with different details leaves the saved details alone) and SC-38.1 and SC-38.2 (a guest buys; the session ended before "Place order") — and without the keys `POST /v1/orders` answers 503 `payment_unavailable`. With the keys set, those cases use the real call and the insert fallback above is not used. Without them, the part of each case that places the order is UNVERIFIED (the instrument it lacked: the VNPay keys that let `POST /v1/orders` answer 201), and only the account-side half is observed on an inserted order. The verifying role cannot set the keys itself; whoever runs the project does.
 - **Twelve orders.** For a case that needs many orders, place or insert them and then give each a distinct `placed_at`, one minute apart, with `set_db_state`, so "newest first" is unambiguous.
 - **Backend stopped.** The story's backend is stopped, so the gateway answers 502 to every `/api` call: the browser sees a server error where there is no JSON. It is started again after the case.
 - **Slow answer.** A named endpoint's answer is delayed by the stated number of seconds (the page's request is held, for example with `interact_page`'s request interception where it offers one). Where the instrument offers no way to hold one request, the case reports UNVERIFIED and names that instrument; it is never reported as passed from reading code.
@@ -95,8 +96,8 @@ Check: fetch_url
 
 **Scenario**: SC-2.4 — Two sign-ups with one email at the same moment make one account
 **Given**: R done. No account for `race@example.com`.
-**When**: Two `POST /v1/account/sign-up` calls with that email (names `Race One` and `Race Two`), issued in the same round so they overlap. Then, with `set_db_state`, a direct `INSERT` of a second `users` row whose email is `RACE@example.com`.
-**Then**: One call answers 201 and the other 409 `conflict`; exactly one row exists for the email. The direct insert is refused by the database with a unique violation (SQLSTATE 23505), proving the uniqueness is the table's and not only the handler's.
+**When**: Two `POST /v1/account/sign-up` calls with that email (names `Race One` and `Race Two`), issued in the same round so they overlap. Then, with `set_db_state`, two direct `INSERT`s into `users`, each in its own statement and each copying every other column from the existing `race@example.com` row with a fresh `id` (`INSERT INTO users (id, email, name, phone, password_hash, role) SELECT gen_random_uuid(), <email>, name, phone, password_hash, role FROM users WHERE email = 'race@example.com'`): (a) with email `race@example.com` (the stored, lower-case form); (b) with email `RACE@example.com`.
+**Then**: One call answers 201 and the other 409 `conflict`; exactly one row exists for the email. Insert (a) is refused by the database with a unique violation, SQLSTATE `23505`, constraint `uq_users_email` — the uniqueness is the table's and not only the handler's. Insert (b) is refused with a check violation, SQLSTATE `23514`, constraint `ck_users_email_lowercase` — an upper-case email cannot be stored at all, which is what makes the uniqueness case-insensitive (`erd.md` §3.18). After both inserts `SELECT count(*) FROM users WHERE lower(email) = 'race@example.com'` is still 1.
 Traces: SC-2 (ACC-001 Failure table "Conflict")
 Check: fetch_url
 
@@ -185,7 +186,7 @@ Traces: SC-4 (last sentence)
 Check: fetch_url
 
 **Scenario**: SC-4.5 — A forged left-most `X-Forwarded-For` does not get round the sign-up limit
-**Given**: R done.
+**Given**: R done. Every call goes through the edge proxy — the URL `run_project` gives, with the `/api` prefix (`<run URL>/api/v1/account/sign-up`) — and not straight to the Go service's own port. The edge appends the real client address to the right of whatever `X-Forwarded-For` the caller sent, so only through it is the right-most entry the real address (called straight at the Go port, the right-most entry is the forged one and the case would count eleven different addresses). If only the Go port is reachable in the run, this case is UNVERIFIED and says so; it is never passed from the code.
 **When**: Eleven sign-up attempts with new valid emails, each carrying a different `X-Forwarded-For` header (`10.0.0.1`, `10.0.0.2`, … `10.0.0.11`).
 **Then**: The first ten answer 201 and the eleventh answers 429 `rate_limited` — the address counted is the right-most entry the edge appended, not the one the caller wrote.
 Traces: SC-4 ("The address is the right-most `X-Forwarded-For` entry"); contract (§2.2 Client address)
@@ -394,7 +395,7 @@ Check: fetch_url
 **When**: `POST /v1/orders` with Lan's cookie and typed details `customer` `Gift Receiver`, `phone` `0900 000 111`, `address` `99 Other Road`, `city` `Hue`; then `GET /v1/account`; then `GET /v1/orders/<id>` with the Admin's cookie.
 **Then**: 201 with the order and a token. `GET /v1/account` is unchanged (name `Lan Nguyen`, phone `0912 345 678`, the saved address and city). The dealer view of the order shows `customer` `Gift Receiver`, `phone` `0900 000 111`, `address` `99 Other Road`, `city` `Hue`.
 Traces: SC-11 (ACC-005 AC-2, items 2, 5)
-Check: fetch_url (if the run has no VNPay keys the order is inserted with `account_id` = Lan's id and this case reports UNVERIFIED for the call itself)
+Check: fetch_url (the VNPay keys are a precondition of the run, §0.2; if they are missing the order is inserted with `account_id` = Lan's id and this case reports UNVERIFIED for the call itself, naming the missing keys)
 
 **Scenario**: SC-11.2 — The new order is in the owner's list at once and on a second session, and not in another customer's
 **Given**: The order of SC-11.1 was just placed. Lan signs in a second time (a second cookie). Bao is signed in.
@@ -408,7 +409,7 @@ Check: fetch_url
 **When**: `POST /v1/orders` once with Minh's cookie and once with the Admin's; then read `orders.account_id` of both with `set_db_state`; then `GET /v1/account/orders` as Lan.
 **Then**: Both answer 201; both rows have `account_id` NULL; neither appears in Lan's list.
 Traces: SC-11 (ACC-005 AC-7, item 5)
-Check: fetch_url (UNVERIFIED for the call itself if no VNPay keys are set; the rule is then read from the Go tests)
+Check: fetch_url (the VNPay keys are a precondition of the run, §0.2; if they are missing the call itself is UNVERIFIED, naming the missing keys, and is not passed from the Go tests)
 
 **Scenario**: SC-12.1 — An order placed with no session is a guest order that can still be tracked
 **Given**: No cookie.
@@ -627,11 +628,11 @@ Traces: SC-19 (ACC-001 AC-7, AC-8)
 Check: interact_page
 
 **Scenario**: SC-19.3 — Each error sentence has an alert icon, the danger colour and an alert role
-**Given**: The state of SC-19.1.
-**When**: The `[role=alert]` elements are inspected and their computed colour read, with `--danger` read from `:root`.
-**Then**: There are four `[role=alert]` elements (one per sentence), each with an icon element in front of the sentence, and each sentence's text colour equals the `--danger` token.
+**Given**: `/account/sign-up` loaded in a browser operated with `interact_page` (the state needs a pressed button, so a bare page measurement cannot reach it); every field empty.
+**When**: "Create account" is pressed; then, through `interact_page`'s inspection of the page, the `[role=alert]` elements and their computed `color` are read, together with the computed value of `--danger` on `:root`.
+**Then**: There are four `[role=alert]` elements (one per sentence), each with an icon element (an `svg` or an element with `aria-hidden="true"` that draws it) in front of the sentence, and each sentence's computed text colour equals the `--danger` token.
 Traces: SC-19 (last sentence); SC-39 (errors announced)
-Check: measure_styles
+Check: interact_page
 
 **Scenario**: SC-20.1 — A valid sign-up goes to `/account`, the header shows the name and the session survives a reload
 **Given**: R done. No account for `lan@example.com`. `/account/sign-up` loaded.
@@ -937,14 +938,14 @@ Check: interact_page
 **When**: `/` is loaded; the computed style and bounding box of the entry, the search button and the bag button are read.
 **Then**: The entry's `text-overflow` is `ellipsis` and `overflow` is `hidden` (its text is wider than its box); the search and bag buttons' right edges are at most 1280px and on the same row as the entry; the page has no horizontal scroll.
 Traces: SC-35 ("A name of 100 characters is cut so the search and bag buttons stay on the bar")
-Check: measure_styles
+Check: interact_page (the customer is signed in through the page's own form, and the computed styles and bounding boxes are read through `interact_page`'s inspection of the page, because the state needs a session that a bare page measurement does not hold)
 
 **Scenario**: SC-35.4 — On its own address the entry is underlined and marked as the current page
-**Given**: A signed-out visitor, then Lan signed in; 1280px.
-**When**: `/account/sign-in` is loaded signed out; `/account` is loaded as Lan; the entry's attributes and `text-decoration` are read.
-**Then**: Signed out on `/account/sign-in`, the entry has `aria-current="page"` and an underline; signed in as Lan on `/account`, the entry has `aria-current="page"` and an underline. On `/shop` neither has `aria-current`.
+**Given**: A browser operated with `interact_page`: first signed out, then signed in as Lan through the page's own sign-in form (the second half needs a session, which a bare page measurement does not hold); 1280px.
+**When**: `/account/sign-in` is loaded signed out; then Lan signs in, which lands on `/account`; then `/shop` is loaded as Lan. On each page the header entry's `aria-current` attribute and its computed `text-decoration-line` are read through `interact_page`'s inspection of the page. The signed-out `/shop` page is read too.
+**Then**: Signed out on `/account/sign-in`, the entry has `aria-current="page"` and a computed `text-decoration-line` of `underline`; signed in as Lan on `/account`, the entry has `aria-current="page"` and `underline`. On `/shop` — signed out and signed in — the entry has no `aria-current` attribute.
 Traces: SC-35 (last but one sentence)
-Check: interact_page (attributes); measure_styles (`text-decoration-line` of the entry)
+Check: interact_page
 
 **Scenario**: SC-35.5 — At 390px the bar is unchanged and the open menu lists the five links, the entry, then the help links
 **Given**: A 390×844 window. Run three times: signed out, signed in as Lan, signed in as Minh.
@@ -1053,11 +1054,11 @@ Traces: SC-39 (Accessibility NFR; ACC-001 and ACC-002 "forms work with Enter and
 Check: interact_page
 
 **Scenario**: SC-39.4 — The pages' buttons are at least 44px high
-**Given**: `/account/sign-up`, `/account/sign-in` and `/account` (with twelve orders so `Show more` is drawn, and with the orders failing so `Try again` is drawn in a second run) at 390px.
-**When**: The computed height of `Create account`, `Sign in`, `Save details`, `Add order`, `Show more`, `Try again` and `Sign out` is read.
-**Then**: Each is at least 44px high.
+**Given**: A 390×844 window, operated with `interact_page` because four of the buttons exist only for a signed-in customer in a particular state. Three runs. Run 1: `/account/sign-up` and `/account/sign-in` loaded signed out (no state needed). Run 2: Lan signed in through the page's own form, with twelve linked orders (see Twelve orders) so `Show more` is drawn; `/account` loaded. Run 3: Lan signed in, `orders` renamed to `orders_x` with `set_db_state` before `/account` is loaded (the orders call then answers 500, as in SC-29.2) so `Try again` is drawn; the table is renamed back afterwards.
+**When**: In each run the rendered height of every button on the page is read through `interact_page`'s inspection of the page (the element's computed `height` or bounding-box height): run 1 — `main form button[type=submit]` on each page (`Create account`, then `Sign in`); run 2 — `Save details`, `Add order`, `Show more` and `Sign out`; run 3 — `Try again`.
+**Then**: Each of the seven buttons (`Create account`, `Sign in`, `Save details`, `Add order`, `Show more`, `Try again`, `Sign out`) is at least 44px high.
 Traces: SC-39 ("the page's buttons are at least 44px high")
-Check: measure_styles
+Check: interact_page
 
 **Scenario**: SC-40.1 — A customer on `/admin` sees only the team-only message
 **Given**: Lan has just signed up (customer session).
@@ -1126,11 +1127,13 @@ Every role the SRS names is covered, allowed and denied: visitor (SC-6.2, SC-7.7
 
 **Cases that depend on an arrangement the verifying role may not have, and are then reported UNVERIFIED naming the missing instrument, never passed from reading code:**
 - A slow answer (SC-21.1, SC-24.2, SC-27.2, SC-28.2, SC-29.1, SC-30.2, SC-33.4, SC-36.2, SC-37.3) needs `interact_page` to hold one request for a stated time; SC-31.2 needs it to replace one answer.
-- Placing a real order (SC-11, SC-12, SC-37.4, SC-38) needs the VNPay keys to be set in the run, because `POST /v1/orders` answers 503 `payment_unavailable` without them (`services.md` §3.10). The account-side half of each case is checked with an order inserted by `set_db_state`.
+- Placing a real order (SC-11, SC-12, SC-37.4, SC-38.1, SC-38.2) needs the VNPay keys to be set in the run, because `POST /v1/orders` answers 503 `payment_unavailable` without them (`services.md` §3.10). **The keys are a precondition of the run (§0.2) and should be set before verification starts**: with them, every one of these cases is observed in full; without them the placing step of each is UNVERIFIED and only the account-side half, checked with an order inserted by `set_db_state`, is observed.
 - SC-17.4 needs `fetch_url` to report response times.
+- SC-4.5 needs `fetch_url` to go through the edge proxy (the `run_project` URL), which appends the real client address to `X-Forwarded-For`; called straight at the Go port it would count eleven different addresses. If only the Go port is reachable it is UNVERIFIED.
+- SC-19.3, SC-35.3, SC-35.4 and SC-39.4 read computed styles and sizes through `interact_page`'s inspection of the page, because each needs a pressed button, a signed-in session or arranged data that `measure_styles` (a bare page load) does not hold. If the inspection returns no value for a property, that property is UNVERIFIED and names the property.
 
 **Findings against the documents (nothing was resolved silently):**
-1. **Where an error sentence sits.** The SRS says "beside the field"; the story (UI scope, decision 1) puts it under the field in the design system's alert style. These cases follow the story ("under").
+1. **Where an error sentence sits.** The SRS says "beside the field"; the story (UI scope, decision 1) puts it under the field in the design system's alert style. These cases follow the story ("under"). This is a finding against the SRS, not a case: ACC-001 item 2 and ACC-004 item 3 should say "under the field" (PM to align).
 2. **A team session on `/account`.** The SRS says only that the account endpoints answer 403 to a team session; the story's decision 3 sends the page to `/admin`. SC-28.3 follows the story. The SRS should say so.
 3. **An unreachable database.** `services.md` §2.3 makes "a database that cannot be reached" a 500 `internal`, while the verification guidance reserves 503 for a refused dependency. No case arranges an unreachable database; C-2 arranges a failed query (a table that is gone), which is 500 under both readings.
 4. **`limit` above 100 on `GET /v1/account/orders`.** `services.md` §3.20 lists an invalid `limit` as 400, while §2.4 serves a `limit` above 100 as 100. SC-8.3 follows §2.4 (200, `"limit":100`) and 400 only for `0`, negative and non-numeric values.

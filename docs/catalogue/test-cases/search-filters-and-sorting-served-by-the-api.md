@@ -49,7 +49,7 @@ Written before the implementation exists, from the requirements, the story and t
 
 ## 4. Open points found while writing (reported, not resolved here)
 
-1. **A shoe with no rating, ascending.** CAT-001 item 5 and `services.md` §2.4 say a record with no value for the sorted field comes last either way, but `products.rating` is `NOT NULL DEFAULT 0` (`erd.md` §3.4), so "no rating" is stored as 0 and `sort=rating` would put it first. SC-7 therefore tests "no rating last" on `-rating` for shoes (where it holds) and tests the "last either way" rule on a column that really is nullable (`lines.since`). TL/PM should say what `sort=rating` ascending must do for an unrated shoe; no case pins it.
+1. **A shoe with no rating, ascending — a gap between the SRS and the ERD, routed to PM and TL; not a missing case.** CAT-001 item 5 and `services.md` §2.4 say a record with no value for the sorted field comes last either way, but `products.rating` is `NOT NULL DEFAULT 0` (`erd.md` §3.4; `services.md` §2.3: "0 when none"), so an unrated shoe is stored as 0 and sorts **first** on `sort=rating` (ascending) while the SRS says it comes last. Both documents cannot hold for ascending rating. **Who decides:** PM, whether CAT-001 item 5 covers a stored 0 that means "none" (SRS wording), and TL, how the sort treats it (treat `rating = 0` with `review_count = 0` as no value, or make the column nullable, `erd.md` §3.4). **What the cases do meanwhile:** SC-7c pins the unrated shoe last on `-rating` (CAT-001 AC-18, true under either reading) and pins the "last either way" rule on `lines.since`, a column that really is nullable. No case asserts where an unrated shoe lands on ascending `sort=rating`, because whichever reading is chosen one approved document is amended and a case written today would encode a guess. **When it is decided,** one case is added to SC-7: an unrated shoe (FX-NORATING) is the last item of `GET /v1/products?sort=rating&limit=100` if the SRS stands, or the first if the ERD's reading is accepted and the SRS item is reworded.
 2. **Database unreachable: 500 or 503.** The SRS ("Upstream failure … 500 with a generic error body"), the story (SC-17) and `services.md` §2.3/§3.2 all say a list answers **500 `internal`** when the database cannot be reached; 503 `unavailable` is reserved for shutdown and `/healthz`. The cases follow the approved documents (500). If the backend is reviewed to answer 503 for a refused connection, the documents and these two cases change together.
 3. **`q=samba%20og` or `q=samba+og`.** CAT-003 AC-10 writes the address as `q=samba%20og`; the shop's address helper writes spaces as `+`. Both decode to the same value. The case reads the decoded `q` and accepts either spelling of the space.
 4. **The union of price bands** is TL's decision (story §10.1). No case names a request parameter for it; the shop cases observe the cards and the count, and the API cases use `price_from` / `price_to` only.
@@ -372,6 +372,9 @@ Check: fetch_url
 **Given**: The seed plus FX-10K (10,000 live shoes), the backend running with its normal database.
 **When**: 200 sequential `GET /v1/products?q=samba%20og&category=women&sort=-price` requests (one at a time, each after the previous answer), each timed from request to full response.
 **Then**: Every answer is 200 with `total` equal to the same number and 12 items. The 95th percentile of the 200 durations (the 190th value of the sorted durations) is 500 ms or less. FX-10K is deleted afterwards.
+**What is read if the instrument cannot issue and time 200 sequential requests in one run** (each `fetch_url` call is one request, so a loop of 200 may be out of reach). The case is then read from these, in this order, and the report names which one it used:
+1. **The backend's own test run** — `run_tests` on the backend. The story's backend carries a Go test that inserts FX-10K into `TEST_DATABASE_URL`, issues the same 200 sequential requests against the list handler, asserts every answer is 200 with 12 items and the same `total`, and asserts the 190th sorted duration is 500 ms or less. The case passes when that test's output shows it ran and passed; it fails when the test fails or does not exist; a run in which the test is skipped (no database in the run) is not a pass and is reported UNVERIFIED with that reason.
+2. **A spot check with `fetch_url`** against the running API with FX-10K inserted: 20 sequential requests of the same URL, each timed. If more than one of the 20 takes over 500 ms (the 19th sorted value is over 500 ms), the case fails. If all but at most one are within 500 ms, the figures are reported as evidence but the case is UNVERIFIED, because 20 requests are not the 200 the requirement names.
 Traces: SC-19 (CAT-001 Performance, SRS §6)
 Check: fetch_url
 
@@ -408,11 +411,11 @@ Traces: SC-21 (CAT-002 Boundary)
 Check: interact_page
 
 **Scenario**: SC-22 — the shop asks for twelve live shoes at a time and for the lines once
-**Given**: The seed plus FX-LIVE30; a browser whose network requests during the page's life are listed.
-**When**: Open `/shop`, wait for the cards, press "Show more" once, then list the requests made.
-**Then**: Every request to `/api/v1/products` carries `limit=12` and `status=live` (the second carries `page=2`); no request has a `limit` over 100 (none over 12); the requests whose path starts `/api/v1/lines` number at most one in all (not one per card). The page shows 24 cards, which also shows no request asked for more than twelve at a time.
+**Given**: The seed plus FX-LIVE30; the page is operated in a browser session whose request log (every request the page makes, with its URL) can be read back.
+**When**: Open `/shop` and wait for the cards; read the request log; press "Show more" once and wait for the new cards; read the request log again.
+**Then**: After the first read: the log holds at least one request to `/api/v1/products`, every one of them carries `limit=12` and `status=live` and none carries `page=2` yet, and 12 cards are drawn. After the press: the log holds a request to `/api/v1/products` that carries `page=2`, `limit=12` and `status=live`, and 24 cards are drawn (24 distinct `href`s). Over the whole log: no request to `/api/v1/products` has a `limit` over 12 (so none over 100) and none lacks `status=live`; the requests whose path starts `/api/v1/lines` number at most one in all (not one per card, not one per page); no request asks for the shoes with `limit=100` or more to filter them in the browser.
 Traces: SC-22 (CAT-002 AC-5)
-Check: render_url
+Check: interact_page
 
 **Scenario**: SC-23a — a draft shoe is not listed and not counted
 **Given**: The seed plus FX-DRAFT (a draft shoe named "Samba OG Draft Tc").
@@ -544,10 +547,10 @@ Check: interact_page
 
 **Scenario**: SC-34b — `size` on the shop is never read as a page size
 **Given**: The seed plus FX-LIVE30; 23 shoes have size 38 available.
-**When**: Open `/shop?size=38`; read the cards and the count; list the requests to `/api/v1/products`.
-**Then**: 12 cards (not 23), the count reads `23 matching`, a "Show more" button is present, and every shoe request carries `limit=12` (never `limit=38`).
+**When**: Open `/shop?size=38` in a browser session whose request log can be read back; read the cards and the count; read the request log for `/api/v1/products`.
+**Then**: 12 cards (not 23), the count reads `23 matching`, a "Show more" button is present, and every request to `/api/v1/products` in the log carries `limit=12` (never `limit=38`) and `size=38` as a filter.
 Traces: SC-34 (CAT-003 AC-4; story §10.2)
-Check: render_url
+Check: interact_page
 
 **Scenario**: SC-35a — women's Samba in 38 under 3.000.000 ₫ is exactly one pair
 **Given**: The seed.
@@ -679,4 +682,13 @@ Check: interact_page
 | SC-40 | SC-40a, SC-40b, SC-40c |
 | Contract only (not a story criterion) | SC-15e (private fields), SC-15f (undefined list parameters ignored), SC-18c (`product-filters` 500) |
 
-Every case uses an instrument: `fetch_url` for the endpoint cases, `render_url`, `interact_page` and `measure_styles` for the page. None is `manual`. The two places where the instrument may fall short are named in their own `Given`: holding a response for 3 seconds (SC-32, SC-40a) and switching the browser offline (SC-40c); each has an arrangement that still exercises the criterion, and the part that needs the missing instrument is reported UNVERIFIED rather than failed.
+Every case uses an instrument: `fetch_url` for the endpoint cases, `render_url`, `interact_page` and `measure_styles` for the page. None is `manual`. A case that presses something or reads the browser's request log is `interact_page`, not `render_url`: that is SC-22 and SC-34b, and the cases that tick, type or choose. The places where the instrument may fall short are named in their own `Given` or `Then`: timing 200 sequential requests (SC-19, which names the backend test run and a 20-request spot check as what is read instead), holding a response for 3 seconds (SC-32, SC-40a) and switching the browser offline (SC-40c); each has an arrangement that still exercises the criterion, and the part that needs the missing instrument is reported UNVERIFIED rather than failed.
+
+## 10. Revision 1
+
+Changed after the test-case review, and nothing else:
+
+- **SC-22** now `Check: interact_page` (it presses "Show more" and reads the request log for `page=2`); its `Then` is written against that log.
+- **SC-34b** moved from `render_url` to `interact_page` for the same reason: it reads the request log.
+- **SC-19** names what is read when 200 timed sequential requests cannot be issued in one run (§6).
+- **Open point 1** (§4) is written as the gap it is — SRS CAT-001 item 5 against `erd.md` §3.4 — with who decides and the case to add once decided.
