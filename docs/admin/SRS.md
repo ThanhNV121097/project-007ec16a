@@ -114,7 +114,9 @@ Behaviour:
 5. A value placed in the browser's local storage by hand (for example under the old key `agentteam:session`) does not make a visitor signed in and does not open any page; the dealer's endpoints still answer 401.
 6. Signing out — the sign-out button at the foot of the left menu, from any admin page — ends the session at the shop and goes to `/admin/sign-in`. After it, the same cookie no longer opens anything, and Back does not show data.
 7. The left menu's foot shows the dealer's initial, name and role as drawn in the design.
-8. `useSession`, `signIn`, `signOut` and `useRole` keep their names, so no other page changes.
+8. `useSession`, `signIn`, `signOut` and `useRole` keep their names, so no other page changes. `useRole` returns "admin", "staff" or "customer", or nothing when nobody is signed in.
+9. The gate lets an admin session and a staff session into every `/admin` page. A signed-in customer who reaches any `/admin` page except sign-in sees the plain message "This area is for the shop's team" with a "Back to the shop" link to `/`, and none of the area's pages or data; every dealer endpoint answers that session 403.
+10. There is one users table with a role of admin, staff or customer. A staff row can sign in and is let into `/admin`; a customer row can sign in and is not (item 9).
 
 **Acceptance criteria**
 
