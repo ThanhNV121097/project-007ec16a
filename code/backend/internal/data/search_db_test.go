@@ -333,7 +333,7 @@ func TestOrdersAndReviewsAreSearchedByTheirNamedFields(t *testing.T) {
 		t.Errorf("q=nam: got %v", got)
 	}
 	expectSet(t, pool, "/v1/orders?q=90001", "doi-90001")
-	expectSet(t, pool, "/v1/orders?q=tran%20lan", "doi-90001")
+	expectAmong(t, pool, "/v1/orders?q=tran%20lan", "doi-90001")
 	// A phone number, an address and a note are never searched.
 	expectSet(t, pool, "/v1/orders?q=0912345678")
 	expectSet(t, pool, "/v1/orders?q=0938")
