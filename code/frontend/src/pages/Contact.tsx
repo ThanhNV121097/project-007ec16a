@@ -3,6 +3,7 @@ import { T, useContent, useList } from "../editable";
 import { usePageMeta } from "../seo";
 import { useRecord } from "../data";
 import { fill, type ShopTerms } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import ContactForm from "../components/ContactForm";
 import Icon from "../components/Icon";
 import SpecList from "../components/SpecList";
@@ -58,10 +59,10 @@ export default function Contact() {
             ))}
           </ul>
         </div>
-        <div className="lg:col-span-6 lg:col-start-7">
+        <Bleed side="right" ground className="py-8 lg:col-span-6 lg:col-start-7">
           <T k="pages.contact.form_heading" as="h2" className="mb-6 text-lg text-ink" />
           <ContactForm />
-        </div>
+        </Bleed>
       </section>
     </>
   );
