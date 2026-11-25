@@ -624,6 +624,7 @@ Behaviour:
 | AC-16 | A new order is placed | The overview is read again | This month's sales and order count include it |
 | AC-17 | An order is cancelled | The overview is read again | It is no longer in any figure |
 | AC-18 | 10,000 orders | The overview is read | The answer is one request's worth of figures, not the orders themselves: it holds no order other than the five latest and no customer phone, email, address or note |
+| AC-19 | The seeded orders, or any other set of orders | The figures are read | This month's sales, each day of the series and each line's pairs equal the sums over the stored, non-cancelled orders' totals and pairs. The figures quoted in AC-1 to AC-4 hold for the sample orders after the "Free delivery on every order" story; a test may assert the sums instead |
 
 **Failure, boundary and permission behaviour**
 
