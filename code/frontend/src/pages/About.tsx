@@ -3,6 +3,7 @@ import { usePageMeta } from "../seo";
 import { useCollection, useRecord } from "../data";
 import { Picture } from "../picture";
 import { fill, type Line, type Product, type ShopTerms } from "../lib/shop";
+import Bleed from "../components/Bleed";
 import OutlinePill from "../components/OutlinePill";
 import Rule from "../components/Rule";
 
@@ -30,9 +31,9 @@ export default function About() {
       </section>
       <Rule />
       <section className="grid gap-10 py-16 lg:grid-cols-12 lg:items-end lg:gap-8">
-        <div className="aspect-[4/3] overflow-hidden bg-surface lg:col-span-7">
+        <Bleed side="left" className="aspect-[4/3] overflow-hidden bg-surface lg:col-span-7">
           <Picture src="/images/about-stockroom.jpg" alt={useContent("pages.about.first_alt")} width={1280} height={714} motion="parallax" className="h-full w-full object-cover" />
-        </div>
+        </Bleed>
         <T k="pages.about.first" as="p" className="max-w-[40ch] text-sm leading-relaxed text-ink-soft lg:col-span-4 lg:col-start-9" />
       </section>
       <section className="grid gap-10 pb-16 lg:grid-cols-12 lg:items-end lg:gap-8">
