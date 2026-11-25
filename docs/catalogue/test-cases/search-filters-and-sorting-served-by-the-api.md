@@ -334,7 +334,7 @@ Check: fetch_url
 **Scenario**: SC-17 — the database cannot be reached: 500 with a generic body
 **Given**: The backend running; `set_db_available` takes the database away so it refuses connections.
 **When**: `GET /v1/products?q=samba&category=women&sort=price`.
-**Then**: 500; body `{"error":"internal","message":<non-empty sentence>}` with no `errors` key and no `items`; the body text contains none of: `SELECT`, `FROM`, `pgx`, `postgres`, `connection refused`, `doi_fold`, `products`, `goroutine`, `.go:`. After `set_db_available` puts the database back, the same request answers 200.
+**Then**: 500; body `{"error":"internal","message":<non-empty sentence>}` with no `errors` key and no `items`; the body text contains none of: `SELECT`, `FROM`, `pgx`, `postgres`, `connection refused`, `doi_fold`, `products`, `goroutine`, a Go source file name. After `set_db_available` puts the database back, the same request answers 200.
 Traces: SC-17 (CAT-001 Upstream failure; contract §2.3 `internal`)
 Check: fetch_url
 
