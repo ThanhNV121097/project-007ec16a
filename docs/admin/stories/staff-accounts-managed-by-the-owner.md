@@ -140,7 +140,7 @@ Forty-one criteria; the SRS gives this item 26 of its own (14 in ADMIN-030, 12 i
 
 - **SC-31 [ADMIN-031 AC-12, item 4]:** "Remove" asks "Remove <name>?" with "Cancel" and "Remove". "Cancel" (or Escape) closes it, sends no request and the row stays.
 - **SC-32 [ADMIN-031 AC-6, item 4]:** Confirming "Remove" sends `DELETE` and gets 204; the row is gone; the staff member's next request answers 401; the same email can then be added again (201, a new id, no earlier session valid).
-- **SC-33 [ADMIN-031 item 4]:** Removing a staff member changes no order, shoe, line, category or review: the counts of those collections before and after are equal, and rows they last touched are still there.
+- **SC-33 [ADMIN-031 item 4]:** Removing a staff member changes no order, shoe, line, category or review: the counts of those collections before and after are equal, and a picture row the removed account uploaded, if the uploads table exists by then, is kept with its uploader link cleared.
 
 ### 6.8 Never lock the owner out
 
