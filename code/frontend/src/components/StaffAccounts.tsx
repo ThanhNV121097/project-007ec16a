@@ -33,13 +33,6 @@ function useWords() {
  * of what can be done to them. Three views and no more: waiting for the
  * answer, the answer, and the answer that did not come.
  *
-<<<<<<< refs/heads/feature/staff-accounts-managed-by-the-owner-ui
- * Everything it draws arrives as props — the accounts, whether they have
- * arrived, and what to do when one is chosen — so the page owns the data.
- */
-export default function StaffAccounts({ items, status, onRetry, onChoose }: {
-  items: readonly StaffAccount[];
-=======
  * Everything it draws arrives as props — the accounts, how many the shop says
  * there are, whether they have arrived, and what to do when one is chosen — so
  * the page owns the data.
@@ -47,7 +40,6 @@ export default function StaffAccounts({ items, status, onRetry, onChoose }: {
 export default function StaffAccounts({ items, total, status, onRetry, onChoose }: {
   items: readonly StaffAccount[];
   total: number;
->>>>>>> refs/heads/main
   status: StaffStatus;
   onRetry: () => void;
   onChoose: (choice: StaffChoice, account: StaffAccount) => void;
@@ -82,11 +74,7 @@ export default function StaffAccounts({ items, total, status, onRetry, onChoose 
       columns={columns}
       rows={items}
       rowKey={(r) => r.id}
-<<<<<<< refs/heads/feature/staff-accounts-managed-by-the-owner-ui
-      total={items.length}
-=======
       total={total}
->>>>>>> refs/heads/main
       page={1}
       pages={1}
       size={100}
