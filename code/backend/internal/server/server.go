@@ -35,7 +35,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	orders.Register(mux, pool, log, orders.Options{})
 	mux.HandleFunc("/", notFound)
 
-	var h http.Handler = mux
+	var h http.Handler = httpx.CleanPaths(mux)
 	h = httpx.CORS(cfg.CORSAllowedOrigins)(h)
 	h = httpx.AccessLog(log)(h)
 	h = httpx.Recover(log)(h)
