@@ -16,6 +16,8 @@ import Rule from "../components/Rule";
 const FIELD = "w-full appearance-none rounded-sm border border-field bg-ground px-3 py-3 text-base text-ink outline-none placeholder:text-ink-soft focus:border-ink sm:text-sm";
 const LABEL = "mb-1.5 block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-ink-soft";
 
+const STEPS = ["pages.checkout.step_contact", "pages.checkout.step_delivery", "pages.checkout.step_payment"] as const;
+
 function Step({ n, k }: { n: number; k: string }) {
   return (
     <legend className="mb-5 flex items-baseline gap-3 text-lg text-ink">
@@ -92,7 +94,12 @@ export default function Checkout() {
     <>
       <section className="flex flex-col gap-3 pb-8 pt-8 sm:flex-row sm:items-end sm:justify-between lg:pt-10">
         <T k="pages.checkout.heading" as="h1" className="text-[length:var(--size-h1)] leading-[1.02] text-ink" />
-        <p className="flex items-center gap-2 pb-2 text-xs text-ink-soft"><Icon name="secure" size={16} className="shrink-0 text-ink" /><T k="pages.checkout.secure" /></p>
+        <ol className="hidden items-center gap-6 pb-3 text-sm text-ink-soft lg:flex">
+          {STEPS.map((k, i) => (
+            <li key={k} className="flex items-baseline gap-2"><span className="tabular-nums">{String(i + 1).padStart(2, "0")}</span><T k={k} className="text-ink" /></li>
+          ))}
+        </ol>
+        <p className="flex items-center gap-2 pb-3 text-sm text-ink-soft"><Icon name="secure" size={16} className="shrink-0 text-ink" /><T k="pages.checkout.secure" /></p>
       </section>
       <Rule />
       <form onSubmit={place} noValidate className="grid gap-12 py-10 lg:grid-cols-12 lg:gap-8">
@@ -126,7 +133,7 @@ export default function Checkout() {
                     <Icon name={d.id === "express" ? "fast" : "shipping"} size={18} className="mt-0.5 shrink-0 text-ink" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm text-ink">{d.name} · {d.days}</span>
-                      <span className="mt-1 block text-xs leading-relaxed text-ink-soft">{d.note}</span>
+                      <span className="mt-1 block text-sm leading-relaxed text-ink-soft">{d.note}</span>
                     </span>
                     <span className="shrink-0 text-sm tabular-nums text-ink">{f === 0 ? words.free : formatPrice(f)}</span>
                   </label>
@@ -147,7 +154,7 @@ export default function Checkout() {
                     <Icon name={(m.icon ?? "card") as IconName} size={18} className="mt-0.5 shrink-0 text-ink" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm text-ink">{m.name}</span>
-                      <span className="mt-1 block text-xs leading-relaxed text-ink-soft">{m.note}</span>
+                      <span className="mt-1 block text-sm leading-relaxed text-ink-soft">{m.note}</span>
                     </span>
                   </label>
                 );
@@ -160,12 +167,12 @@ export default function Checkout() {
           <T k="pages.checkout.summary" as="h2" className="text-lg text-ink" />
           <ul className="mt-5 border-t border-line">
             {lines.map((l) => (
-              <li key={lineKey(l)} className="flex gap-4 border-b border-line py-4">
+              <li key={lineKey(l)} data-record={`products:${l.id}`} className="flex gap-4 border-b border-line py-4">
                 <div className="w-20 shrink-0"><ProductImage src={l.image} alt={l.name} aspect="1/1" /></div>
                 <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink">{l.name}</p>
-                    <p className="mt-1 text-xs text-ink-soft">{fill(words.size, { variant: l.variant ?? "", qty: l.qty })}</p>
+                    <p className="mt-1 text-sm text-ink-soft">{fill(words.size, { variant: l.variant ?? "", qty: l.qty })}</p>
                   </div>
                   <p className="shrink-0 text-sm tabular-nums text-ink">{formatPrice(l.price * l.qty)}</p>
                 </div>
@@ -177,7 +184,7 @@ export default function Checkout() {
             <div className="flex justify-between border-b border-line py-3"><dt className="text-ink-soft"><T k="pages.cart.delivery" /></dt><dd className="tabular-nums text-ink">{fee === 0 ? words.free : formatPrice(fee)}</dd></div>
             <div className="flex items-baseline justify-between py-4"><dt className="text-ink"><T k="cart.total" /></dt><dd data-testid="checkout-total" className="text-2xl tabular-nums text-ink">{formatPrice(subtotal + fee)}</dd></div>
           </dl>
-          <p className="flex items-start gap-2 border-t border-line pt-4 text-xs leading-relaxed text-ink-soft">
+          <p className="flex items-start gap-2 border-t border-line pt-4 text-sm leading-relaxed text-ink-soft">
             <Icon name="info" size={16} className="shrink-0 text-ink" />
             {method?.online ? fill(words.nextOnline, { method: method.name }) : words.nextCod}
           </p>
@@ -190,7 +197,7 @@ export default function Checkout() {
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-ink px-6 py-3.5 text-xs font-medium uppercase tracking-[0.14em] text-ground hover:opacity-85 disabled:opacity-60">
             <Icon name="lock" size={16} />{paying ? words.paying : <T k="pages.checkout.place" />}
           </button>
-          <T k="pages.checkout.terms" as="p" className="mt-3 text-xs leading-relaxed text-ink-soft" />
+          <T k="pages.checkout.terms" as="p" className="mt-3 text-sm leading-relaxed text-ink-soft" />
         </aside>
       </form>
     </>
