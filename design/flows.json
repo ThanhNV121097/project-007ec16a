@@ -1,6 +1,6 @@
 [
   {
-    "name": "Choose a pair, pay with MoMo and see the order placed",
+    "name": "Choose a pair, pay with VNPay and see the order placed",
     "steps": [
       { "action": "open", "path": "/shop/samba-og-w-crystal-white" },
       { "action": "click", "selector": "[data-testid='size-38']" },
