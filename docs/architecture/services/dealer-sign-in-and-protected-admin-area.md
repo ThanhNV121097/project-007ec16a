@@ -243,6 +243,7 @@ New packages: `internal/auth`, `internal/ratelimit`. Go tests that need a databa
 ## 10. Backend review checklist (item 9 BE review)
 
 - [ ] R1 `Resolve`'s query has `AND u.is_active` and `expires_at > now()`; R2 the session insert is the `INSERT … SELECT … FOR SHARE OF u` of Q3 with `u.password_hash = $3`; R3 `EnsureAdmin`'s update writes `is_active = true`.
+- [ ] A database test (`TEST_DATABASE_URL`) proves Q3 inserts **no** session for a user switched off, deleted or given a new hash after Q2 read it, and that `INSERT … SELECT … FOR SHARE OF u` is accepted by the server's Postgres 16 (the statement is the one non-obvious SQL of the story).
 - [ ] Exactly one verification per attempt that passes step 4; none for 415/400/422/429; the dummy hash is made in `New`.
 - [ ] Verification reads `m`, `t`, `p` from the string and passes the fixture hash.
 - [ ] The cookie flags and the `Secure` rule of §3.5; `Cache-Control: no-store` on the three routes; the token is in no body and no log.
