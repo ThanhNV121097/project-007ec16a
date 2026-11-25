@@ -124,12 +124,12 @@ export default function Shop() {
           />
           <div className="mt-6 border-b border-line pb-5">
             <T k="pages.shop.filter_size" as="p" className="pb-3 text-xs uppercase tracking-wider text-ink-soft" />
-            <div className="grid grid-cols-4 gap-1.5 lg:grid-cols-3">
+            <div className="flex flex-wrap gap-1.5">
               {allSizes.map((s) => {
                 const on = sizes.includes(s);
                 return (
                   <button key={s} type="button" aria-pressed={on} onClick={() => toggleSize(s)} data-testid={`filter-size-${sizeKey(s)}`}
-                    className={`whitespace-nowrap rounded-[var(--radius-pill)] border px-1 py-1.5 text-xs tabular-nums ${on ? "border-ink bg-ink text-ground" : "border-line text-ink hover:border-ink"}`}>
+                    className={`w-16 whitespace-nowrap rounded-[var(--radius-pill)] border px-1 py-1.5 text-xs tabular-nums ${on ? "border-ink bg-ink text-ground" : "border-line text-ink hover:border-ink"}`}>
                     {s}
                   </button>
                 );
