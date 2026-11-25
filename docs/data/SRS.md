@@ -145,7 +145,7 @@ Behaviour:
 | # | Given | When | Then |
 |---|---|---|---|
 | AC-1 | The shoe `gazelle-indoor-solar-gold` | `GET /v1/products/gazelle-indoor-solar-gold` | 200 and the record with its name, price and lists |
-| AC-2 | The shop's terms record | `GET /v1/shop/shop` | 200 and a record with `free_delivery_from` 2000000 |
+| AC-2 | The shop's terms record | `GET /v1/shop/shop` | 200 and a record with `standard_days` and `dispatch_cutoff` and no `free_delivery_from` |
 | AC-3 | No shoe has the id `nope` | `GET /v1/products/nope` | 404 |
 | AC-4 | The record's list-endpoint copy and its record-endpoint copy | Both are read | They are equal field for field |
 
