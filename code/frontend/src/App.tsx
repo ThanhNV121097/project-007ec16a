@@ -35,7 +35,7 @@ import Track from "./pages/Track";
  */
 function Shell() {
   return (
-    <div className="min-h-screen bg-ground font-body text-ink">
+    <div className="min-h-screen overflow-x-clip bg-ground font-body text-ink">
       {/* The motion the owner chose, on every page (src/motion). */}
       <Motion />
       <SiteHeader />
