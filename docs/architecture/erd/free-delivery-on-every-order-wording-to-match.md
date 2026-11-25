@@ -76,7 +76,7 @@ All 14 hold, so S3's seed can run on these files without editing a total. (On `m
 
 ### Conflicts with merged decisions
 
-None. I checked this story against `erd/_base.md` (D1–D10, §1, §3.x), the S3 ERD (§4.5, §4.6, §4.7, §4.10, §5, §6, open question 1) and `overview.md` §6 row 2: all say the same thing as the story. The one tension that existed — S3's seed assertion would stop on the three old express totals while PR #24 is open — is the ordering rule of §6, not a design conflict.
+None. I checked this story against `erd/_base.md` (D1–D10, §1, §3.x), the S3 ERD (§4.5, §4.6, §4.7, §4.10, §5, §6, open question 1) and `overview.md` §8 row 2: all say the same thing as the story. The one tension that existed — S3's seed assertion would stop on the three old express totals while PR #24 is open — is the ordering rule of §6, not a design conflict.
 
 ## 6. Migration plan
 
