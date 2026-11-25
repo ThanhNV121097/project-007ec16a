@@ -9,7 +9,7 @@ import { formatPrice } from "../lib/format";
 import { placeOrder } from "../lib/mock/orders";
 import { digitsOf, fill, type DeliveryOption, type PaymentMethod, type Product, type ShopTerms } from "../lib/shop";
 import Icon, { type IconName } from "../components/Icon";
-import OutlinePill from "../components/OutlinePill";
+import EmptyBag from "../components/EmptyBag";
 import ProductImage from "../components/ProductImage";
 import Rule from "../components/Rule";
 
@@ -67,14 +67,7 @@ export default function Checkout() {
   const method = payments.find((m) => m.id === payment);
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  if (lines.length === 0) {
-    return (
-      <section className="flex flex-col items-start gap-5 py-16">
-        <T k="pages.checkout.empty" as="h1" className="text-[length:var(--size-h2)] text-ink" />
-        <OutlinePill to="/shop"><T k="pages.cart.keep" /></OutlinePill>
-      </section>
-    );
-  }
+  if (lines.length === 0) return <EmptyBag heading="pages.checkout.empty" />;
 
   const place = (e: FormEvent) => {
     e.preventDefault();
