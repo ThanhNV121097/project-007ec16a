@@ -265,7 +265,7 @@
       "address": "Street address, ward, district",
       "city": "City or province",
       "description": "Your address, delivery and payment for your adidas order.",
-      "empty": "Your bag is empty, so there is nothing to check out yet.",
+      "empty": "Nothing to check out yet.",
       "heading": "Checkout",
       "line": "{variant} · Qty {qty}",
       "missing": "Fill in your name, street address and city.",
