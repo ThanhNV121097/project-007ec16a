@@ -236,7 +236,7 @@ Item 9's backend lands first. Its review checks these; if one is not as written 
 | `api.ts` gains `post`, `put` and `delete` **if they are not there yet** (the checkout story may add `post` first; one client, never a second file). They send `Content-Type: application/json` (the API answers `415` to anything else) and are **never retried**; `delete` resolves with nothing on `204` instead of parsing an empty body | `src/lib/api.ts` |
 | Delete the mock | `src/lib/mock/staff.ts` |
 | `src/test/staff.test.tsx` mocks `../lib/staff` and needs no change except the one test that signs in with the current mock session API: whichever of PR #34 and PR #36 merges second adapts it to the real session (UI review should-fix 2) | `src/test/staff.test.tsx` |
-| List `/admin/staff` with `"roles": ["admin"]` (`"auth": true, "dashboard": true`) so the walk covers the page and the role-leak check sees it (UI review should-fix 3; TL, at this PR's merge) | `design/pages.json` |
+| List `/admin/staff` with `"roles": ["admin"]` (`"auth": true, "dashboard": true`) so the walk covers the page and the role-leak check sees it (UI review should-fix 3). **Not Dev's, and not in this design PR**: TL adds the line when the story's PR merges, because a path listed before its route is on `main` makes the Studio walk and the generated sitemap (`vite.config.ts`) visit a page that does not exist | `design/pages.json` |
 
 `Page`, the components, `content.json` and the routes are untouched; the 12 UI tests keep passing against the real hook's shape.
 
