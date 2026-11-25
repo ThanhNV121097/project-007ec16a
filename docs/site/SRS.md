@@ -12,7 +12,7 @@ Design system: `design/design-system.md`
 
 Đôi is an independent online dealer of genuine adidas shoes in Vietnam. This module is the part of the
 site a customer reads before buying: which pairs there are, what they cost, which sizes are in stock,
-how delivery and exchange work, and how to reach the shop. Most customers are on a phone, so every page
+that delivery is free and that exchanges are not accepted, and how to reach the shop. Most customers are on a phone, so every page
 works at phone width first. Without it a customer cannot choose a pair or trust the shop enough to order.
 
 ## 2. Actors
