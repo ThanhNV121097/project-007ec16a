@@ -83,11 +83,11 @@ export default function Order() {
     <>
       <section className="pb-10 pt-8 lg:pt-10">
         <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink-soft">
-          {fill(numberText, { number: view.number, date: formatDateTime(view.placed_at, "medium") })}
+          {fill(numberText, { number: view.number, date: formatDateTime(view.placed_at) })}
         </p>
         <h1 data-testid="order-status" className="mt-4 max-w-[18ch] text-[length:var(--size-h1)] leading-[1.02] text-ink">{headline}</h1>
         <p className="mt-5 text-sm text-ink-soft">
-          {view.status === "delivered" ? doneText : view.status === "cancelled" ? "" : view.eta ? fill(etaText, { date: formatDate(view.eta, "long") }) : ""}
+          {view.status === "delivered" ? doneText : view.status === "cancelled" ? "" : view.eta ? fill(etaText, { date: formatDate(view.eta) }) : ""}
         </p>
       </section>
       <Rule />
