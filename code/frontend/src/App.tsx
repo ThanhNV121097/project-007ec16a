@@ -15,6 +15,7 @@ import AdminProduct from "./pages/AdminProduct";
 import AdminProducts from "./pages/AdminProducts";
 import AdminReviews from "./pages/AdminReviews";
 import AdminSignIn from "./pages/AdminSignIn";
+import AdminStaff from "./pages/AdminStaff";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Contact from "./pages/Contact";
@@ -77,6 +78,7 @@ export default function App() {
       <Route path="/admin/lines" element={<SignedIn><AdminLines /></SignedIn>} />
       <Route path="/admin/categories" element={<SignedIn><AdminKinds /></SignedIn>} />
       <Route path="/admin/reviews" element={<SignedIn><AdminReviews /></SignedIn>} />
+      <Route path="/admin/staff" element={<SignedIn><AdminStaff /></SignedIn>} />
     </Routes>
   );
 }
