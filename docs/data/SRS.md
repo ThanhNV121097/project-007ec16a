@@ -51,7 +51,7 @@ Behaviour:
 
 1. The database holds ten collections, each with its own table of one column per field the collection's description in `schema.json` lists: categories, delivery, faqs, lines, orders, payments, products, reviews, shop, sizes. The record's id is its key and is text.
 2. Field types are kept as the schema names them: a price is a number in the currency the schema names (VND, no fractions added); a number stays a number; an image or url is text; a list is a list of text; a reference to another collection holds that record's id and must name an existing record; a true/false field is true/false. The record's source note is kept as its own column.
-3. One migration creates the tables and a second inserts every record of every JSON file in `src/data/` exactly as it is: no record is dropped, no id, name, price, list or flag is changed, and each collection keeps the order its file had.
+3. One migration creates the tables and a second inserts every record of every JSON file in `src/data/` as the files stand when this story starts (after the story "Free delivery on every order, wording to match"), exactly as they are: no record is dropped, no id, name, price, list or flag is changed, and each collection keeps the order its file had.
 4. After seeding, every reference resolves: each shoe's line and category, each review's shoe and each order's shoe name an existing record.
 5. Running the migrations again, or restarting the server, never inserts a record twice and never overwrites a change made after seeding.
 
