@@ -30,7 +30,10 @@ const (
 // RegisterStaff mounts the four staff routes. Any other method on these paths
 // falls to the server's catch-all and answers the JSON 404.
 func RegisterStaff(mux *http.ServeMux, db Pool, log *slog.Logger) {
-	h := &staffHandler{store: pgStore{db: db}, log: log}
+	(&staffHandler{store: pgStore{db: db}, log: log}).mount(mux)
+}
+
+func (h *staffHandler) mount(mux *http.ServeMux) {
 	guard := auth.Require(auth.Admin)
 	mux.Handle("GET /v1/admin/staff", guard(http.HandlerFunc(h.list)))
 	mux.Handle("POST /v1/admin/staff", guard(http.HandlerFunc(h.create)))
