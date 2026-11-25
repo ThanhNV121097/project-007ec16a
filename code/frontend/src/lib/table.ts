@@ -62,7 +62,6 @@ const OWN = ["page", "size", "sort", "q"];
 export function useTableQuery(defaults: { size?: number; sort?: string; sizeIsFilter?: boolean } = {}): TableQuery {
   const [params, setParams] = useSearchParams();
   const sizeIsFilter = defaults.sizeIsFilter === true;
-  const owned = sizeIsFilter ? OWN.filter((k) => k !== "size") : OWN;
   const size = (sizeIsFilter ? 0 : Number(params.get("size"))) || defaults.size || 20;
   const page = Math.max(1, Number(params.get("page")) || 1);
   const sort = params.get("sort") ?? defaults.sort ?? "";
@@ -121,7 +120,7 @@ export function useTableQuery(defaults: { size?: number; sort?: string; sizeIsFi
             if (key !== "sort" && (sizeIsFilter || key !== "size")) next.delete(key);
           }
         }, false),
-      filtering: [...params.keys()].some((k) => !owned.includes(k)) || q !== "",
+      filtering: [...params.keys()].some((k) => !OWN.includes(k) || (sizeIsFilter && k === "size")) || q !== "",
     };
-  }, [params, page, size, sort, q, sizeIsFilter, owned, put, write]);
+  }, [params, page, size, sort, q, sizeIsFilter, put, write]);
 }
