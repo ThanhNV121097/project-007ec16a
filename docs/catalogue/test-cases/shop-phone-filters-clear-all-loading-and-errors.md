@@ -136,8 +136,8 @@ Check: measure_styles
 
 **Scenario**: SC-5a — no horizontal scroll in the default list at 320 and 390
 **Given**: The seed. Viewport narrow (320×640), then phone (390×844).
-**When**: Open `/shop`; wait for the cards; scroll the window right by 100px; read `window.scrollX` and `document.documentElement.scrollWidth` against the window's inner width.
-**Then**: At both widths `window.scrollX` is 0 after the scroll and `scrollWidth` is not greater than the inner width.
+**When**: Open `/shop`; wait for the cards; scroll the window right by 100px; read the horizontal scroll offset and the document's scroll width against the window's inner width.
+**Then**: At both widths the horizontal scroll offset is 0 after the scroll and the document's scroll width is not greater than the inner width.
 Traces: SC-5 (SRS §6 Responsive)
 Check: interact_page
 
