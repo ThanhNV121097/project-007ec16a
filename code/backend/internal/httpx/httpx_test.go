@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -40,7 +41,7 @@ func TestRecoverAnswers500WithoutLeakingThePanic(t *testing.T) {
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status %d", rec.Code)
 	}
-	if b, _ := io.ReadAll(rec.Body); string(b) == "" || contains(string(b), "secret detail") {
+	if b, _ := io.ReadAll(rec.Body); len(b) == 0 || strings.Contains(string(b), "secret detail") {
 		t.Errorf("body %q leaks or is empty", b)
 	}
 }
@@ -80,13 +81,4 @@ func TestCORSAllowsOnlyListedOriginsAndAnswersPreflight(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Errorf("an unlisted origin must still reach the handler, got %d", rec.Code)
 	}
-}
-
-func contains(s, sub string) bool {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }
