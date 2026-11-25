@@ -34,16 +34,11 @@ func Recover(log *slog.Logger) Middleware {
 	}
 }
 
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
-// AccessLog writes one line per request: the request id, method, path (never
-// the query string, which can carry a token), status and duration.
-=======
-// AccessLog writes one line per request: method, the route pattern that
-// matched (empty when none did; never the raw path or the query string, which
-// an attacker chooses and which can carry a token), status, duration and the
-// role of the person signed in (empty for a visitor). The pattern and the role
-// reach it through the request's Trace.
->>>>>>> refs/heads/main
+// AccessLog writes one line per request: the request id, method, the route
+// pattern that matched (empty when none did; never the raw path or the query
+// string, which an attacker chooses and which can carry a token), status,
+// duration and the role of the person signed in (empty for a visitor). The
+// pattern and the role reach it through the request's Trace.
 func AccessLog(log *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -52,13 +47,8 @@ func AccessLog(log *slog.Logger) Middleware {
 			r = r.WithContext(context.WithValue(r.Context(), traceKey{}, trace))
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rec, r)
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
-			log.Info("request", "request_id", RequestIDFrom(r.Context()), "method", r.Method, "path", r.URL.Path,
-				"status", rec.status, "ms", time.Since(start).Milliseconds())
-=======
-			log.Info("request", "method", r.Method, "pattern", trace.Pattern,
+			log.Info("request", "request_id", RequestIDFrom(r.Context()), "method", r.Method, "pattern", trace.Pattern,
 				"status", rec.status, "ms", time.Since(start).Milliseconds(), "role", trace.Role)
->>>>>>> refs/heads/main
 		})
 	}
 }
