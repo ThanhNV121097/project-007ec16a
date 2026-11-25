@@ -41,7 +41,7 @@ func (s *service) paymentOptions(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	rows, err := s.db.Query(ctx, "SELECT id, name, note, icon, online FROM payment_methods WHERE id = ANY($1) ORDER BY seq", offered)
 	if err != nil {
-		s.internal(w, "read payment options", err)
+		s.internal(w, r, "read payment options", err)
 		return
 	}
 	defer rows.Close()
@@ -49,14 +49,14 @@ func (s *service) paymentOptions(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var o option
 		if err := rows.Scan(&o.ID, &o.Name, &o.Note, &o.Icon, &o.Online); err != nil {
-			s.internal(w, "read payment options", err)
+			s.internal(w, r, "read payment options", err)
 			return
 		}
 		o.IsAvailable = s.available(o.ID)
 		items = append(items, o)
 	}
 	if err := rows.Err(); err != nil {
-		s.internal(w, "read payment options", err)
+		s.internal(w, r, "read payment options", err)
 		return
 	}
 	noStore(w)
