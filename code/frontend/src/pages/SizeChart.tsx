@@ -22,6 +22,7 @@ export default function SizeChart() {
   const steps = useList<{ text: string }>("pages.sizes.steps");
   const answerText = useContent("pages.sizes.answer_line");
   const tooBig = useContent("pages.sizes.too_big");
+  const sizeText = useContent("pages.sizes.answer_size");
   const head = useContent<Record<string, string>>("pages.sizes.columns");
   const [cm, setCm] = useState("");
   const length = parseFloat(cm.replace(",", "."));
@@ -47,12 +48,12 @@ export default function SizeChart() {
             <div className="flex items-center gap-3">
               <input id="foot-length" inputMode="decimal" value={cm} onChange={(e) => setCm(e.target.value)} placeholder="24.5"
                 className="w-32 appearance-none rounded-sm border border-field bg-ground px-3 py-3 text-base tabular-nums text-ink outline-none placeholder:text-ink-soft focus:border-ink" />
-              <span className="text-sm text-ink-soft">cm</span>
+              <span className="text-sm text-ink-soft">{head?.cm}</span>
             </div>
             <div data-testid="size-answer" aria-live="polite" className="mt-6 min-h-24">
               {answer ? (
                 <>
-                  <p className="text-[length:var(--size-h2)] leading-none tabular-nums text-ink">EU {answer.eu}</p>
+                  <p className="text-[length:var(--size-h2)] leading-none tabular-nums text-ink">{fill(sizeText, { eu: answer.eu })}</p>
                   <p className="mt-2 text-sm tabular-nums text-ink-soft">{fill(answerText, { uk: answer.uk, us_m: answer.us_m, us_w: answer.us_w })}</p>
                 </>
               ) : asked ? (
