@@ -295,7 +295,6 @@ Behaviour:
 |---|---|---|---|
 | 1 | The design draws no loading, load-failed or "Show more" states, but the plan item requires them to be visible | Use the copy in CAT-004 ("Loading the shoes…", "We could not load the shoes.", "Try again", "Loading…") in the empty state's type and spacing, added to the site's content so the owner can edit it | Stakeholder |
 | 2 | Words matching: every typed word must be found (so `samba og` finds "Samba OG"), as part of any searched field | As written in CAT-001 | Stakeholder |
-| 3 | The "To pack" link and the price bands are copied from the design; the "Gifts" tile links to the band "Under 3.000.000 ₫" | Keep | Stakeholder |
 
 ## 8. Traceability
 
