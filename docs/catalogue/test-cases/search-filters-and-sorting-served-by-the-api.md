@@ -292,7 +292,7 @@ Check: fetch_url
 **Scenario**: SC-15d — `q` of 101 characters is a 400, 100 is accepted, spaces are not counted
 **Given**: The seed.
 **When**: `GET /v1/products?q=` + 101 letters "a"; then `q=` + 100 letters "a"; then `q=` + 100 letters "a" followed by 5 encoded spaces (`%20`); then `q=` + 101 letters "a" followed by one space.
-**Then**: The first and fourth answer 400 `bad_request` with `errors.q` a non-empty sentence and no `items`. The second and third answer 200 with `total` 0 (no shoe contains that text) — the limit is 100 characters after trimming.
+**Then**: The first and fourth answer 400 `bad_request` whose `errors` object has the key `q` with a non-empty sentence, and no `items`. The second and third answer 200 with `total` 0 (no shoe contains that text) — the limit is 100 characters after trimming.
 Traces: SC-15 (CAT-001 Invalid input; contract §2.4 `q`)
 Check: fetch_url
 
