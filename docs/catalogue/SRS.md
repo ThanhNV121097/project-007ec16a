@@ -96,7 +96,7 @@ Behaviour:
 | Invalid input | `sort` names a field the collection does not have | 400 naming `sort` |
 | Invalid input | `price_from` or `price_to` is not a number, or a date range holds a value that is not a date | 400 naming the parameter |
 | Invalid input | `q` is longer than 100 characters | 400 naming `q` |
-| Invalid input | `size` is used on a collection that is not shoes | The parameter is treated as an ordinary field filter: orders have a `size` field and are filtered by it exactly; other collections have no such field and the parameter is ignored |
+| Boundary | `size` is used on a collection that is not shoes | The parameter is an ordinary field filter: orders have a `size` field and are filtered by it exactly; a collection with no such field ignores it |
 | Boundary | `q` is only spaces | Treated as no search |
 | Boundary | A size that no shoe has (`size=99`) | 200 with `total` 0 and `items: []`, not an error |
 | Permission | A search term matches only a private field (an order's phone) | No match; private fields are never searched (AC-27) |
