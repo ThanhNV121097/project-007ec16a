@@ -414,7 +414,7 @@ Behaviour:
 | AC-3 | Cut-off 15:00 | The page loads | "Orders placed before 15:00 on a working day leave the same day." is shown |
 | AC-4 | Two delivery options (Standard 30.000 ₫, Express 50.000 ₫) | The page loads | The table headers read Option, Arrives, Where, Fee and two rows follow, fees `30.000 ₫` and `50.000 ₫` |
 | AC-5 | The same | The visitor reads the Standard row | "Free over 2.000.000 ₫" appears under its fee; the Express row has no such line |
-| AC-6 | Five questions of topic "shipping" | The page loads | Four to five closed rows are shown (one per such question), each opening onto its answer |
+| AC-6 | Four questions of topic "shipping" | The page loads | Four closed rows are shown (one per such question), each opening onto its answer |
 | AC-7 | The page loads | The visitor presses "Track an order" | The address is `/track` |
 | AC-8 | The stored express fee is changed to 60.000 ₫ | The page loads | The Express row shows `60.000 ₫` |
 | AC-9 | A 390px window | The page loads | The table scrolls sideways inside its own box; the page itself has no horizontal scroll |
