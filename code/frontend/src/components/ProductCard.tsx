@@ -29,7 +29,7 @@ export default function ProductCard({ product, tilt = false }: { product: Produc
         <span className="min-w-0 underline-offset-4 group-hover:underline">{product.name}</span>
         <span className="shrink-0 tabular-nums">{formatPrice(product.price)}</span>
       </span>
-      <span className="mt-1 block text-sm text-ink-soft">{line?.name ? `${line.name} · ${note}` : note}</span>
+      <span className="mt-auto block pt-1 text-sm text-ink-soft">{line?.name ? `${line.name} · ${note}` : note}</span>
     </Link>
   );
 }
