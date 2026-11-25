@@ -107,16 +107,17 @@ function Navigator({ into }: { into: { current?: NavigateFunction } }) {
   return null;
 }
 
-function open(first: string) {
+function open(first: string, container?: HTMLElement) {
   const nav: { current?: NavigateFunction } = {};
   const view = render(
     <MemoryRouter initialEntries={[first]}>
       <Navigator into={nav} />
       <Routes><Route path="/shop/:id" element={<Product />} /></Routes>
     </MemoryRouter>,
+    { container },
   );
-  const go = async (to: string, answer: Answer) => {
-    hook.answer = answer;
+  const go = async (to: string, answer?: Answer) => {
+    if (answer) hook.answer = answer;
     await act(async () => { nav.current?.(to); });
   };
   return { ...view, go };
@@ -239,9 +240,7 @@ type Answerer = () => Response | Promise<Response>;
 /** A request the test answers when it chooses. */
 function held() {
   let release: (r: Response) => void = () => {};
-  const answer = new Promise<Response>((resolve) => {
-    release = resolve;
-  });
+  const answer = new Promise<Response>((resolve) => (release = resolve));
   return { answer: () => answer, release: (r: Response) => act(async () => release(r)) };
 }
 
@@ -265,17 +264,10 @@ function watched(first: string) {
   const note = (records: MutationRecord[]) => records.forEach((r) => r.addedNodes.forEach((n) => added.push(n.textContent ?? "")));
   const observer = new MutationObserver(note);
   observer.observe(root, { childList: true, subtree: true });
-  const nav: { current?: NavigateFunction } = {};
-  render(
-    <MemoryRouter initialEntries={[first]}>
-      <Navigator into={nav} />
-      <Routes><Route path="/shop/:id" element={<Product />} /></Routes>
-    </MemoryRouter>,
-    { container: root },
-  );
+  const { go } = open(first, root);
   return {
     root,
-    go: (to: string) => act(async () => { nav.current?.(to); }),
+    go,
     everMissing: () => {
       note(observer.takeRecords());
       return added.some((text) => text.includes(MISSING));
