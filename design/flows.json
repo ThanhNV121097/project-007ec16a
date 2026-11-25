@@ -12,7 +12,6 @@
       { "action": "type", "selector": "#checkout-phone", "value": "0912345678" },
       { "action": "type", "selector": "#checkout-address", "value": "12 Example Street, Ward 1" },
       { "action": "type", "selector": "#checkout-city", "value": "Da Nang" },
-      { "action": "click", "selector": "[data-testid='pay-momo']" },
       { "action": "click", "selector": "[data-testid='place-order']" },
       { "action": "expect", "selector": "[data-testid='order-status']", "text": "Thank you" }
     ]
