@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io/fs"
 	"reflect"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -20,9 +22,9 @@ import (
 // handler and the real pool, on shoes they insert themselves. They skip without
 // TEST_DATABASE_URL, like every test that needs a database.
 
-// shoe is one fixture. A shoe's sizes are columns until the checkout story
-// moves them into per-size counts; insertShoe is the one place that knows the
-// form, so the tests above it do not change when it does.
+// shoe is one fixture. A shoe's sizes are one count of pairs per size in
+// product_sizes: a size in out holds 0 pairs, one in low holds 1, every other
+// listed size holds 3. insertShoe is the one place that knows the form.
 type shoe struct {
 	id, name, model, description string
 	line, category, colour       string
@@ -46,20 +48,42 @@ func insertShoe(t *testing.T, pool *pgxpool.Pool, s shoe) {
 		}
 		return v
 	}
-	list := func(v []string) []string {
-		if v == nil {
-			return []string{}
-		}
-		return v
-	}
-	_, err := pool.Exec(context.Background(), `INSERT INTO products
-		(id, name, model, description, line_id, category_id, colour, status, released, price, rating, sizes, sizes_low, sizes_out)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11::numeric, $12, $13, $14)`,
+	ctx := context.Background()
+	_, err := pool.Exec(ctx, `INSERT INTO products
+		(id, name, model, description, line_id, category_id, colour, status, released, price, rating)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11::numeric)`,
 		s.id, s.name, s.model, s.description, orNil(s.line), orNil(s.category), s.colour, s.status, s.released, s.price,
-		fmt.Sprintf("%.1f", s.rating), list(s.sizes), list(s.low), list(s.out))
+		fmt.Sprintf("%.1f", s.rating))
 	if err != nil {
 		t.Fatalf("insert %s: %v", s.id, err)
 	}
+	for _, size := range s.sizes {
+		pairs := 3
+		switch {
+		case slices.Contains(s.out, size):
+			pairs = 0
+		case slices.Contains(s.low, size):
+			pairs = 1
+		}
+		if _, err := pool.Exec(ctx, `INSERT INTO product_sizes (product_id, size, size_value, pairs)
+			VALUES ($1, $2, $3::numeric, $4)`, s.id, size, fmt.Sprintf("%.2f", sizeNumber(size)), pairs); err != nil {
+			t.Fatalf("insert %s size %s: %v", s.id, size, err)
+		}
+	}
+}
+
+// sizeNumber reads an EU size as a number: "38" is 38, "36 2/3" is 36.67.
+func sizeNumber(size string) float64 {
+	whole, frac, _ := strings.Cut(size, " ")
+	v, _ := strconv.ParseFloat(whole, 64)
+	if num, den, ok := strings.Cut(frac, "/"); ok {
+		n, _ := strconv.ParseFloat(num, 64)
+		d, _ := strconv.ParseFloat(den, 64)
+		if d != 0 {
+			v += n / d
+		}
+	}
+	return v
 }
 
 // emptyShop is a seeded database with no shoes, orders or reviews: the lines
@@ -316,30 +340,17 @@ func TestTheSeededShoesAnswerTheStoryExamples(t *testing.T) {
 	}
 }
 
-// SC-13, SC-14, SC-16: orders are searched by number and customer only, and
-// reviews by the customer's name, the text and the shoe's name.
-func TestOrdersAndReviewsAreSearchedByTheirNamedFields(t *testing.T) {
+// SC-14, SC-16: reviews are searched by the customer's name, the text and the
+// shoe's name. Orders are no collection of the generic reader (a customer's
+// details are read by internal/orders, by the order's token), so no search
+// reaches them.
+func TestReviewsAreSearchedByTheirNamedFields(t *testing.T) {
 	pool := seeded(t)
-	if _, err := pool.Exec(context.Background(), `INSERT INTO orders (id, number, payment_method_id, delivery_option_id, customer, phone, address, city, note, total)
-		VALUES ('doi-90001', 'DOI-90001', 'momo', 'standard', 'Trần Lan', '0912345678', 'Zxqv Nam Street 12', 'Zxqv City', 'nam nam nam zxqv', 1000)`); err != nil {
-		t.Fatal(err)
+	for _, target := range []string{"/v1/orders?q=nam", "/v1/orders?q=0938"} {
+		if code, _, raw := get(t, pool, target); code != 404 {
+			t.Errorf("%s: %d %s, want 404", target, code, raw)
+		}
 	}
-	got, _ := listOf(t, pool, "/v1/orders?q=nam&limit=100")
-	has := map[string]bool{}
-	for _, id := range got {
-		has[id] = true
-	}
-	if !has["doi-24817"] || has["doi-90001"] {
-		t.Errorf("q=nam: got %v", got)
-	}
-	expectSet(t, pool, "/v1/orders?q=90001", "doi-90001")
-	expectAmong(t, pool, "/v1/orders?q=tran%20lan", "doi-90001")
-	// A phone number, an address and a note are never searched.
-	expectSet(t, pool, "/v1/orders?q=0912345678")
-	expectSet(t, pool, "/v1/orders?q=0938")
-	expectSet(t, pool, "/v1/orders?q=zxqv")
-	// size on orders is the first pair's size, exactly.
-	expectAmong(t, pool, "/v1/orders?size=39%201%2F3&limit=100", "doi-24817")
 
 	expectOrder(t, pool, "/v1/reviews?product=samba-og-w-core-black&sort=-date", "r-01", "r-02", "r-03")
 	expectAmong(t, pool, "/v1/reviews?q=Ph%C6%B0%C6%A1ng", "r-01")
@@ -360,10 +371,10 @@ func TestABadParameterIsAFaultAndAnEmptyAnswerIsNot(t *testing.T) {
 		"/v1/products?price_ranges=3000000":           "price_ranges",
 		"/v1/products?q=" + strings.Repeat("a", 101):  "q",
 		"/v1/products?sort=price_listed":              "sort",
-		"/v1/orders?sort=phone":                       "sort",
-		"/v1/orders?phone_from=1":                     "phone_from",
+		"/v1/lines?sort=_source":                      "sort",
+		"/v1/products?price_listed_from=1":            "price_listed_from",
 		"/v1/products?q=a%00b":                        "q",
-		"/v1/orders?placed_at_from=yesterday":         "placed_at_from",
+		"/v1/reviews?date_from=yesterday":             "date_from",
 		"/v1/products?size=38%00":                     "size",
 		"/v1/products?category=women&price_from=zero": "price_from",
 	} {
@@ -460,15 +471,22 @@ func TestSearchTextMigrationKeepsEveryRowOfAPopulatedTable(t *testing.T) {
 func TestASearchOverTenThousandShoesIsFast(t *testing.T) {
 	pool := emptyShop(t)
 	ctx := context.Background()
-	if _, err := pool.Exec(ctx, `INSERT INTO products (id, name, model, description, line_id, category_id, colour, price, status, released, rating, sizes)
+	if _, err := pool.Exec(ctx, `INSERT INTO products (id, name, model, description, line_id, category_id, colour, price, status, released, rating)
 		SELECT 'perf-' || g, 'Samba OG Colourway ' || g, 'Samba OG', 'Leather upper, gum sole and a note about Cửa Lò ' || g,
 		       (ARRAY['samba', 'gazelle', 'adizero'])[1 + g % 3], (ARRAY['women', 'men', 'kids'])[1 + g % 3],
-		       'black', 2000000 + (g % 40) * 100000, 'live', DATE '2026-01-01' + (g % 300), (g % 50) / 10.0, ARRAY['38', '39']
+		       'black', 2000000 + (g % 40) * 100000, 'live', DATE '2026-01-01' + (g % 300), (g % 50) / 10.0
 		FROM generate_series(1, 10000) g`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, "ANALYZE products"); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO product_sizes (product_id, size, size_value, pairs)
+		SELECT 'perf-' || g, s.size, s.value, 3
+		FROM generate_series(1, 10000) g CROSS JOIN (VALUES ('38', 38), ('39', 39)) AS s(size, value)`); err != nil {
 		t.Fatal(err)
+	}
+	for _, table := range []string{"products", "product_sizes"} {
+		if _, err := pool.Exec(ctx, "ANALYZE "+table); err != nil {
+			t.Fatal(err)
+		}
 	}
 	const runs = 200
 	took := make([]time.Duration, 0, runs)
