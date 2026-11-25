@@ -97,7 +97,7 @@ export default function Home() {
           {cats.map((c) => (
             <Link key={c.id} to={`/shop?category=${c.id}`} data-record={`categories:${c.id}`} className="group block">
               <ProductImage src={c.image} alt={c.name} aspect="1/1" />
-              <span className="mt-3 flex items-baseline justify-between gap-3 text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink">
+              <span className="mt-3 flex flex-col gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                 <span className="underline-offset-4 group-hover:underline">{c.name}</span>
                 <span className="shrink-0 tabular-nums">{fill(pairsText, { n: all.filter((p) => p.category === c.id).length })}</span>
               </span>
@@ -106,7 +106,7 @@ export default function Home() {
           ))}
           <Link to="/shop?price=under-3m" className="group block">
             <ProductImage src={giftImage} alt={giftName} aspect="1/1" />
-            <span className="mt-3 flex items-baseline justify-between gap-3 text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink">
+            <span className="mt-3 flex flex-col gap-1 text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
               <span className="underline-offset-4 group-hover:underline">{giftName}</span>
               <span className="shrink-0 tabular-nums">{fill(pairsText, { n: gifts })}</span>
             </span>
