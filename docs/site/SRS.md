@@ -314,7 +314,7 @@ Behaviour:
 3. The bag page `/cart` shows the heading "Your bag", "{n} in your bag" (pairs in all) and a picture. Each line shows the picture (a link to the shoe), the name (a link to the shoe), the variant, "{price} each", the line total, a quantity stepper from 1 to 5, and "Remove" (text hidden below 640px, the button stays).
 4. The summary on the bag page shows Subtotal, Delivery and Total. Delivery reads "Free" (the site's own word for it, never `0 ₫`) for every bag, whatever the subtotal, and Total equals Subtotal.
 5. Below the summary: a "Check out" button with a lock icon to `/checkout`, the line "You pay online with VNPay — card, domestic ATM card or QR — at the next step.", the four promises in compact form, and a "Keep shopping" pill to `/shop`.
-6. An empty bag on `/cart` shows the heading "Your bag is empty.", the line "Pick a pair — the size chart is one tap from every shoe, and the first size exchange is free.", a "Keep shopping" pill, and under a hairline "New this month" with up to four live new shoes as cards.
+6. An empty bag on `/cart` shows the heading "Your bag is empty.", the line "Pick a pair — the size chart is one tap from every shoe.", a "Keep shopping" pill, and under a hairline "New this month" with up to four live new shoes as cards.
 7. The figures on the bag page are an estimate for the visitor; the order's own total is computed by the shop at checkout (`orders` module).
 
 **Acceptance criteria**
