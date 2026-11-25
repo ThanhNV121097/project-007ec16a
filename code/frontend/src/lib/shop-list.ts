@@ -28,17 +28,28 @@ const NO_SHOES: Product[] = [];
 /**
  * `items` are the pages loaded so far and `total` is the API's total, the
  * count the visitor reads. A new query starts again at its first page; the
- * answer to an older query that arrives late is dropped, so the newest
- * request is what shows. While a new query is on its way the last answer
- * stays on screen, and a query that failed shows no list at all.
- * `total` is null until the first answer is in: nothing is claimed empty
- * before then.
+ * answer or the failure of an older query that arrives late is dropped, so
+ * the newest request is what shows.
+ *
+ * Only the answer to the CURRENT query is ever returned: while a new query is
+ * on its way `items` is empty, `total` is null and `loading` is true, so the
+ * page never shows the last list under a new filter, nor claims "no match"
+ * for a list that has not come. `total` is null until the first answer of the
+ * query is in, and after a first page that failed.
+ *
+ * A failed "Show more" keeps the pages already loaded and sets `error`;
+ * `retry()` asks for the page that failed — never another, never one already
+ * shown — and a first page that failed is asked for again the same way.
+ * `loading` with `items` on screen is "more is on its way".
  */
 export function useShopList(query: ShopQuery) {
   const key = JSON.stringify(query);
   const [paging, setPaging] = useState({ key, pages: 1 });
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  // A new query starts at its first page, and stays there if the visitor comes back to an old one.
+  if (paging.key !== key) setPaging({ key, pages: 1 });
   const pages = paging.key === key ? paging.pages : 1;
 
   useEffect(() => {
@@ -60,24 +71,28 @@ export function useShopList(query: ShopQuery) {
     return () => {
       current = false;
     };
-  }, [key, pages]);
+  }, [key, pages, attempt]);
 
   const error = failure?.key === key && failure.pages === pages ? failure.error : null;
-  const settled = answer?.key === key && answer.pages === pages;
-  const shown = error && answer?.key !== key ? null : answer;
-  const loading = !settled && !error;
+  const shown = answer?.key === key ? answer : null;
+  const loading = !(shown && shown.pages === pages) && !error;
   const loadMore = useCallback(() => {
-    if (loading || answer?.key !== key) return;
-    setPaging({ key, pages: answer.pages + 1 });
-  }, [loading, answer, key]);
+    if (loading || error || !shown) return;
+    setPaging({ key, pages: shown.pages + 1 });
+  }, [loading, error, shown, key]);
+  const retry = useCallback(() => {
+    setFailure(null);
+    setAttempt((n) => n + 1);
+  }, []);
 
   return {
     items: shown?.items ?? NO_SHOES,
     total: shown ? shown.total : null,
-    hasMore: shown?.key === key && shown.items.length < shown.total,
+    hasMore: shown !== null && shown.items.length < shown.total,
     loading,
     error,
     loadMore,
+    retry,
   };
 }
 
