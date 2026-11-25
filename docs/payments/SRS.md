@@ -417,7 +417,7 @@ Every other screen this module touches (checkout, order page, "Pay now") is spec
 | 4 | A customer who paid and whose notice is late sees "We have not heard from VNPay yet." with no "Try again" | As written (PAY-004) | Stakeholder |
 | 5 | A bank transfer takes hours, so the 30-minute rule does not suit it | Cancel an unpaid bank-transfer order after 24 hours | Stakeholder |
 | 6 | The owner's bank, account number and holder name for VietQR, and MoMo's merchant keys, are not yet supplied | Requested in the console when the later story starts | Owner |
-| 7 | Because the rule now covers every unpaid order, the sample orders that came with the design (some unpaid) would be cancelled and would change the dashboard figures | The rule skips the sample orders DOI-24804 to DOI-24817; it applies to every order placed through checkout | TL |
+| 7 | The rule covers every unpaid online order, so the sample orders that came with the design (some unpaid) would be cancelled and would change the dashboard figures | The rule skips the sample orders DOI-24804 to DOI-24817; it applies to every VNPay (and, later, MoMo) order placed through checkout whose status is placed, confirmed or packed; unpaid shipped or delivered orders and bank-transfer orders (24 hours, PAY-020) are left alone | TL |
 
 ## 8. Traceability
 
