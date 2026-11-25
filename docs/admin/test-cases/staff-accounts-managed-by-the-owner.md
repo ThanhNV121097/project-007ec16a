@@ -217,7 +217,7 @@ Check: fetch_url
 
 **Scenario**: SC-11c — no password, hash or field named like one in any response
 **Given**: FX-STAFF-A with password `staff-pass-A1`; the session is ADMIN.
-**When**: ADMIN sends `GET /v1/admin/staff`; `POST` with a valid body (password `leak-check-pass-1`); `PUT` on FX-STAFF-A with `{"password":"leak-check-pass-2"}`; `PUT` with `{"name":"Tc Renamed"}`; `PUT` with `{"password":"short"}` (422); `POST` with an email already taken (422); `PUT` on the admin's id (409); `DELETE` of the new account (204). STAFF also sends the list (403).
+**When**: ADMIN sends `GET /v1/admin/staff`; `POST` with a valid body (password `leak-check-pass-1`); `PUT` on FX-STAFF-A with `{"password":"leak-check-pass-2"}`; `PUT` with `{"name":"Tc Renamed"}`; `PUT` with `{"password":"zq9-tiny"}` (422); `POST` with an email already taken (422); `PUT` on the admin's id (409); `DELETE` of the new account (204). STAFF also sends the list (403).
 **Then**: No response body, at any status, contains the strings `staff-pass-A1`, `leak-check-pass-1`, `leak-check-pass-2`, `short` as a password echo, `$argon2`, `argon2id`, or a key containing `pass` or `hash` outside the `errors` object's own field names; the 422 for the short password has the field name `password` only as a key of `errors`, with a sentence that does not repeat the typed value; no response sets a cookie.
 Traces: SC-11 (ADMIN-030 AC-11, item 5)
 Check: fetch_url
