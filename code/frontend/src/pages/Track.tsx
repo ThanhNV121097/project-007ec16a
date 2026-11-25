@@ -7,6 +7,9 @@ import { formatDate } from "../lib/format";
 import { usePlacedOrders } from "../lib/mock/orders";
 import { digitsOf, ORDER_STEPS, type Order } from "../lib/shop";
 import Disclosure from "../components/Disclosure";
+import FaqRows from "../components/FaqRows";
+import OutlinePill from "../components/OutlinePill";
+import PromiseRow from "../components/PromiseRow";
 import Icon from "../components/Icon";
 
 const FIELD = "w-full appearance-none rounded-sm border border-field bg-ground px-3 py-3 text-base text-ink outline-none placeholder:text-ink-soft focus:border-ink sm:text-sm";
@@ -64,6 +67,7 @@ export default function Track() {
         <div className="lg:col-span-5 lg:col-start-8">
           <T k="pages.track.steps_heading" as="h2" className="mb-5 text-lg text-ink" />
           <Disclosure rows={ORDER_STEPS.map((s) => ({ label: labels?.[s] ?? s, content: <p className="max-w-[48ch] leading-relaxed">{steps?.[s]}</p> }))} />
+          <div className="mt-10"><PromiseRow compact /></div>
           {placed.length > 0 && (
             <div className="mt-10">
               <T k="pages.track.yours" as="h2" className="mb-3 text-lg text-ink" />
@@ -79,6 +83,17 @@ export default function Track() {
               </ul>
             </div>
           )}
+        </div>
+      </section>
+      <section className="flex flex-col gap-8 border-t border-line py-12 lg:flex-row lg:gap-12">
+        <div className="flex flex-col items-start gap-5 lg:w-1/3">
+          <T k="pages.track.faq_heading" as="h2" className="text-[length:var(--size-h2)] leading-[1.1] text-ink" />
+          <T k="pages.track.help" as="p" className="max-w-[36ch] text-sm leading-relaxed text-ink-soft" />
+          <OutlinePill to="/contact"><T k="pages.track.contact_cta" /></OutlinePill>
+        </div>
+        <div className="lg:flex-1">
+          <FaqRows topic="orders" />
+          <FaqRows topic="shipping" />
         </div>
       </section>
     </>
