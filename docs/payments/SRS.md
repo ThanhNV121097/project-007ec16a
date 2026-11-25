@@ -9,7 +9,7 @@ Design system: `design/design-system.md`
 
 ## 1. Purpose
 
-The shop is in Vietnam and prices in VND, so customers expect to pay by card, banking app or QR as well as in cash
+The shop is in Vietnam and prices in VND, so customers pay by card, banking app or QR, and the owner chose online payment as the only way to pay (there is no cash on delivery).
 at the door. This module lets a customer pay an order on VNPay's page (Visa, Mastercard, JCB, domestic ATM cards
 and QR), makes the shop mark the order paid only when VNPay itself says so, and gives up unpaid orders after 30
 minutes so their pairs go back on the shelf. A later story adds a VietQR bank transfer and MoMo. Without it
