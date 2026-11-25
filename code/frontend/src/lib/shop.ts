@@ -91,8 +91,6 @@ export interface ShopTerms {
   express_days: string;
   express_cities: string;
   dispatch_cutoff: string;
-  exchange_days: number;
-  refund_days: number;
   reply_time: string;
   rating: number;
   review_count: number;
