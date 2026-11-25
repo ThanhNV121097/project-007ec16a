@@ -553,9 +553,9 @@ Behaviour:
 | AC-6 | The same order | The dealer saves cancelled again | 422 and the shelf is unchanged (the pairs are not returned twice) |
 | AC-7 | A shipped order | The dealer saves it as cancelled | 422 |
 | AC-8 | A shipped order | The dealer sets carrier `GHN`, tracking `GHN-PT27XM`, expected `2026-11-26` | They are saved and the customer's order page shows them |
-| AC-9 | A delivered cash-on-delivery order | The dealer marks it paid | `paid` is true and the order page says "Cash on delivery · paid" |
-| AC-10 | A placed cash-on-delivery order | The dealer marks it paid | 422 (not yet shipped) |
-| AC-11 | A shipped VNPay order | The dealer marks it paid | 422 "Only the payment provider marks this order paid." |
+| AC-9 | An order paid by VNPay's notice, transaction `14123456` | The dealer opens it | The order page shows "Paid" and the transaction number `14123456`, read-only, with no control to change either |
+| AC-10 | An unpaid order | The dealer opens it | The order page shows "Awaiting payment" and no transaction number |
+| AC-11 | Any unpaid order, whatever its status | The dealer tries to mark it paid | 422 "Only the payment provider marks this order paid." and the order stays unpaid |
 | AC-12 | A paid order | The dealer marks it unpaid | 422 |
 | AC-13 | A packed order | The dealer changes the address | Saved |
 | AC-14 | A delivered order | The dealer changes the address | 422 naming `address`; the note can still change |
