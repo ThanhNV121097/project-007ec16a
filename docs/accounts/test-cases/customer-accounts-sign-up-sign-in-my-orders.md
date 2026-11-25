@@ -1131,7 +1131,7 @@ Every role the SRS names is covered, allowed and denied: visitor (SC-6.2, SC-7.7
 - SC-17.4 needs `fetch_url` to report response times.
 
 **Findings against the documents (nothing was resolved silently):**
-1. **Where an error sentence sits.** The SRS says "beside the field"; the story (UI scope, decision 1) puts it under the field in the design system's alert style. These cases follow the story ("under").
+1. **Where an error sentence sits.** The SRS says "beside the field"; the story (UI scope, decision 1) puts it under the field in the design system's alert style. These cases follow the story ("under"). This is a finding against the SRS, not a case: ACC-001 item 2 and ACC-004 item 3 should say "under the field" (PM to align).
 2. **A team session on `/account`.** The SRS says only that the account endpoints answer 403 to a team session; the story's decision 3 sends the page to `/admin`. SC-28.3 follows the story. The SRS should say so.
 3. **An unreachable database.** `services.md` §2.3 makes "a database that cannot be reached" a 500 `internal`, while the verification guidance reserves 503 for a refused dependency. No case arranges an unreachable database; C-2 arranges a failed query (a table that is gone), which is 500 under both readings.
 4. **`limit` above 100 on `GET /v1/account/orders`.** `services.md` §3.20 lists an invalid `limit` as 400, while §2.4 serves a `limit` above 100 as 100. SC-8.3 follows §2.4 (200, `"limit":100`) and 400 only for `0`, negative and non-numeric values.
