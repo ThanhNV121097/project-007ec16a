@@ -159,7 +159,7 @@ Behaviour:
 | AC-2 | The same order held 2 pairs of size `38` | The order is cancelled | Size `38` has 2 more pairs and the shoe's lists and total agree with the counts |
 | AC-3 | A VNPay order placed 29 minutes ago | The check runs | It is unchanged |
 | AC-4 | A paid VNPay order placed 2 hours ago | The check runs | It is unchanged |
-| AC-5 | A cash-on-delivery order placed 2 hours ago, unpaid | The check runs | It is unchanged |
+| AC-5 | An unpaid order placed through checkout 2 hours ago, which the dealer moved to "confirmed" | The check runs | It is cancelled and its pairs return |
 | AC-6 | A VNPay order the dealer cancelled at minute 5 | The check runs at minute 31 | Its pairs are not returned a second time |
 | AC-7 | A cancelled VNPay order | "Pay now" is pressed with its token | 409 |
 | AC-8 | Two checks run at the same moment | Both see an order to cancel | The order is cancelled once and its pairs return once |
