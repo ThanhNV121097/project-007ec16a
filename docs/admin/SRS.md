@@ -578,7 +578,8 @@ Behaviour:
 
 | Field | Type | Required | Rule |
 |---|---|---|---|
-| Order: status, carrier, tracking, expected date, paid, customer, phone, email, address, city, note | write | per rule | As above |
+| Order: status, carrier, tracking, expected date, customer, phone, email, address, city, note | write | per rule | As above |
+| Order: paid, VNPay transaction number | read | yes | Read-only: set only by the payment provider's notice |
 | Per-size pairs | write | yes | Returned once on cancel |
 
 ### 4.3 Dealer dashboard figures and charts
