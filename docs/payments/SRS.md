@@ -409,7 +409,7 @@ Every other screen this module touches (checkout, order page, "Pay now") is spec
 
 | # | Open question | Proposed default | Who decides |
 |---|---|---|---|
-| 1 | The design's words for the order's "Confirmed" step say "Paid, or confirmed by phone for cash on delivery", so a paid online order is confirmed | A verified notice moves an order from "placed" to "confirmed" along with marking it paid (PAY-002 item 4) | Stakeholder |
+| 1 | The design's words for the order's "Confirmed" step now say "Paid online; the pair is set aside for you." (ORD-020), so a paid order is confirmed | A verified notice moves an order from "placed" to "confirmed" along with marking it paid (PAY-002 item 4) | Stakeholder |
 | 2 | VNPay's notice can reach a minute after the 30-minute deadline for a customer who paid at the last second; the pairs may already be sold | The payment is recorded, "paid" is set and the order stays cancelled so the dealer sees it and refunds it in VNPay's portal | Stakeholder |
 | 3 | The result page is not in the approved design | The wording of PAY-004, in the site's own styles; the owner can edit the words in the Studio | Stakeholder |
 | 4 | A customer who paid and whose notice is late sees "We have not heard from VNPay yet." with no "Try again" | As written (PAY-004) | Stakeholder |
