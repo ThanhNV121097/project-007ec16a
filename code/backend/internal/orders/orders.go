@@ -1,9 +1,10 @@
 // Package orders places an order and reads it back by its own token.
 //
 // An order holds a customer's name, phone and address, so it is no public
-// collection: GET /v1/orders answers 401 to everyone until the dealer signs in,
-// and GET /v1/orders/{id} answers the public view (never phone, email, address or
-// note) to the order's X-Order-Token and 404 to everything else.
+// collection: GET /v1/orders is the shop team's list (401 with no session, 403
+// for a customer, never a phone, email, address or note), and GET /v1/orders/{id}
+// answers the public view (never phone, email, address or note) to the order's
+// X-Order-Token and 404 to everything else.
 //
 // Placing goes through one transaction that takes the pairs off the shelf and
 // saves the order, its pairs and a hashed token together. The lock order, which
@@ -20,6 +21,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
 	"github.com/jackc/pgx/v5"
 )
@@ -94,15 +97,11 @@ func Register(mux *http.ServeMux, db DB, log *slog.Logger, opts Options) {
 	}
 	mux.HandleFunc("POST /v1/orders", s.create)
 	mux.HandleFunc("GET /v1/orders/{id}", s.read)
-	mux.HandleFunc("GET /v1/orders", s.list)
+	// The team's list: auth.Require answers 401 with no session and 403 for a
+	// customer before the query string is read; a dealer reads the list the generic
+	// reader's grammar gives every collection, over dealerList (list.go).
+	mux.Handle("GET /v1/orders", auth.Require(auth.Admin, auth.Staff)(data.ListHandler(db, log, dealerList)))
 	mux.HandleFunc("GET /v1/payment-options", s.paymentOptions)
-}
-
-// list is the dealer's list. No dealer session can exist before the sign-in
-// story, so it answers 401 to every request, with any query string, before the
-// query string is read. The sign-in story puts its guard here.
-func (s *service) list(w http.ResponseWriter, _ *http.Request) {
-	httpx.Error(w, http.StatusUnauthorized, "unauthenticated", "Sign in to see orders.", nil)
 }
 
 func (s *service) internal(w http.ResponseWriter, r *http.Request, what string, err error) {
