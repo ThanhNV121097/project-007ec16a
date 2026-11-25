@@ -13,6 +13,12 @@ import type { Product as Shoe } from "../lib/shop";
 // test; every other record and list the page asks for comes back empty.
 type Answer = { item?: Shoe; loading: boolean; error: Error | null };
 
+// React's `act`, which Testing Library renders through, exists only in React's
+// development build, and React picks its build from NODE_ENV when it is first
+// imported. A machine that exports NODE_ENV=production for its builds would
+// run these tests against the production build and fail on `React.act`.
+vi.hoisted(() => vi.stubEnv("NODE_ENV", "test"));
+
 const hook = vi.hoisted(() => ({
   none: { item: undefined, loading: false, error: null } as Answer,
   answer: { item: undefined, loading: false, error: null } as Answer,
