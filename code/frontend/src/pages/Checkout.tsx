@@ -4,6 +4,7 @@ import { T, useContent } from "../editable";
 import { usePageMeta } from "../seo";
 import { useCollection, useRecord } from "../data";
 import { clearCart, lineKey, useCart, type CartLine } from "../lib/cart";
+import { useSavedDetailsFill } from "../lib/customer-accounts-sign-up-sign-in-my-orders";
 import { useDemo } from "../lib/demo";
 import { formatPrice } from "../lib/format";
 import { placeOrder } from "../lib/mock/orders";
@@ -56,6 +57,7 @@ export default function Checkout() {
   const [delivery, setDelivery] = useState("standard");
   const [payment, setPayment] = useState("cod");
   const [form, setForm] = useState({ name: "", phone: "", address: "", city: "", note: "" });
+  useSavedDetailsFill(setForm);
   const [errors, setErrors] = useState<string[]>([]);
   const [paying, setPaying] = useState(false);
 
