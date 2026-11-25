@@ -62,7 +62,7 @@ Traces: SC-1 (ADMIN-001 boundary)
 Check: fetch_url
 
 **Scenario**: TC-03 — the stored password is an argon2id hash, salted, never the typed password
-**Given**: The admin of TC-01 and the three fixture rows of "Fixtures" exist (the fixtures share one hash on purpose; the salt claim is read on two rows made by the server itself).
+**Given**: The admin of TC-01 exists. (The fixture rows share one hash on purpose, so the salt claim is read on two rows the server's own code made, not on the fixtures.)
 **When**: `SELECT email, password_hash FROM users WHERE role = 'admin'` is read; then a second account is made by the server's own code with the same password as the admin's (the backend PR's Go test calls `auth.CreateUser` twice with one password) and both hashes are read.
 **Then**: The admin's `password_hash` starts with `$argon2id$`; it is not equal to `Dealer-Pass1` and does not contain it. The two hashes made from one password differ (a salt per password). The hash never appears in any response of TC-01 and TC-02.
 Traces: SC-2 (ADMIN-003 AC-2)
