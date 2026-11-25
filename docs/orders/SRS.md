@@ -240,7 +240,7 @@ Behaviour:
 
 Behaviour:
 
-1. The shop keeps a count of pairs for each size of each shoe. A size with 0 pairs is in the shoe's sold-out list; a size with 1 or 2 pairs is in its last-pairs list; a size with 3 or more is in neither. The shoe's "pairs in stock" is the sum over its sizes.
+1. The shop keeps a count of pairs for each size of each shoe. A size with 0 pairs is in the shoe's sold-out list; a size with 1 or 2 pairs is in its last-pairs list; a size with 3 or more is in neither. The shoe's "pairs in stock" is the sum over its sizes. The counts are the ones staff type in the shoe form (ADMIN-015); there is no second copy.
 2. These lists and the total change the moment an order is saved, so the next time a shoe page loads it shows the new state: a size reaching zero is struck through; one or two left carries the last-pairs dot.
 3. Pairs come back to the shelf, and the lists and total with them, when an order is cancelled (`admin` and `payments` modules).
 4. The shoes on record are given counts that agree with the lists they already show: a sold-out size has 0, a last-pairs size has 1 or 2, any other listed size has at least 3 (open question 1 for the totals).
