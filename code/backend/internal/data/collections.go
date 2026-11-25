@@ -220,13 +220,6 @@ func build(name, from string, cols ...Column) *Collection {
 	return &Collection{Name: name, From: from, Columns: append(cols, bookkeeping()...)}
 }
 
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
-// registry lists the nine collections the generic reader serves. Orders are not
-// one of them: they hold a customer's details, so internal/orders reads them,
-// by the order's own token. The only one with a join is products: a shoe's
-// sizes, last-pairs list, sold-out list and stock are derived from the count of
-// pairs per size (the view product_stock), never stored on the shoe.
-=======
 // over is the search condition of a collection whose words are looked for in
 // some of its own columns: the columns are joined by a space (so a word never
 // straddles two of them), folded, and searched with strpos — which reads % and
@@ -239,9 +232,11 @@ func over(columns ...string) string {
 	return "strpos(doi_fold(" + strings.Join(parts, " || ' ' || ") + "), {w}) > 0"
 }
 
-// registry lists the ten collections. The only one with a join is orders: an
-// order's shoe, size and pairs are its first pair line.
->>>>>>> refs/heads/main
+// registry lists the nine collections the generic reader serves. Orders are not
+// one of them: they hold a customer's details, so internal/orders reads them,
+// by the order's own token. The only one with a join is products: a shoe's
+// sizes, last-pairs list, sold-out list and stock are derived from the count of
+// pairs per size (the view product_stock), never stored on the shoe.
 var registry = []*Collection{
 	build("categories", "categories t",
 		text("id"), text("name"), text("blurb"), text("image")).
