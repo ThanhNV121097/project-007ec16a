@@ -45,7 +45,7 @@ const SAMPLES: PublicOrder[] = [
   order("doi-24818", { eta: "2026-11-28" }),
   order("doi-24819", { status: "packed", items: [black, kids], carrier: "GHTK", eta: "2026-11-27" }),
   order("doi-24817", { status: "shipped", items: [crystal], paid: true, carrier: "GHN", tracking: "GHN-PT27XM", eta: "2026-11-26", customer: "Hoàng Nam", city: "Đà Nẵng", placed_at: "2026-11-23T16:05:00+07:00" }),
-  order("doi-24811", { status: "cancelled", items: [gazelle], payment: "cod", customer: "Đức", city: "Huế", placed_at: "2026-11-20T09:20:00+07:00" }),
+  order("doi-24811", { status: "cancelled", items: [gazelle], customer: "Đức", city: "Huế", placed_at: "2026-11-20T09:20:00+07:00" }),
   order("doi-24810", { status: "delivered", paid: true, carrier: "GHN", tracking: "GHN-MW55RB", eta: "2026-11-20", customer: "Phương", city: "TP. Hồ Chí Minh", placed_at: "2026-11-19T21:15:00+07:00" }),
 ];
 
