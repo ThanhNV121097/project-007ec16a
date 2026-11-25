@@ -59,7 +59,7 @@ Behaviour:
 1. `/admin/sign-in` is a split screen: the stockroom picture (alt "Boxes stacked in a stockroom") at the left, above the form on a phone; at the right the wordmark, the heading "Đôi — dealer sign-in", the line "Sign in to see orders, stock and sales.", three lines each with an icon — "Orders to confirm, pack and send, newest first.", "Stock for every pair, size by size, and what sold this month.", "The sizes running out, before a customer finds them gone." — and the form.
 2. The form has "Email" (placeholder `you@example.com`), "Password" (hidden characters) and a full-width "Sign in" button; Enter in either field submits. Under it the note "Accounts are for the dealer and staff. Ask the owner for one."
 3. Submitting with the email empty shows "An email address is needed" beside the email field and sends nothing.
-4. Right credentials take the dealer to `/admin`.
+4. Right credentials of an admin or a staff account take the person to `/admin`. A customer's credentials sign the customer in too (one sign-in serves all three roles), and `/admin` then shows the team-only message (ADMIN-002 item 9).
 5. Wrong credentials — an unknown email or a wrong password, alike — show "Wrong email or password." and nothing else about which was wrong. The password field is emptied.
 6. While the shop is answering, the button reads "Signing in…" and is disabled.
 7. When the shop cannot be reached the page shows "We cannot reach the server. Please try again." and the button is enabled.
