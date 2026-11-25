@@ -393,7 +393,7 @@ Behaviour:
 Behaviour:
 
 1. Orders are not a public collection. The list of orders answers 401 with no session and 403 for a signed-in customer; only a shop-team session (role admin or staff) lists orders.
-2. One order is read with its order token, or with the dealer's session. Without either the answer is 404, the same as for an order that does not exist.
+2. One order is read with its order token, with a shop-team session (admin or staff), or with the session of the customer account the order is linked to (ACC-005). Without any of these the answer is 404, the same as for an order that does not exist; so is the answer to the session of another customer.
 3. The order's phone, email, address and note are never returned to a visitor, token or not. The dealer's order page shows them (`admin` module).
 4. The token is sent only to the browser that placed the order or looked it up (ORD-021). It is not in any address or message the shop sends.
 5. Until the dealer's sign-in story exists, nobody holds a dealer session, so the list of orders answers 401 to everyone.
