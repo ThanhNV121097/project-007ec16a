@@ -40,14 +40,12 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	orders.Register(mux, pool, log, orders.Options{})
 	mux.HandleFunc("/", notFound)
 
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
-	var h http.Handler = httpx.CleanPaths(mux)
-=======
-	// The chain, outermost first: Recover, AccessLog, CORS, Resolve (who is
-	// signed in), the route recorder (for the access log), the mux.
+	// The chain, outermost first: RequestID, Recover, AccessLog, CORS, CleanPaths
+	// (an address that is not clean is a 404 before anything is looked up),
+	// Resolve (who is signed in), the route recorder (for the access log), the mux.
 	var h http.Handler = httpx.RecordRoute(mux)
 	h = svc.Resolve()(h)
->>>>>>> refs/heads/main
+	h = httpx.CleanPaths(h)
 	h = httpx.CORS(cfg.CORSAllowedOrigins)(h)
 	h = httpx.AccessLog(log)(h)
 	h = httpx.Recover(log)(h)
