@@ -45,11 +45,7 @@ function StaffPage() {
   return (
     <DashboardLayout title={useContent("pages.admin.staff.title")} nav={nav} actions={staff.status === "ready" ? add : null}>
       {said && <Notice tone={said.tone} onClose={() => setSaid(null)}>{said.text}</Notice>}
-<<<<<<< refs/heads/feature/staff-accounts-managed-by-the-owner-ui
-      <StaffAccounts items={staff.items} status={staff.status} onRetry={staff.retry} onChoose={choose} />
-=======
       <StaffAccounts items={staff.items} total={staff.total} status={staff.status} onRetry={staff.retry} onChoose={choose} />
->>>>>>> refs/heads/main
       <StaffDialogs
         dialog={dialog}
         actions={staff}
