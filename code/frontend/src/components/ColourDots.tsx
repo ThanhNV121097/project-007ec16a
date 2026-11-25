@@ -1,42 +1,44 @@
 import { type ReactNode } from "react";
+import { Link } from "react-router-dom";
+
+export interface ColourChoice {
+  id: string;
+  name: string;
+  /** A CSS colour name kept on the record ("black", "pink"), never a hex. */
+  swatch?: string;
+}
 
 /**
- * A product's colours as filled circles, the chosen one ringed. They are the
- * only colour on the page outside the photographs, which is why they are
- * small.
- *
- * The fill is the colour's own NAME handed to the browser — "navy", "olive",
- * "black" are all CSS colours — so a record names its colours in words an
- * owner would type and no hex is kept in the data. A name the browser does
- * not know draws the ring with no fill, and the word under the row still
- * says which is chosen.
+ * COLOUR DOTS: the colourways of one model as filled circles about 14px
+ * across, the one being looked at carrying a thin ring. Each dot is a link
+ * to that colourway's own page — the choice is real, not decoration. A model
+ * with one colourway shows its one dot, ringed.
  */
-export default function ColourDots({ label, colours, value, onChange }: {
+export default function ColourDots({ label, items, current }: {
   label: ReactNode;
-  colours: readonly string[];
-  value: string;
-  onChange: (colour: string) => void;
+  items: readonly ColourChoice[];
+  current: string;
 }) {
-  if (colours.length === 0) return null;
+  if (items.length === 0) return null;
   return (
-    <fieldset data-block="variants" className="flex flex-col gap-2">
-      <legend className="mb-2 text-xs uppercase tracking-wider text-ink-soft">
-        {label}{value ? ` — ${value}` : ""}
-      </legend>
-      <div className="flex flex-wrap gap-2.5" role="radiogroup">
-        {colours.map((c) => (
-          <button
-            key={c}
-            type="button"
-            role="radio"
-            aria-checked={c === value}
-            aria-label={c}
-            onClick={() => onChange(c)}
-            className={`size-5 rounded-full border border-line outline-offset-2 ${c === value ? "outline outline-1 outline-ink" : ""}`}
-            style={{ backgroundColor: c.toLowerCase().replace(/\s+/g, "") }}
-          />
-        ))}
-      </div>
-    </fieldset>
+    <div data-block="variants" className="flex flex-col gap-1.5">
+      <p className="text-xs uppercase tracking-wider text-ink-soft">{label}</p>
+      <ul className="-ml-2 flex flex-wrap">
+        {items.map((c) => {
+          const on = c.id === current;
+          return (
+            <li key={c.id}>
+              <Link to={`/shop/${c.id}`} aria-label={c.name} aria-current={on ? "page" : undefined} title={c.name}
+                className="grid size-9 place-items-center">
+                <span
+                  className={`block size-3.5 rounded-full border border-line outline-offset-2 transition-transform hover:scale-110 ${on ? "outline outline-1 outline-ink" : ""}`}
+                  style={{ backgroundColor: c.swatch }}
+                />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
