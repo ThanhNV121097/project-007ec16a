@@ -102,7 +102,7 @@ uploads, overview, staff), `account` (customer account). A package exposes `Regi
   the admin area) is frozen: a story never edits it, nor `src/index.css`, `src/content.json`, `package.json`,
   `eslint.config.js` or `package-lock.json`. Use the Tailwind names (`bg-ground`, `text-ink`, `border-line`, `p-4`); no raw
   colour, no arbitrary-value class, no Tailwind palette colour — eslint fails the build on them. There are no CSS modules.
-  Every token `design/design-system.md` §1.1 documents exists in `theme.css`; nothing is missing.
+  Every colour token §1.1 documents exists in `theme.css`; the typography, tracking and pill-radius names §4 asks for do not (section 9).
 - **Gates (`npm run lint`):** `max-lines` 300 per file, `complexity` 20, no unused vars, no `any`. Split a page before it grows past 300.
 - **Records are read only through `src/data/index.ts`** (`useCollection`, `useRecord`). The data story rewrites that one module to
   call `GET <base>/v1/<name>?page=&limit=&sort=&q=&<field>=<value>` and deletes every JSON file in `src/data/` except `schema.json`,
@@ -168,7 +168,7 @@ Order: 2 → 3 → {4, 5, 8}; 5 → {6, 7, 14}; 8 → {9, 10, 13, 14}; 3 → 12;
 | 11 | VietQR transfer and MoMo (P3) | A payment row per provider attempt; MoMo's own signed notice; the dealer marks a bank-transfer order paid and no other. New secrets are requested when this story starts |
 | 12 | Product page missing-shoe bug | Frontend only, after 3: no "not found" until the record's request has finished |
 | 13 | Staff accounts | `/v1/admin/staff` for role `admin` only; the admin's own row is protected (409); switching an account off ends its sessions, because every request re-reads `users.active` |
-| 14 | Customer accounts | `/v1/account/sign-up|""|/orders`; `orders.account_id` is set only for role `customer`; email unique across all roles, case-insensitive; sign-up 10 per hour per address; no email or SMS is sent anywhere |
+| 14 | Customer accounts | `/v1/account/sign-up`, `/v1/account`, `/v1/account/orders`; `orders.account_id` is set only for role `customer`; email unique across all roles, case-insensitive; sign-up 10 per hour per address; no email or SMS is sent anywhere |
 
 ## 9. Risks and open items
 
