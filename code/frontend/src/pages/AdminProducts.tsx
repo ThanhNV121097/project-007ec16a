@@ -1,4 +1,6 @@
 import { useContent } from "../editable";
+import { useCollection } from "../data";
+import type { Category } from "../lib/shop";
 import ListPage from "../components/admin/ListPage";
 import { columnsFromFields, fieldsOf } from "../components/admin/fields";
 import { LIST_COLUMNS, useAdminNav } from "./admin-nav";
@@ -7,6 +9,7 @@ import { LIST_COLUMNS, useAdminNav } from "./admin-nav";
 export default function AdminProducts() {
   const nav = useAdminNav();
   const keys = LIST_COLUMNS.products;
+  const cats = useCollection<Category>("categories", { pageSize: 50 }).items;
   return (
     <ListPage
       collection="products"
@@ -17,7 +20,7 @@ export default function AdminProducts() {
       searchPlaceholder={useContent("pages.admin.products.search")}
       filters={[
         { key: "status", label: useContent("pages.admin.products.status"), options: [["live", useContent("pages.admin.products.live")], ["draft", useContent("pages.admin.products.draft")]] },
-        { key: "category", label: useContent("pages.admin.products.category"), options: [["women", "Women"], ["men", "Men"], ["kids", "Kids"]] },
+        { key: "category", label: useContent("pages.admin.products.category"), options: cats.map((c) => [c.id, c.name] as const) },
       ]}
     />
   );
