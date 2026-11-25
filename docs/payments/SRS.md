@@ -202,7 +202,7 @@ Behaviour:
 | AC-1 | The order was marked paid by VNPay's notice | `/payment/return` opens with its reference | "Payment received." and "Your order DOI-24818 is paid. We will pack it next." and a "View your order" link to `/orders/doi-24818` |
 | AC-2 | The address says success, the notice has not arrived | The page opens | "We are confirming your payment…" with the line "This usually takes a few seconds. Please do not pay again." and no "Try again" |
 | AC-3 | The same, and the notice arrives after 6 seconds | The page waits | It switches to "Payment received." with no reload |
-| AC-4 | The same, and no notice arrives for 30 seconds | The page waits | The heading reads "We have not heard from VNPay yet." with the line, "View your order" and "Try again" |
+| AC-4 | The same, and no notice arrives for 30 seconds | The page waits | The heading reads "We have not heard from VNPay yet." with the line and "View your order", and no "Try again" |
 | AC-5 | The address says the customer cancelled; the order is unpaid | The page opens | "Payment was not completed." with the line, "View your order" and "Try again" |
 | AC-6 | The same | "Try again" is pressed | The shop gives a new payment address with a new reference and the browser goes to it |
 | AC-7 | The order was cancelled by the 30-minute rule | The page opens | "This order was cancelled." with the line, "View your order" and a "Keep shopping" pill, and no "Try again" |
