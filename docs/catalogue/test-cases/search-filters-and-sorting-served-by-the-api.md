@@ -408,11 +408,11 @@ Traces: SC-21 (CAT-002 Boundary)
 Check: interact_page
 
 **Scenario**: SC-22 — the shop asks for twelve live shoes at a time and for the lines once
-**Given**: The seed plus FX-LIVE30; a browser whose network requests during the page's life are listed.
-**When**: Open `/shop`, wait for the cards, press "Show more" once, then list the requests made.
-**Then**: Every request to `/api/v1/products` carries `limit=12` and `status=live` (the second carries `page=2`); no request has a `limit` over 100 (none over 12); the requests whose path starts `/api/v1/lines` number at most one in all (not one per card). The page shows 24 cards, which also shows no request asked for more than twelve at a time.
+**Given**: The seed plus FX-LIVE30; the page is operated in a browser session whose request log (every request the page makes, with its URL) can be read back.
+**When**: Open `/shop` and wait for the cards; read the request log; press "Show more" once and wait for the new cards; read the request log again.
+**Then**: After the first read: the log holds one request to `/api/v1/products` (plus the one to `/api/v1/product-filters`), it carries `limit=12` and `status=live`, and 12 cards are drawn. After the press: the log holds a second request to `/api/v1/products` that carries `page=2`, `limit=12` and `status=live`, and 24 cards are drawn (24 distinct `href`s). Over the whole log: no request to `/api/v1/products` has a `limit` over 12 (so none over 100) and none lacks `status=live`; the requests whose path starts `/api/v1/lines` number at most one in all (not one per card, not one per page); no request asks for the shoes with `limit=100` or more to filter them in the browser.
 Traces: SC-22 (CAT-002 AC-5)
-Check: render_url
+Check: interact_page
 
 **Scenario**: SC-23a — a draft shoe is not listed and not counted
 **Given**: The seed plus FX-DRAFT (a draft shoe named "Samba OG Draft Tc").
