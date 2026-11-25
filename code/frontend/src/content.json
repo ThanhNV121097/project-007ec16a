@@ -167,49 +167,81 @@
   },
   "pages": {
     "about": {
-      "cta": "See the shop",
-      "description": "Who makes the things in the shop, and how.",
-      "first": "Everything here is made in small runs by workshops we visit. When a run sells out we make it again or we do not — nothing is marked down to clear a shelf.",
-      "second": "We would rather sell you one shirt you wear for ten years than three you replace. Bring anything back and we will mend it.",
-      "statement": "From one rail of shirts to a shop for things you keep.",
-      "title": "About"
+      "cta": "See the shoes",
+      "description": "Who sells the shoes at Đôi, and how each pair is checked and sent.",
+      "figures": {
+        "lines": "adidas lines, from the 1950 Samba to this year's runners.",
+        "pairs": "Pairs in the shop today, each with its sizes in stock.",
+        "rating": "Average rating from {n} reviews by people who bought here."
+      },
+      "first": "Every pair comes from the dealer's own stock, boxed with its tags and checked against the order before it is sent.",
+      "first_alt": "Boxes stacked in a stockroom",
+      "second": "We started for friends who could not find their size in the shops near them. We still answer every size question ourselves, the same working day.",
+      "second_alt": "Gift boxes ready to wrap",
+      "statement": "Đôi sells genuine adidas, one pair at a time, to people who would rather not guess their size.",
+      "title": "About Đôi"
     },
     "admin": {
-      "kinds": {
-        "title": "Kinds"
+      "categories": {
+        "title": "Categories"
+      },
+      "lines": {
+        "title": "Lines"
       },
       "nav": {
         "catalogue": "Catalogue",
-        "kinds": "Kinds",
+        "categories": "Categories",
+        "lines": "Lines",
+        "orders": "Orders",
         "overview": "Overview",
-        "products": "Products"
+        "products": "Shoes",
+        "reviews": "Reviews",
+        "sales": "Sales"
+      },
+      "orders": {
+        "cancelled": "Cancelled",
+        "payment": "Payment",
+        "search": "Search by number or customer",
+        "status": "Status",
+        "title": "Orders"
       },
       "overview": {
-        "col_kind": "Kind",
-        "col_product": "Product",
+        "chart_title": "Sales, last 14 days",
+        "col_kind": "For",
+        "col_product": "Shoe",
         "col_stock": "In stock",
-        "drafts": "still in draft",
-        "kinds": "Kinds",
+        "lines_title": "Pairs sold by line",
         "low": "Running low",
         "low_none": "Nothing is running low.",
-        "low_note": "under ten left",
+        "low_note": "shoes down to their last pairs",
         "low_title": "Running low",
-        "products": "Products",
+        "orders_note": "{n} orders",
+        "sales": "Sales this month",
+        "stock": "Pairs in stock",
+        "stock_note": "across {n} shoes",
         "title": "Overview",
-        "worth": "Stock on the shelf",
-        "worth_note": "at the prices shown"
+        "to_pack": "To pack",
+        "to_pack_note": "placed or confirmed"
       },
       "products": {
+        "category": "For",
         "draft": "Draft",
-        "live": "Live",
-        "search": "Search by name",
+        "live": "On sale",
+        "search": "Search by name or style code",
         "status": "Status",
-        "title": "Products"
+        "title": "Shoes"
+      },
+      "reviews": {
+        "hidden": "Hidden",
+        "live": "Shown",
+        "search": "Search reviews",
+        "status": "Status",
+        "title": "Reviews"
       },
       "signin": {
-        "description": "Sign in to run the shop.",
-        "note": "Ask the shop's owner for an account.",
-        "title": "Welcome back"
+        "description": "Sign in to see orders, stock and sales.",
+        "note": "Accounts are for the dealer and staff. Ask the owner for one.",
+        "title": "Đôi — dealer sign-in"
       }
     },
     "cart": {
@@ -255,13 +287,34 @@
     },
     "contact": {
       "about": "You are asking about",
-      "address": "Find us",
-      "description": "How to reach the shop.",
+      "address": "Shop",
+      "description": "Ask Đôi about a size, an order or a gift.",
       "email": "Email",
-      "hours": "Open",
-      "lead": "Message us about a size, an order or a repair. We answer the same day.",
+      "form_heading": "Send a message",
+      "hours": "Hours",
+      "lead": "Send a message about a size, an order or a gift. We answer {reply}.",
       "phone": "Phone",
-      "title": "Contact"
+      "quick": [
+        {
+          "href": "/size-chart",
+          "label": "Find your size"
+        },
+        {
+          "href": "/shipping",
+          "label": "Delivery times and fees"
+        },
+        {
+          "href": "/returns",
+          "label": "Returns and size exchange"
+        },
+        {
+          "href": "/track",
+          "label": "Track an order"
+        }
+      ],
+      "quick_heading": "Already answered",
+      "title": "Contact",
+      "zalo": "Zalo"
     },
     "home": {
       "colour": "Colour",
@@ -366,6 +419,71 @@
       "stock_some": "In stock in {n} sizes. Last pairs in {low}.",
       "title": "A pair at Đôi"
     },
+    "returns": {
+      "contact_cta": "Start an exchange",
+      "description": "How to exchange a size or return a pair for a refund.",
+      "faq_heading": "Questions about returns",
+      "figures": {
+        "exchange": "Days to exchange a size, counted from delivery.",
+        "free": "For your first size exchange: we pay the courier both ways.",
+        "refund": "Days to return an unworn pair for a refund."
+      },
+      "heading": "Returns and size exchange",
+      "lead": "Buying shoes online means guessing a size once. If the guess is wrong, this is how we put it right.",
+      "rules": [
+        {
+          "text": "Worn indoors only, with clean soles."
+        },
+        {
+          "text": "In the original box, with its tags and paper."
+        },
+        {
+          "text": "Within the exchange or return window, counted from the day it arrived."
+        },
+        {
+          "text": "Reduced pairs can be exchanged for another size but not refunded."
+        }
+      ],
+      "rules_heading": "What we ask",
+      "steps": [
+        {
+          "text": "Send the order number and the size you want through the contact form.",
+          "title": "Message us"
+        },
+        {
+          "text": "Put it back in its box; the courier collects it and brings the new size.",
+          "title": "Hand over the pair"
+        },
+        {
+          "text": "A refund goes back to your bank account or wallet within three working days.",
+          "title": "Wear the right size"
+        }
+      ],
+      "steps_heading": "How to exchange",
+      "title": "Returns and exchange"
+    },
+    "shipping": {
+      "columns": {
+        "fee": "Fee",
+        "option": "Option",
+        "time": "Arrives",
+        "where": "Where"
+      },
+      "cutoff": "Orders placed before {cutoff} on a working day leave the same day.",
+      "description": "What delivery costs, how long it takes and where express reaches.",
+      "faq_heading": "Questions about delivery",
+      "figures": {
+        "express": "Working day by express in {cities}.",
+        "free": "Standard delivery on every order over {price} — that is every pair in the shop.",
+        "standard": "Working days by standard delivery, anywhere in Vietnam."
+      },
+      "free_from": "Free over {price}",
+      "heading": "Delivery",
+      "lead": "Every pair leaves boxed, tagged and tracked. Here is what it costs and how long it takes.",
+      "options_heading": "Options and fees",
+      "title": "Delivery",
+      "track_cta": "Track an order"
+    },
     "shop": {
       "band_between": "{a} – {b}",
       "band_over": "{a} and over",
@@ -391,6 +509,38 @@
       "sort_newest": "Newest first",
       "sort_rated": "Best rated",
       "title": "All shoes"
+    },
+    "sizes": {
+      "answer_line": "UK {uk} · US men {us_m} · US women {us_w}",
+      "columns": {
+        "cm": "cm",
+        "eu": "EU",
+        "uk": "UK",
+        "us_m": "US men",
+        "us_w": "US women"
+      },
+      "description": "The adidas size chart in EU, UK, US and centimetres, with a box that finds your size from your foot length.",
+      "faq_heading": "Questions about size",
+      "fit_heading": "How each line fits",
+      "heading": "Find your size",
+      "hint": "Type a length such as 24.5 to see your size.",
+      "input": "Your foot length",
+      "lead": "adidas makes shoes in thirds of an EU size. Measure your foot once and the chart does the rest.",
+      "note": "Lengths are foot lengths from adidas's own chart. Kids' grade-school sizes start at EU 35 1/2 and follow the same lengths.",
+      "steps": [
+        {
+          "text": "Stand on a sheet of paper in the afternoon, heel against a wall, in the socks you will wear."
+        },
+        {
+          "text": "Mark the tip of your longest toe and measure from the wall to the mark in centimetres."
+        },
+        {
+          "text": "Type the longer of your two feet below; between two sizes, take the larger."
+        }
+      ],
+      "table": "adidas sizes, adults and older kids",
+      "title": "Size chart",
+      "too_big": "That is beyond the chart — message us and we will check the pair for you."
     },
     "track": {
       "description": "Find your order with its number and your phone.",
