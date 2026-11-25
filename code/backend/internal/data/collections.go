@@ -155,8 +155,11 @@ func build(name, from string, cols ...Column) *Collection {
 	return &Collection{Name: name, From: from, Columns: append(cols, bookkeeping()...)}
 }
 
-// registry lists the ten collections. The only one with a join is orders: an
-// order's shoe, size and pairs are its first pair line.
+// registry lists the nine collections the generic reader serves. Orders are not
+// one of them: they hold a customer's details, so internal/orders reads them,
+// by the order's own token. The only one with a join is products: a shoe's
+// sizes, last-pairs list, sold-out list and stock are derived from the count of
+// pairs per size (the view product_stock), never stored on the shoe.
 var registry = []*Collection{
 	build("categories", "categories t",
 		text("id"), text("name"), text("blurb"), text("image")),
@@ -166,26 +169,9 @@ var registry = []*Collection{
 		text("id"), text("topic"), text("question"), text("answer")),
 	build("lines", "lines t",
 		text("id"), text("name"), text("blurb"), col("since", Int), text("fit_note")),
-	build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
-		text("id"), text("number"),
-		Column{Name: "placed_at", Kind: Instant,
-			Select: "to_char(t.placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD\"T\"HH24:MI:SS') || '+07:00'",
-			Filter: "t.placed_at"},
-		text("status"),
-		Column{Name: "product", Kind: Text, Select: "coalesce(oi.product_id,'')", Filter: "oi.product_id"},
-		Column{Name: "size", Kind: Text, Select: "coalesce(oi.size,'')", Filter: "oi.size"},
-		Column{Name: "qty", Kind: Int, Select: "coalesce(oi.qty,0)", Filter: "oi.qty"},
-		col("total", Int),
-		ref("payment", "payment_method_id"), col("paid", Bool), ref("delivery", "delivery_option_id"),
-		text("carrier"), text("tracking"),
-		Column{Name: "eta", Kind: Date, Select: "coalesce(to_char(t.eta,'YYYY-MM-DD'),'')", Filter: "t.eta"},
-		text("customer"),
-		private("phone"), private("email"), private("address"),
-		text("city"),
-		private("note")),
 	build("payments", "payment_methods t",
 		text("id"), text("name"), text("note"), col("online", Bool), text("icon")),
-	build("products", "products t",
+	build("products", "products t JOIN product_stock ps ON ps.product_id = t.id",
 		text("id"), text("name"), text("model"),
 		optRef("line", "line_id"), optRef("category", "category_id"),
 		col("price", Int),
@@ -194,8 +180,11 @@ var registry = []*Collection{
 		text("description"), text("code"), text("colourway"), text("colour"), text("swatch"),
 		text("upper"), text("lining"), text("sole"), text("fit"), text("care"),
 		day("released"),
-		col("sizes", List), col("sizes_low", List), col("sizes_out", List),
-		col("stock", Int), decimal("rating"), col("review_count", Int),
+		Column{Name: "sizes", Kind: List, Select: "ps.sizes"},
+		Column{Name: "sizes_low", Kind: List, Select: "ps.sizes_low"},
+		Column{Name: "sizes_out", Kind: List, Select: "ps.sizes_out"},
+		Column{Name: "stock", Kind: Int, Select: "ps.stock"},
+		decimal("rating"), col("review_count", Int),
 		text("image"), text("image_back"), text("image_detail")),
 	build("reviews", "reviews t",
 		text("id"), ref("product", "product_id"), text("name"), col("rating", Int), day("date"),
