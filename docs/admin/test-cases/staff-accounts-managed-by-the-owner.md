@@ -738,4 +738,4 @@ Check: fetch_url
 | SC-20 | SC-20 | | SC-41 | SC-41a, SC-41b |
 | SC-21 | SC-21a, SC-21b | | Contract | C-1 … C-8 |
 
-All 41 criteria are covered. The two `manual` cases (SC-21b, SC-41b) are the only ones no instrument can observe; every case that is somebody typing, clicking or pressing is `interact_page`.
+All 41 criteria are covered by 83 cases, plus 8 contract cases (C-1 … C-8): 91 in all. 52 are `fetch_url`, 37 are `interact_page`, 2 are `manual` (SC-21b, SC-41b — the only ones no instrument can observe). Every case that is somebody typing, clicking or pressing is `interact_page`; the cases that arrange a state the application will not produce (a customer row, a switched-off account, a failed write, a removed row behind the page's back) say so in their `Given`.
