@@ -1,8 +1,9 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { MemoryRouter, Route, Routes, useNavigate, type NavigateFunction } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Product from "../pages/Product";
+import type { Query } from "../data";
 import type { Product as Shoe } from "../lib/shop";
 
 // WHAT THE SHOE PAGE DRAWS, DECIDED BY WHAT THE RECORD REQUEST SAYS.
@@ -21,16 +22,20 @@ type Answer = { item?: Shoe; loading: boolean; error: Error | null };
 vi.hoisted(() => vi.stubEnv("NODE_ENV", "test"));
 
 const hook = vi.hoisted(() => ({
+  real: false,
   none: { item: undefined, loading: false, error: null } as Answer,
   answer: { item: undefined, loading: false, error: null } as Answer,
 }));
 
+// `hook.real` turns both stubs off for the tests at the end of the file, which
+// run the real hook and the real API client against a stubbed `fetch`.
 vi.mock("../data", async (importOriginal) => {
   const real = await importOriginal<typeof import("../data")>();
   return {
     ...real,
-    useRecord: (name: string) => (name === "products" ? hook.answer : hook.none),
-    useCollection: () => ({ items: [], total: 0, pages: 1, page: 1, hasMore: false, loading: false, error: null, loadMore: () => {} }),
+    useRecord: (name: string, id?: string) => (hook.real ? real.useRecord(name, id) : name === "products" ? hook.answer : hook.none),
+    useCollection: (name: string, query?: Query) =>
+      hook.real ? real.useCollection(name, query) : { items: [], total: 0, pages: 1, page: 1, hasMore: false, loading: false, error: null, loadMore: () => {} },
   };
 });
 
@@ -119,6 +124,7 @@ function open(first: string) {
 
 beforeEach(() => {
   hook.answer = notFound;
+  hook.real = false;
 });
 
 describe("a record for this address is in hand", () => {
