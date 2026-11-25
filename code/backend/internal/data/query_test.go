@@ -11,7 +11,7 @@ import (
 // ordersShape is what the orders collection looked like while the generic reader
 // served it. Orders are read by internal/orders now and are no longer in the
 // registry, but the grammar still has to read an instant, a date, a nullable
-column of a left join and a private column, so these tests keep the shape.
+// column of a left join and a private column, so these tests keep the shape.
 var ordersShape = build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
 	text("id"), text("number"),
 	Column{Name: "placed_at", Kind: Instant,
