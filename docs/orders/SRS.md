@@ -192,7 +192,7 @@ Behaviour:
 
 | Field | Type | Required | Rule |
 |---|---|---|---|
-| Order: number, id, placed time, status, total, payment, paid, delivery, expected date, customer, phone, address, city, note | write | yes | Phone, address and note private |
+| Order: number, id, placed time, status, total, payment, paid, delivery, expected date, customer, customer account (when signed in), phone, address, city, note | write | yes | Phone, address and note private |
 | Order pair: shoe, EU size, quantity, unit price | write | yes | One or more per order |
 | Order token | write | yes | Unguessable |
 
