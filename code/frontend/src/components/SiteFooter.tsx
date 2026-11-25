@@ -33,14 +33,14 @@ export default function SiteFooter() {
   return (
     <footer className="mt-16 bg-accent text-accent-ink">
       <div className="mx-auto max-w-page px-[var(--gutter)] pb-[var(--dock-space)] pt-4 lg:pb-12">
-        <div className="grid grid-cols-2 gap-10 py-12 md:grid-cols-12">
-          <div className="col-span-2 md:col-span-5">
+        <div className="grid grid-cols-2 gap-10 py-12 md:grid-cols-3 lg:grid-cols-12">
+          <div className="col-span-2 md:col-span-3 lg:col-span-5">
             <Logo />
             <T k="footer.line" as="p" className="mt-4 max-w-[40ch] text-sm leading-relaxed text-accent-ink/70" />
           </div>
-          <div className="md:col-span-2"><Column heading="footer.shop_heading" list="footer.shop" items={shop} /></div>
-          <div className="md:col-span-3"><Column heading="footer.help_heading" list="footer.help" items={help} /></div>
-          <div className="md:col-span-2"><Column heading="footer.about_heading" list="footer.about" items={about} /></div>
+          <div className="lg:col-span-2"><Column heading="footer.shop_heading" list="footer.shop" items={shop} /></div>
+          <div className="lg:col-span-3"><Column heading="footer.help_heading" list="footer.help" items={help} /></div>
+          <div className="lg:col-span-2"><Column heading="footer.about_heading" list="footer.about" items={about} /></div>
         </div>
         <hr className="h-px w-full border-0 bg-accent-ink/15" />
         <div className="flex flex-col gap-3 pt-6 text-[0.8125rem] leading-relaxed text-accent-ink/60 md:flex-row md:items-start md:justify-between md:gap-10">
