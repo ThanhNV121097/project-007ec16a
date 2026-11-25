@@ -34,7 +34,7 @@ minutes so their pairs go back on the shelf. A later story adds a VietQR bank tr
 **Out of scope**
 
 - Placing an order, the order page, its "Pay now" button and which ways to pay checkout offers — belong to the `orders` module (ORD-006, ORD-007). This module is the provider they call; it edits no page of that story.
-- Marking a cash-on-delivery order paid — belongs to the `admin` module.
+- Cash on delivery — not offered: the owner chose online payment only. Nobody marks an order paid by hand; only the later bank-transfer story lets the dealer do so (PAY-020).
 - Refunds — not in the brief or plan; a refund is made by the dealer in VNPay's own merchant portal and is not recorded by the shop.
 - Saving cards or customers' payment details — not built; VNPay's page takes them.
 - Instalments and other VNPay products — not in the brief.
