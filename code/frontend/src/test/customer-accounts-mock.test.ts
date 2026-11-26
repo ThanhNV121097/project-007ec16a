@@ -156,7 +156,7 @@ describe("my orders", () => {
     expect(await listOrders(1)).toEqual({ kind: "forbidden" });
   });
 
-  it("is unreachable when the answer is a 500 or has no connection, after one more try", async () => {
+  it("is unreachable when the answer is a 500, after one more try", async () => {
     const mock = stubShop({ "GET account/orders": () => refusal(500, "internal") });
     expect(await listOrders(1)).toEqual({ kind: "unreachable" });
     expect(mock).toHaveBeenCalledTimes(2);
@@ -217,7 +217,7 @@ describe("adding a guest order", () => {
     expect(await addOrder("24999", "0912345678")).toEqual({ kind: "limited" });
   });
 
-  it("is never one try more than one: a POST is not repeated", async () => {
+  it("is not repeated after a 500: a POST is not idempotent", async () => {
     const mock = stubShop({ "POST account/orders": () => refusal(500, "internal") });
     expect(await addOrder("24818", "0912345678")).toEqual({ kind: "unreachable" });
     expect(mock).toHaveBeenCalledTimes(1);
