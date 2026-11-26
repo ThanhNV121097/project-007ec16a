@@ -1,17 +1,20 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { T, useContent } from "../editable";
 import { usePageMeta } from "../seo";
 import { useCollection, useRecord } from "../data";
-import { clearCart, lineKey, useCart, type CartLine } from "../lib/cart";
+import { clearCart, useCart, type CartLine } from "../lib/cart";
 import { useDemo } from "../lib/demo";
-import { formatPrice } from "../lib/format";
-import { placeOrder } from "../lib/mock/orders";
-import { digitsOf, fill, type DeliveryOption, type PaymentMethod, type Product, type ShopTerms } from "../lib/shop";
+import {
+  buildRequest, detailProblems, keyKeeper, payAddress, placeOrder, rememberOrder, useCurrentPrices, usePaymentOptions,
+  type Details, type PlaceResult,
+} from "../lib/orders";
+import type { DeliveryOption, Product } from "../lib/shop";
 import HeadPicture from "../components/HeadPicture";
 import Icon, { type IconName } from "../components/Icon";
+import CheckoutRow from "../components/CheckoutRow";
+import CheckoutSummary from "../components/CheckoutSummary";
 import EmptyBag from "../components/EmptyBag";
-import ProductImage from "../components/ProductImage";
 import Rule from "../components/Rule";
 
 const FIELD = "w-full appearance-none rounded-sm border border-field bg-ground px-3 py-3 text-base text-ink outline-none placeholder:text-ink-soft focus:border-ink sm:text-sm";
@@ -28,68 +31,84 @@ function Step({ n, k }: { n: number; k: string }) {
 }
 
 /**
- * CHECKOUT, ON ONE PAGE: who and where, how fast, how to pay — three
+ * CHECKOUT, ON ONE PAGE: who and where, delivery, how to pay — three
  * numbered groups because they are a sequence — with the pairs, their
  * pictures and the total kept in view beside them, and what happens after
- * "Place order" said before it is pressed. Payment is a mock: an online
- * method is marked paid at once; the real gateway arrives with the backend.
+ * "Place order" said before it is pressed. The shop reads its own prices and
+ * sets the pairs aside; this page sends what was typed and the pairs, never
+ * an amount (src/lib/orders.ts).
  */
 export default function Checkout() {
   usePageMeta("pages.checkout.title", "pages.checkout.description");
   const navigate = useNavigate();
   const { lines: real } = useCart();
   const demo = useDemo();
-  const products = useCollection<Product>("products", { where: { status: "live" }, pageSize: 500 }).items;
-  const deliveries = useCollection<DeliveryOption>("delivery", { pageSize: 10 }).items;
-  const payments = useCollection<PaymentMethod>("payments", { pageSize: 10 }).items;
-  const terms = useRecord<ShopTerms>("shop", "shop").item;
+  const products = useCollection<Product>("products", { where: { status: "live" }, pageSize: 3 }).items;
+  const standard = useRecord<DeliveryOption>("delivery", "standard").item;
+  const options = usePaymentOptions();
+  const option = options.items.find((o) => o.id === "vnpay");
+  const current = useCurrentPrices(real.map((l) => l.id));
   const words = {
     free: useContent("pages.cart.free"),
-    nextOnline: useContent("pages.checkout.next_online"),
-    nextCod: useContent("pages.checkout.next_cod"),
-    paying: useContent("pages.checkout.paying"),
+    deliveryTitle: useContent("pages.checkout.delivery_title"),
     missing: useContent("pages.checkout.missing"),
     phoneBad: useContent("pages.checkout.phone_bad"),
-    size: useContent("pages.checkout.line"),
+    failed: useContent("pages.checkout.failed"),
+    offline: useContent("pages.checkout.offline"),
+    unavailable: useContent("pages.checkout.unavailable"),
     headAlt: useContent("pages.checkout.head_alt"),
   };
-  const [delivery, setDelivery] = useState("standard");
-  const [payment, setPayment] = useState("cod");
-  const [form, setForm] = useState({ name: "", phone: "", address: "", city: "", note: "" });
-  const [errors, setErrors] = useState<string[]>([]);
-  const [paying, setPaying] = useState(false);
+  const [form, setForm] = useState<Details>({ name: "", phone: "", address: "", city: "", note: "" });
+  const [problems, setProblems] = useState<string[]>([]);
+  const [placing, setPlacing] = useState(false);
+  const [closed, setClosed] = useState(false);
+  const [keyFor] = useState(keyKeeper);
+  const sending = useRef(false);
 
   const example: CartLine[] = products.slice(1, 3).map((p) => ({
     id: p.id, name: p.name, price: p.price, image: p.image, variant: `EU ${(p.sizes ?? [])[3] ?? ""}`, qty: 1,
   }));
   const showingExample = demo && real.length === 0;
-  const lines = showingExample ? example : real;
+  // The shop's price today, not the one the bag saved: a shoe the shop does not
+  // answer for keeps its saved price here and is refused by name when ordered.
+  const lines = (showingExample ? example : real).map((l) => ({ ...l, price: showingExample ? l.price : current.get(l.id) ?? l.price }));
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  const option = deliveries.find((d) => d.id === delivery);
-  const feeOf = (d: DeliveryOption) => (d.id === "standard" && terms && subtotal >= terms.free_delivery_from ? 0 : d.fee);
-  const fee = option ? feeOf(option) : 0;
-  const method = payments.find((m) => m.id === payment);
-  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  // The one way to pay is closed when the shop says so, and when the read of what
+  // it offers has finished without VNPay in it (it failed, or it is not listed).
+  const blocked = closed || option?.is_available === false || (!options.loading && !option);
+  const set = (k: keyof Details) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   if (lines.length === 0) return <EmptyBag heading="pages.checkout.empty" />;
 
-  const place = (e: FormEvent) => {
+  const stopped = (r: Extract<PlaceResult, { ok: false }>): string[] => {
+    if (r.kind === "unavailable") return [];
+    if (r.kind === "offline") return [words.offline];
+    return r.problems.length > 0 ? r.problems : [words.failed];
+  };
+
+  const place = async (e: FormEvent) => {
     e.preventDefault();
-    const wrong: string[] = [];
-    if (!form.name.trim() || !form.address.trim() || !form.city.trim()) wrong.push(words.missing);
-    if (digitsOf(form.phone).length < 9) wrong.push(words.phoneBad);
-    setErrors(wrong);
+    if (sending.current || blocked) return;
+    const wrong = detailProblems(form).map((p) => (p === "missing" ? words.missing : words.phoneBad));
+    setProblems(wrong);
     if (wrong.length > 0) return;
-    setPaying(true);
-    window.setTimeout(() => {
-      const order = placeOrder({
-        lines, delivery, delivery_fee: fee, delivery_days: delivery === "express" ? 1 : 4,
-        payment, online: Boolean(method?.online), customer: form.name.trim(), phone: form.phone.trim(),
-        address: form.address.trim(), city: form.city.trim(), note: form.note.trim(),
-      });
-      if (!showingExample) clearCart();
-      navigate(`/orders/${order.id}?placed=1`);
-    }, method?.online ? 900 : 300);
+    sending.current = true;
+    setPlacing(true);
+    const request = buildRequest(lines, form);
+    const result = await placeOrder(request, keyFor(request));
+    if (!result.ok) {
+      setProblems(stopped(result));
+      setClosed(result.kind === "unavailable");
+      sending.current = false;
+      setPlacing(false);
+      return;
+    }
+    rememberOrder(result.placed);
+    if (!showingExample) clearCart();
+    const { payment_url: pay, order } = result.placed;
+    const address = payAddress(pay);
+    if (address) window.location.assign(address);
+    else navigate(`/orders/${order.id}?placed=1`);
   };
 
   return (
@@ -107,7 +126,7 @@ export default function Checkout() {
         <HeadPicture src="/images/head-checkout.jpg" alt={words.headAlt} className="lg:col-span-6 lg:col-start-7" />
       </section>
       <Rule />
-      <form onSubmit={place} noValidate className="grid gap-12 py-10 lg:grid-cols-12 lg:gap-8">
+      <form onSubmit={(e) => void place(e)} noValidate className="grid gap-12 py-10 lg:grid-cols-12 lg:gap-8">
         <div className="flex flex-col gap-10 lg:col-span-7">
           <fieldset>
             <Step n={1} k="pages.checkout.step_contact" />
@@ -127,83 +146,24 @@ export default function Checkout() {
           <Rule />
           <fieldset>
             <Step n={2} k="pages.checkout.step_delivery" />
-            <div className="border-t border-line" role="radiogroup">
-              {deliveries.map((d) => {
-                const on = d.id === delivery;
-                const f = feeOf(d);
-                return (
-                  <label key={d.id} data-testid={`delivery-${d.id}`} className="flex cursor-pointer gap-4 border-b border-line py-4">
-                    <input type="radio" name="delivery" value={d.id} checked={on} onChange={() => setDelivery(d.id)} className="sr-only" />
-                    <span className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${on ? "border-ink" : "border-field"}`}>{on && <span className="size-2 rounded-full bg-ink" />}</span>
-                    <Icon name={d.id === "express" ? "fast" : "shipping"} size={18} className="mt-0.5 shrink-0 text-ink" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm text-ink">{d.name} · {d.days}</span>
-                      <span className="mt-1 block text-sm leading-relaxed text-ink-soft">{d.note}</span>
-                    </span>
-                    <span className="shrink-0 text-sm tabular-nums text-ink">{f === 0 ? words.free : formatPrice(f)}</span>
-                  </label>
-                );
-              })}
+            <div className="border-t border-line">
+              <CheckoutRow testid="delivery-standard" icon="shipping" title={`${words.deliveryTitle} · ${standard?.days ?? ""}`} note={standard?.note} aside={words.free} />
             </div>
           </fieldset>
           <Rule />
           <fieldset>
             <Step n={3} k="pages.checkout.step_payment" />
-            <div className="border-t border-line" role="radiogroup">
-              {payments.map((m) => {
-                const on = m.id === payment;
-                return (
-                  <label key={m.id} data-testid={`pay-${m.id}`} className="flex cursor-pointer gap-4 border-b border-line py-4">
-                    <input type="radio" name="payment" value={m.id} checked={on} onChange={() => setPayment(m.id)} className="sr-only" />
-                    <span className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${on ? "border-ink" : "border-field"}`}>{on && <span className="size-2 rounded-full bg-ink" />}</span>
-                    <Icon name={(m.icon ?? "card") as IconName} size={18} className="mt-0.5 shrink-0 text-ink" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm text-ink">{m.name}</span>
-                      <span className="mt-1 block text-sm leading-relaxed text-ink-soft">{m.note}</span>
-                    </span>
-                  </label>
-                );
-              })}
+            <div className="border-t border-line">
+              {option && <CheckoutRow testid="pay-vnpay" icon={(option.icon || "card") as IconName} title={option.name} note={option.note} />}
             </div>
+            {blocked && (
+              <p role="alert" className="mt-3 flex items-center gap-2 text-xs text-danger">
+                <Icon name="alert" size={14} className="shrink-0" />{words.unavailable}
+              </p>
+            )}
           </fieldset>
         </div>
-
-        <aside className="lg:col-span-5 lg:pl-8">
-          <T k="pages.checkout.summary" as="h2" className="text-lg text-ink" />
-          <ul className="mt-5 border-t border-line">
-            {lines.map((l) => (
-              <li key={lineKey(l)} data-record={`products:${l.id}`} className="flex gap-4 border-b border-line py-4">
-                <div className="w-20 shrink-0"><ProductImage src={l.image} alt={l.name} aspect="1/1" /></div>
-                <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[0.6875rem] font-medium uppercase tracking-[0.1em] text-ink">{l.name}</p>
-                    <p className="mt-1 text-sm text-ink-soft">{fill(words.size, { variant: l.variant ?? "", qty: l.qty })}</p>
-                  </div>
-                  <p className="shrink-0 text-sm tabular-nums text-ink">{formatPrice(l.price * l.qty)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <dl className="text-sm">
-            <div className="flex justify-between border-b border-line py-3"><dt className="text-ink-soft"><T k="pages.cart.subtotal" /></dt><dd className="tabular-nums text-ink">{formatPrice(subtotal)}</dd></div>
-            <div className="flex justify-between border-b border-line py-3"><dt className="text-ink-soft"><T k="pages.cart.delivery" /></dt><dd className="tabular-nums text-ink">{fee === 0 ? words.free : formatPrice(fee)}</dd></div>
-            <div className="flex items-baseline justify-between py-4"><dt className="text-ink"><T k="cart.total" /></dt><dd data-testid="checkout-total" className="text-2xl tabular-nums text-ink">{formatPrice(subtotal + fee)}</dd></div>
-          </dl>
-          <p className="flex items-start gap-2 border-t border-line pt-4 text-sm leading-relaxed text-ink-soft">
-            <Icon name="info" size={16} className="shrink-0 text-ink" />
-            {method?.online ? fill(words.nextOnline, { method: method.name }) : words.nextCod}
-          </p>
-          {errors.length > 0 && (
-            <ul role="alert" className="mt-4 flex flex-col gap-1 text-xs text-danger">
-              {errors.map((er) => <li key={er} className="flex items-center gap-2"><Icon name="alert" size={14} className="shrink-0" />{er}</li>)}
-            </ul>
-          )}
-          <button type="submit" data-testid="place-order" disabled={paying}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-ink px-6 py-3.5 text-xs font-medium uppercase tracking-[0.14em] text-ground hover:opacity-85 disabled:opacity-60">
-            <Icon name="lock" size={16} />{paying ? words.paying : <T k="pages.checkout.place" />}
-          </button>
-          <T k="pages.checkout.terms" as="p" className="mt-3 text-sm leading-relaxed text-ink-soft" />
-        </aside>
+        <CheckoutSummary lines={lines} subtotal={subtotal} method={option?.name} problems={problems} placing={placing} blocked={blocked} />
       </form>
     </>
   );

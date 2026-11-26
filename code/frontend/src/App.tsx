@@ -1,10 +1,10 @@
 import { type ReactNode } from "react";
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Outlet, Route, Routes } from "react-router-dom";
+import AdminGate from "./components/admin/AdminGate";
 import ContactDock from "./components/ContactDock";
 import { Motion } from "./motion";
 import SiteFooter from "./components/SiteFooter";
 import SiteHeader from "./components/SiteHeader";
-import { useSession } from "./lib/session";
 import About from "./pages/About";
 import AdminKinds from "./pages/AdminKinds";
 import AdminLines from "./pages/AdminLines";
@@ -15,6 +15,7 @@ import AdminProduct from "./pages/AdminProduct";
 import AdminProducts from "./pages/AdminProducts";
 import AdminReviews from "./pages/AdminReviews";
 import AdminSignIn from "./pages/AdminSignIn";
+import AdminStaff from "./pages/AdminStaff";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Contact from "./pages/Contact";
@@ -46,9 +47,9 @@ function Shell() {
   );
 }
 
-/** The management area's door, through the scaffold's own session (src/lib/session.ts). */
+/** The management area's door: the server's word on who is signed in (components/admin/AdminGate). */
 function SignedIn({ children }: { children: ReactNode }) {
-  return useSession() ? <>{children}</> : <Navigate to="/admin/sign-in" replace />;
+  return <AdminGate>{children}</AdminGate>;
 }
 
 export default function App() {
@@ -77,6 +78,7 @@ export default function App() {
       <Route path="/admin/lines" element={<SignedIn><AdminLines /></SignedIn>} />
       <Route path="/admin/categories" element={<SignedIn><AdminKinds /></SignedIn>} />
       <Route path="/admin/reviews" element={<SignedIn><AdminReviews /></SignedIn>} />
+      <Route path="/admin/staff" element={<SignedIn><AdminStaff /></SignedIn>} />
     </Routes>
   );
 }

@@ -17,7 +17,6 @@ export interface PlacedOrder {
   status: OrderStatus;
   lines: CartLine[];
   subtotal: number;
-  delivery_fee: number;
   total: number;
   delivery: string;
   payment: string;
@@ -76,11 +75,11 @@ function addDays(from: Date, days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** The last number of the standard option's "2–4 working days": the day a new order is expected by. */
+const STANDARD_DAYS = 4;
+
 export interface NewOrder {
   lines: CartLine[];
-  delivery: string;
-  delivery_fee: number;
-  delivery_days: number;
   payment: string;
   online: boolean;
   customer: string;
@@ -102,9 +101,8 @@ export function placeOrder(input: NewOrder): PlacedOrder {
     status: "placed",
     lines: input.lines,
     subtotal,
-    delivery_fee: input.delivery_fee,
-    total: subtotal + input.delivery_fee,
-    delivery: input.delivery,
+    total: subtotal,
+    delivery: "standard",
     payment: input.payment,
     paid: input.online,
     customer: input.customer,
@@ -112,7 +110,7 @@ export function placeOrder(input: NewOrder): PlacedOrder {
     address: input.address,
     city: input.city,
     note: input.note,
-    eta: addDays(now, input.delivery_days),
+    eta: addDays(now, STANDARD_DAYS),
   };
   write([order, ...read().filter((o) => o.id !== order.id)]);
   return order;

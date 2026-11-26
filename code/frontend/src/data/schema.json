@@ -78,7 +78,7 @@
         { "key": "total", "label": "Total", "type": "price", "currency": "VND", "section": "Order" },
         { "key": "payment", "label": "Payment", "type": "text", "options": [["cod", "Cash on delivery"], ["bank", "Bank transfer"], ["vnpay", "VNPay"], ["momo", "MoMo"]], "section": "Order" },
         { "key": "paid", "label": "Paid", "type": "bool", "section": "Order" },
-        { "key": "delivery", "label": "Delivery", "type": "text", "options": [["standard", "Standard"], ["express", "Express"]], "section": "Delivery" },
+        { "key": "delivery", "label": "Delivery", "type": "text", "options": [["standard", "Standard"]], "section": "Delivery" },
         { "key": "carrier", "label": "Carrier", "type": "text", "section": "Delivery" },
         { "key": "tracking", "label": "Tracking number", "type": "text", "section": "Delivery" },
         { "key": "eta", "label": "Expected", "type": "text", "section": "Delivery" },
@@ -93,10 +93,7 @@
     "shop": {
       "label": "Shop terms",
       "fields": [
-        { "key": "free_delivery_from", "label": "Free standard delivery from", "type": "price", "currency": "VND" },
         { "key": "standard_days", "label": "Standard delivery, working days", "type": "text" },
-        { "key": "express_days", "label": "Express delivery, working days", "type": "text" },
-        { "key": "express_cities", "label": "Express covers", "type": "text" },
         { "key": "dispatch_cutoff", "label": "Same-day dispatch before", "type": "text" },
         { "key": "reply_time", "label": "Messages answered within", "type": "text" },
         { "key": "rating", "label": "Average rating", "type": "number" },

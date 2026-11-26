@@ -7,79 +7,103 @@
  * does nothing), a password field that is a text field, an area whose pages
  * are gated while the door into them is not.
  *
- *   <Route path="/admin/sign-in" element={
- *     <SignInPage title={useContent("pages.admin.signin.title")} to="/admin" />
- *   } />
- *
- * TWO PIECES, BECAUSE THE FIRST VERSION WAS ONE AND COULD NOT BE PLACED.
- * SignInPage owns the whole screen — a card in the middle of it, the
- * management palette round it. A design that wanted its own photograph down
- * one side had nothing to put there but the whole screen again: on run
- * bd4d1058 it nested SignInPage, min-h-screen and all, inside a column of its
- * own layout. So the form is its own part:
- *
  *   <SignInForm to="/admin" />          the form alone, wherever you put it
  *   <SignInPage title=… to="/admin" />  the whole screen, for when you do not
  *
- * WHOSE SIGN-IN IT IS. Where more than one kind of person signs in, `roles`
- * draws the choice and the session carries it, which is what <RequireRole>
- * and design/pages.json's "roles" read.
- *
- * IT IS THE MOCK SESSION (src/lib/session.ts), as the whole design is: no
- * password is checked, because there is nothing yet to check one against.
- * The backend story replaces that one module behind the same three names.
+ * The form asks the shop's server (src/lib/session.ts) and the server decides
+ * who the person is and what they may open: the form carries no role. Its words
+ * for what can go wrong live here, beside the states they belong to.
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Choice from "./Choice";
+import Icon from "../Icon";
 import { Button, Field, Input } from "./index";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { signIn, useSession } from "../../lib/session";
 
+/** What the shop said, as the one line under the fields. It never says which part was wrong. */
+const PROBLEMS = {
+  wrong: "Wrong email or password.",
+  limited: "Too many tries. Please wait 15 minutes.",
+  unreachable: "We cannot reach the server. Please try again.",
+} as const;
+
+type Problem = keyof typeof PROBLEMS | "";
+
+interface Missing {
+  email?: string;
+  password?: string;
+}
+
+/** What is left blank, stopped here: nothing is sent for it. */
+function missing(email: string, password: string): Missing {
+  if (!email.trim()) return { email: "An email address is needed" };
+  if (!password) return { password: "A password is needed" };
+  return {};
+}
+
 /** The form alone: no card, no screen. Carries the management palette with
  *  it, so it is right wherever a design places it. */
-export function SignInForm({ to = "/", roles, note }: {
+export function SignInForm({ to = "/", note }: {
   to?: string;
-  roles?: readonly (readonly [string, string])[];
   note?: React.ReactNode;
 }) {
   const navigate = useNavigate();
   const session = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState(roles?.[0]?.[0] ?? "");
-  const [error, setError] = useState("");
+  const [blank, setBlank] = useState<Missing>({});
+  const [problem, setProblem] = useState<Problem>("");
+  const [busy, setBusy] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!email.trim()) {
-      setError("An email address is needed");
+    if (busy) return;
+    const left = missing(email, password);
+    setBlank(left);
+    setProblem("");
+    const first = left.email ? "email" : left.password ? "password" : "";
+    if (first) {
+      (e.currentTarget.elements.namedItem(first) as HTMLInputElement | null)?.focus();
       return;
     }
-    signIn(email, undefined, role || undefined);
-    navigate(to);
+    setBusy(true);
+    const result = await signIn(email, password);
+    setBusy(false);
+    if (result === "ok") {
+      navigate(to);
+      return;
+    }
+    setProblem(result);
+    // The password is never kept after a refusal; unreachable keeps it, so
+    // one press tries again.
+    if (result !== "unreachable") setPassword("");
   }
 
   return (
     <div data-dashboard="true" className="bg-transparent">
       {/* A <form>, so Enter in either field signs in — the one thing
           everybody tries and the commonest omission of a hand-written one. */}
-      <form onSubmit={submit} className="grid gap-5">
-        <Field label="Email" error={error}>
-          <Input type="email" autoComplete="username" placeholder="you@example.com" value={email}
-            onChange={(e) => { setEmail(e.target.value); setError(""); }} />
+      <form onSubmit={submit} noValidate className="grid gap-5">
+        <Field label="Email" error={blank.email}>
+          <Input name="email" type="email" autoComplete="username" placeholder="you@example.com" value={email}
+            aria-invalid={blank.email ? true : undefined}
+            onChange={(e) => { setEmail(e.target.value); setBlank({}); }} />
         </Field>
-        <Field label="Password">
-          <Input type="password" autoComplete="current-password" value={password}
-            onChange={(e) => setPassword(e.target.value)} />
+        <Field label="Password" error={blank.password}>
+          <Input name="password" type="password" autoComplete="current-password" value={password}
+            aria-invalid={blank.password ? true : undefined}
+            onChange={(e) => { setPassword(e.target.value); setBlank({}); }} />
         </Field>
-        {roles && roles.length > 1 && (
-          <Field label="Signing in as">
-            <Choice value={role} onChange={setRole} aria-label="Signing in as"
-              options={roles.map(([value, label]) => ({ value, label }))} />
-          </Field>
+        {problem && (
+          <p role="alert" className="flex items-start gap-2 text-sm text-danger">
+            <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
+            {PROBLEMS[problem]}
+          </p>
         )}
-        <Button kind="primary" type="submit" className="h-9 w-full">Sign in</Button>
+        <Button kind="primary" type="submit" disabled={busy} className="h-9 w-full">
+          {busy ? "Signing in…" : "Sign in"}
+        </Button>
       </form>
       {note && <p className="mt-4 text-center text-sm text-ink-soft">{note}</p>}
       {session && (
@@ -94,14 +118,12 @@ export function SignInForm({ to = "/", roles, note }: {
   );
 }
 
-export default function SignInPage({ title, description, to = "/", roles, note, brand }: {
+export default function SignInPage({ title, description, to = "/", note, brand }: {
   title: string;
   /** One line under the title: what this area is. */
   description?: string;
   /** Where signing in lands. The area's overview. */
   to?: string;
-  /** [value, label] — "supplier", "Supplier". One kind of person needs none. */
-  roles?: readonly (readonly [string, string])[];
   /** A line under the button: who this area is for, who to ask for access. */
   note?: React.ReactNode;
   brand?: React.ReactNode;
@@ -116,7 +138,7 @@ export default function SignInPage({ title, description, to = "/", roles, note, 
             {description && <CardDescription>{description}</CardDescription>}
           </CardHeader>
           <CardContent>
-            <SignInForm to={to} roles={roles} note={note} />
+            <SignInForm to={to} note={note} />
           </CardContent>
         </Card>
       </div>
