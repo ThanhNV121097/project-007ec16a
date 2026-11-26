@@ -51,7 +51,7 @@ const press = () => fireEvent.click(button());
 
 describe("a right pair", () => {
   it("sends what was typed, as typed, and opens the order", async () => {
-    post.mockResolvedValueOnce({ ...FOUND, phone: "0938410552" });
+    post.mockResolvedValueOnce(FOUND);
     open();
     type("Order number", "doi 24817");
     type("Phone", "+84938410552");
@@ -62,7 +62,8 @@ describe("a right pair", () => {
   });
 
   it("keeps the id, number, placed time and token in the one store and nothing else", async () => {
-    post.mockResolvedValueOnce({ ...FOUND, phone: "0938410552", customer: "Lan Nguyen" });
+    const answered = { ...FOUND, phone: "0938410552", customer: "Lan Nguyen" };
+    post.mockResolvedValueOnce(answered);
     open();
     type("Order number", "DOI-24817");
     type("Phone", "0938 410 552");
@@ -204,7 +205,7 @@ describe("while the shop answers", () => {
   });
 
   it("does not go to the order when the visitor has left the page by the time it answers", async () => {
-    let answer: (v: unknown) => void = () => undefined;
+    let answer: (v: typeof FOUND) => void = () => undefined;
     post.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
     open();
     press();
