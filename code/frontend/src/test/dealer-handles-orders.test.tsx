@@ -232,13 +232,14 @@ describe("the order page", () => {
 
   it("keeps the order's pairs when the shop's answer comes without them", async () => {
     const { order, onSaved } = await open("doi-24815");
-    const bare = { ...order, address: "9 New Street", items: undefined } as unknown as DealerOrder;
-    vi.spyOn(transport, "update").mockResolvedValueOnce(bare);
+    const answer = Object.entries({ ...order, address: "9 New Street" }).filter(([key]) => key !== "items");
+    const update = vi.spyOn(transport, "update").mockResolvedValueOnce(Object.fromEntries(answer) as unknown as DealerOrder);
     tab("Customer");
     type("Address", "9 New Street");
     save();
     expect(await screen.findByText("Saved.")).toBeInTheDocument();
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ address: "9 New Street", items: order.items }));
+    update.mockRestore();
   });
 
   it("says it could not save when the shop does not answer, and keeps the button", async () => {
