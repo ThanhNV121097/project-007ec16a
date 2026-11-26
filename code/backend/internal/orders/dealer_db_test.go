@@ -2,6 +2,7 @@ package orders
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -21,30 +22,12 @@ func placeFor(t *testing.T, h http.Handler, key string, items ...string) string 
 	return a.Order["id"].(string)
 }
 
-// inTx runs fn in one transaction and commits it.
-func inTx(t *testing.T, pool *pgxpool.Pool, fn func(tx txLike) error) {
+func decodeInto(t *testing.T, raw []byte, v any) {
 	t.Helper()
-	ctx := context.Background()
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	if err := fn(tx); err != nil {
-		t.Error(err)
-		return
-	}
-	if err := tx.Commit(ctx); err != nil {
-		t.Error(err)
+	if err := json.Unmarshal(raw, v); err != nil {
+		t.Fatalf("%s: %v", raw, err)
 	}
 }
-
-type txLike = interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgxRow
-}
-
-type pgxRow = interface{ Scan(dest ...any) error }
 
 // cancel runs the dealer's cancel the way the handler does: lock the order, cancel it.
 func cancel(t *testing.T, pool *pgxpool.Pool, id string) bool {
@@ -142,11 +125,15 @@ func TestCancellingASampleOrderReturnsNoPair(t *testing.T) {
 	if err != nil {
 		t.Skipf("no open sample order: %v", err)
 	}
-	before := pairsLeft(t, pool, product, size)
+	// -1 when the shoe has no count for that size: the shelf then has nothing to move.
+	shelf := func() int {
+		return scalar[int](t, pool, "SELECT coalesce((SELECT pairs FROM product_sizes WHERE product_id = $1 AND size = $2), -1)", product, size)
+	}
+	before := shelf()
 	if !cancel(t, pool, id) {
 		t.Fatal("the sample order was not cancelled")
 	}
-	if after := pairsLeft(t, pool, product, size); after != before {
+	if after := shelf(); after != before {
 		t.Errorf("a sample cancel moved the shelf: %d -> %d", before, after)
 	}
 	if status := scalar[string](t, pool, "SELECT status FROM orders WHERE id = $1", id); status != "cancelled" {
@@ -161,7 +148,7 @@ func TestDeleteRemovesOnlyACancelledUnpaidOrder(t *testing.T) {
 	addShoe(t, pool, "tc-d", "Shoe D", 1000000, map[string]int{"41": 10})
 	id := placeFor(t, h, "delete-key-0001", item("tc-d", "41", 1))
 	ctx := context.Background()
-	delete := func(id string) error {
+	remove := func(id string) error {
 		tx, err := pool.Begin(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -172,17 +159,17 @@ func TestDeleteRemovesOnlyACancelledUnpaidOrder(t *testing.T) {
 		}
 		return tx.Commit(ctx)
 	}
-	if err := delete(id); !errors.Is(err, ErrNotCancelled) {
+	if err := remove(id); !errors.Is(err, ErrNotCancelled) {
 		t.Fatalf("a placed order: %v", err)
 	}
 	cancel(t, pool, id)
 	exec(t, pool, "UPDATE orders SET paid = true WHERE id = $1", id)
-	if err := delete(id); !errors.Is(err, ErrPaid) {
+	if err := remove(id); !errors.Is(err, ErrPaid) {
 		t.Fatalf("a paid order: %v", err)
 	}
 	exec(t, pool, "UPDATE orders SET paid = false WHERE id = $1", id)
 	counter := scalar[int64](t, pool, "SELECT value FROM counters WHERE name = 'order_number'")
-	if err := delete(id); err != nil {
+	if err := remove(id); err != nil {
 		t.Fatalf("a cancelled, unpaid order: %v", err)
 	}
 	for _, table := range []string{"orders WHERE id", "order_items WHERE order_id", "order_tokens WHERE order_id"} {
@@ -193,7 +180,7 @@ func TestDeleteRemovesOnlyACancelledUnpaidOrder(t *testing.T) {
 	if pairsLeft(t, pool, "tc-d", "41") != 10 || scalar[int64](t, pool, "SELECT value FROM counters WHERE name = 'order_number'") != counter {
 		t.Error("the delete moved the shelf or the counter")
 	}
-	if err := delete(id); !errors.Is(err, ErrNotFound) {
+	if err := remove(id); !errors.Is(err, ErrNotFound) {
 		t.Errorf("a second delete: %v", err)
 	}
 }
