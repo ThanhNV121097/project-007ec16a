@@ -23,6 +23,7 @@ export default function AdminOverviewReady({ data, title, nav }: {
 }) {
   const chartTitle = useContent("pages.admin.overview.chart_title");
   const linesTitle = useContent("pages.admin.overview.lines_title");
+  const sizesText = useContent("pages.admin.overview.low_sizes");
   const sales = formatPrice(data.month.sales);
   const low = data.running_low.length;
 
@@ -58,7 +59,7 @@ export default function AdminOverviewReady({ data, title, nav }: {
         { title: useContent("pages.admin.overview.recent_title"), content: <AdminRecentOrders rows={data.latest_orders} /> },
         { title: useContent("pages.admin.overview.low_title"),
           content: low > 0
-            ? <AdminLowStock rows={data.running_low} sizesText={useContent("pages.admin.overview.low_sizes")} />
+            ? <AdminLowStock rows={data.running_low} sizesText={sizesText} />
             : <T k="pages.admin.overview.low_none" as="p" className="text-sm text-ink-soft" /> },
       ]}
     />
