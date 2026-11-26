@@ -11,15 +11,25 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// transactionNoExpr is VNPay's transaction number of an order, "" when there is
-// none. The payment tables belong to the payments story and are not in this
-// branch's schema, so until it lands the number is the empty text, written once
-// here and used by the dealer's single read and by the team's list. The day the
-// tables exist this constant becomes (alias o in the single read, t in the list):
-//
-//	coalesce((SELECT n.transaction_no FROM payment_notices n JOIN payment_attempts a ON a.id = n.attempt_id
-//	          WHERE a.order_id = <alias>.id AND n.is_success ORDER BY n.received_at LIMIT 1), '')
-const transactionNoExpr = `''::text`
+// The dealer's transaction_no is VNPay's transaction number of the order's one
+// success notice, "" when there is none (erd/dealer-handles-orders-status-courier-payment.md
+// section 6). It is derived, never a column of orders: a read-only scalar
+// subquery over the payments story's two tables, written once here with the
+// order's alias as its only blank and used by the dealer's single read (alias o)
+// and by the team's list (alias t). This package reads those tables and imports
+// nothing from payments, so the import graph stays payments -> orders. The
+// ORDER BY ... LIMIT 1 is there so that a second provider can never make the
+// subquery return two rows.
+const (
+	transactionNoHead = `coalesce((SELECT n.transaction_no FROM payment_notices n JOIN payment_attempts a ON a.id = n.attempt_id ` +
+		`WHERE a.order_id = `
+	transactionNoTail = `.id AND n.is_success ORDER BY n.received_at LIMIT 1), '')`
+
+	// transactionNoOfOrder is the number in the single read, where the order is o.
+	transactionNoOfOrder = transactionNoHead + `o` + transactionNoTail
+	// transactionNoOfListRow is the number in the list, where the order is t.
+	transactionNoOfListRow = transactionNoHead + `t` + transactionNoTail
+)
 
 // dealerViewSQL is the dealer's view of one order: the public view's keys and
 // phone, email, address, note and transaction_no. It is a statement of its own,
@@ -54,7 +64,7 @@ const dealerViewSQL = `SELECT json_build_object(
     'email', o.email,
     'address', o.address,
     'note', o.note,
-    'transaction_no', ` + transactionNoExpr + `
+    'transaction_no', ` + transactionNoOfOrder + `
 )::text
 FROM orders o
 LEFT JOIN order_items f ON f.order_id = o.id AND f.line_no = 1
