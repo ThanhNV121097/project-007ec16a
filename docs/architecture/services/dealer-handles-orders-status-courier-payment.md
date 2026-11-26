@@ -68,7 +68,7 @@ The UI PR (#77) adds `src/lib/mock/dealer-handles-orders-status-courier-payment.
 | `not_found` | 404 | The id does not exist or cannot be an id (a dealer is told the truth about a missing order; a visitor keeps the one body for every cause) |
 | `internal` | 500 | The statement fails or times out (the 5-second context). Generic body; the cause is logged beside the order id and the request id |
 
-**Notes.** A dealer's browser that opens a customer's order page sends its session cookie and so receives the dealer view in the network answer (the contract's "(1) a dealer session"); the customer pages draw none of the private fields and SC-27 is checked with **no dealer session** (Test: open the customer page in a window with no admin cookie, as item 10's D2 already says for the shop pages). `GET /v1/orders/{id}/payment`-style routes are untouched: `POST /v1/orders/{id}/payment` answers a dealer session without the token `404` (§3.13).
+**Notes.** A dealer's browser that opens a customer's order page sends its session cookie and so receives the dealer view in the network answer (the contract's "(1) a dealer session"); the customer pages draw none of the private fields and SC-27 is checked with **no dealer session** (Test: open the customer page in a window with no admin cookie, as item 10's D2 already says for the shop pages). `POST /v1/orders/{id}/payment` is untouched: a dealer session without the token still answers `404` there (§3.13).
 
 ### 3.2 `GET /v1/orders` — the dealer's list (project §3.14)
 
@@ -108,7 +108,7 @@ The UI PR (#77) adds `src/lib/mock/dealer-handles-orders-status-courier-payment.
 | 10 | Open a transaction (`READ COMMITTED`, 5 s context), `SET LOCAL lock_timeout = '3s'`, `orders.LockOrder(id)` | `404 not_found` for no such order (this wins over every `422`) |
 | 11 | The **state rules**, judged on the status the order has under the lock (ERD §3): the move, and a delivered or cancelled order's locked fields | collected as `422` |
 | 12 | Any fault from 8, 9 or 11 | roll back; `422 invalid`, `errors` naming every field at fault, `message` "Check the details of this order." Nothing in the body is applied |
-| 13 | Apply (§4: one `UPDATE`, or the cancel with its pairs), read the dealer view **in the same transaction**, commit | `200` the dealer view of §3.1 |
+| 13 | Apply (ERD §5: one `UPDATE`, or the cancel with its pairs, `orders.Update`), read the dealer view **in the same transaction** (`orders.ReadDealer`), commit | `200` the dealer view of §3.1 |
 
 **The ten editable fields** (the labels are the schema's own, and the page's)
 
