@@ -152,6 +152,26 @@ describe("the picture control", () => {
     expect(await screen.findByText("We could not upload that picture. Please try again.")).toBeInTheDocument();
     expect(screen.queryByText("Choose a JPEG, PNG or WebP picture.")).toBeNull();
   });
+
+  it("refuses a file over 5 MB beside the control without sending a byte, and takes exactly 5 MB", async () => {
+    openAdd("categories", "Categories");
+    type("Name", "Women");
+    const big = png();
+    Object.defineProperty(big, "size", { value: 5 * 1024 * 1024 + 1 });
+    choose(big);
+    expect(await screen.findByText("That picture is too large (5 MB at most).")).toHaveAttribute("role", "alert");
+    expect(shop.upload).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Name")).toHaveValue("Women");
+    expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+
+    shop.upload.mockResolvedValueOnce(reply(201, { url: "/api/v1/uploads/abc.png" }));
+    const exact = png();
+    Object.defineProperty(exact, "size", { value: 5 * 1024 * 1024 });
+    choose(exact);
+    expect(await screen.findByRole("button", { name: "Replace" })).toBeInTheDocument();
+    expect(shop.upload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("That picture is too large (5 MB at most).")).toBeNull();
+  });
 });
 
 describe("the delete question", () => {
