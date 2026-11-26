@@ -86,10 +86,10 @@ func TestTheOrdersListIsForTheTeamOnly(t *testing.T) {
 	}
 }
 
-// A dealer's list names only the public columns: a customer's phone, email,
-// address and note and the owner's notes are not in the statement, and a filter
-// or a sort on one of them is a 400 that sends nothing.
-func TestTheTeamsListSelectsNoPrivateColumn(t *testing.T) {
+// A dealer's list serves a customer's phone, email, address and note and VNPay's
+// transaction number, and never the owner's notes; a filter or a sort on any
+// private column is still a 400 that sends nothing.
+func TestTheTeamsListServesThePrivateColumnsAndNeverFiltersOnThem(t *testing.T) {
 	db := &listDB{}
 	h := mount(db, Options{})
 	if rec := getAs(h, auth.Staff, "/v1/orders"); rec.Code != http.StatusOK {
@@ -98,14 +98,23 @@ func TestTheTeamsListSelectsNoPrivateColumn(t *testing.T) {
 	if len(db.sqls) != 1 {
 		t.Fatalf("%d statements, want 1", len(db.sqls))
 	}
-	for _, name := range []string{"phone", "email", "address", "note", "source", "invented", "idempotency_key"} {
+	for _, name := range []string{"phone", "email", "address", "note", "transaction_no"} {
+		if !strings.Contains(db.sqls[0], `AS "`+name+`"`) {
+			t.Errorf("the team's list does not select %s: %s", name, db.sqls[0])
+		}
+	}
+	for _, name := range []string{"source", "invented", "idempotency_key", "account_id", "is_sample"} {
 		if strings.Contains(db.sqls[0], "t."+name) {
 			t.Errorf("the list selects %s: %s", name, db.sqls[0])
 		}
 	}
+	if !strings.Contains(db.sqls[0], "ORDER BY t.placed_at DESC, t.seq DESC") {
+		t.Errorf("the list is not newest first: %s", db.sqls[0])
+	}
 	for _, target := range []string{
 		"/v1/orders?phone=0912%20345%20678", "/v1/orders?email=a", "/v1/orders?address=x", "/v1/orders?note=x",
-		"/v1/orders?sort=phone", "/v1/orders?phone_from=1", "/v1/orders?_source=owner",
+		"/v1/orders?transaction_no=14123456", "/v1/orders?sort=phone", "/v1/orders?sort=-transaction_no",
+		"/v1/orders?phone_from=1", "/v1/orders?_source=owner",
 	} {
 		rec := getAs(h, auth.Admin, target)
 		if rec.Code != http.StatusBadRequest || envelopeOf(t, rec).Error != "bad_request" {
@@ -117,19 +126,20 @@ func TestTheTeamsListSelectsNoPrivateColumn(t *testing.T) {
 	}
 }
 
-// Only public columns, in the order the list has always had.
-func TestTheTeamsListHasTheSixteenPublicColumns(t *testing.T) {
+// The public columns, in the order the list has always had, with the first
+// pair's shoe name beside its id; the customer's details are not public.
+func TestTheTeamsListHasTheSeventeenPublicColumns(t *testing.T) {
 	var public []string
 	for _, c := range dealerList.Columns {
 		if c.Access == data.Public {
 			public = append(public, c.Name)
 		}
 	}
-	want := "id,number,placed_at,status,product,size,qty,total,payment,paid,delivery,carrier,tracking,eta,customer,city"
+	want := "id,number,placed_at,status,product,product_name,size,qty,total,payment,paid,delivery,carrier,tracking,eta,customer,city"
 	if strings.Join(public, ",") != want {
 		t.Errorf("public columns %v, want %s", public, want)
 	}
-	for _, name := range []string{"phone", "email", "address", "note"} {
+	for _, name := range []string{"phone", "email", "address", "note", "transaction_no"} {
 		found := false
 		for _, c := range dealerList.Columns {
 			if c.Name == name {
@@ -142,9 +152,10 @@ func TestTheTeamsListHasTheSixteenPublicColumns(t *testing.T) {
 	}
 }
 
-// The team reads the seeded orders through the real reader and statement; none
-// of them shows a customer's phone, email, address or note.
-func TestTheTeamReadsTheSeededOrdersWithoutTheirPrivateDetails(t *testing.T) {
+// The team reads the seeded orders through the real reader and statement,
+// newest first, each with the customer's details and the first pair's shoe name
+// and none of the owner's notes.
+func TestTheTeamReadsTheSeededOrdersWithTheirPrivateDetails(t *testing.T) {
 	h, _ := shop(t, Options{})
 	if rec := getAs(h, "", "/v1/orders"); rec.Code != http.StatusUnauthorized {
 		t.Fatalf("no session: %d", rec.Code)
@@ -167,11 +178,22 @@ func TestTheTeamReadsTheSeededOrdersWithoutTheirPrivateDetails(t *testing.T) {
 	if total != 14 || len(items) != 14 {
 		t.Fatalf("total %d, %d items, want 14", total, len(items))
 	}
-	for _, o := range items {
-		for _, key := range []string{"phone", "email", "address", "note", "_source", "_invented"} {
+	for i, o := range items {
+		for _, key := range []string{"phone", "email", "address", "note", "transaction_no", "product_name"} {
+			if _, has := o[key]; !has {
+				t.Errorf("%v lacks %s", o["id"], key)
+			}
+		}
+		for _, key := range []string{"_source", "_invented", "items"} {
 			if _, has := o[key]; has {
 				t.Errorf("%v has %s", o["id"], key)
 			}
+		}
+		if name, _ := o["product_name"].(string); name == "" {
+			t.Errorf("%v has no shoe name", o["id"])
+		}
+		if i > 0 && items[i-1]["placed_at"].(string) < o["placed_at"].(string) {
+			t.Errorf("%v is newer than the order before it", o["id"])
 		}
 	}
 	for target, want := range map[string]int{
