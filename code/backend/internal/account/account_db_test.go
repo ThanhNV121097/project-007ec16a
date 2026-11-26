@@ -356,9 +356,15 @@ func TestPlacingAnOrderLinksOnlyACustomerAgainstPostgres(t *testing.T) {
 	g := newRig(t)
 	var product, size string
 	err := g.pool.QueryRow(context.Background(), `SELECT s.product_id, s.size FROM product_sizes s JOIN products p ON p.id = s.product_id
-		WHERE p.status = 'live' AND s.pairs >= 6 ORDER BY s.product_id, s.size LIMIT 1`).Scan(&product, &size)
+		WHERE p.status = 'live' AND s.pairs > 0 ORDER BY s.product_id, s.size LIMIT 1`).Scan(&product, &size)
 	if err != nil {
 		t.Fatalf("no shoe to order: %v", err)
+	}
+	// The seed shelves at most 3 pairs of a size and this test sells three, so
+	// the shelf is filled up first: the test is about who the order is linked to,
+	// never about stock.
+	if _, err := g.pool.Exec(context.Background(), `UPDATE product_sizes SET pairs = 10 WHERE product_id = $1 AND size = $2`, product, size); err != nil {
+		t.Fatalf("fill the shelf: %v", err)
 	}
 	place := func(cookie, key, addr string) map[string]any {
 		t.Helper()
