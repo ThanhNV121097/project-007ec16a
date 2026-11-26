@@ -47,9 +47,6 @@ func (s *service) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
-	res, err := s.place(r.Context(), key, req, callerAccount(r))
-=======
 	// The provider's keys are checked after the fields and before anything is
 	// written or locked: with a key missing no order is made and no pair leaves the
 	// shelf. A replay of a used key gets the same answer while the keys are missing.
@@ -58,8 +55,9 @@ func (s *service) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := s.place(r.Context(), key, req)
->>>>>>> refs/heads/main
+	// The order is linked to the session's account only for a customer; a guest, a
+	// staff member and the admin give "".
+	res, err := s.place(r.Context(), key, req, callerAccount(r))
 	if err != nil {
 		s.refuse(w, r, err)
 		return
