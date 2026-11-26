@@ -84,20 +84,45 @@ func TestAnAccountOrderIsExactlyFiveKeysWithTheShopsClock(t *testing.T) {
 	}
 }
 
-// countingQ answers every read with no row and counts the reads.
+// countingQ answers every read with no row and counts the transactions opened
+// and the reads made inside them.
 type countingQ struct {
-	calls int
-	args  []any
+	opened, calls int
+	args          []any
 }
 
 type noRow struct{}
 
 func (noRow) Scan(...any) error { return pgx.ErrNoRows }
 
-func (c *countingQ) QueryRow(_ context.Context, _ string, args ...any) pgx.Row {
-	c.calls++
-	c.args = args
+// countingTx is the transaction countingQ hands out: only the calls Read makes
+// are answered.
+type countingTx struct {
+	pgx.Tx
+	q *countingQ
+}
+
+func (t *countingTx) QueryRow(_ context.Context, _ string, args ...any) pgx.Row {
+	t.q.calls++
+	t.q.args = args
 	return noRow{}
+}
+
+func (t *countingTx) Rollback(context.Context) error { return nil }
+
+func (c *countingQ) BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error) {
+	c.opened++
+	return &countingTx{q: c}, nil
+}
+
+func (c *countingQ) QueryRow(context.Context, string, ...any) pgx.Row {
+	c.calls++
+	return noRow{}
+}
+
+func (c *countingQ) Query(context.Context, string, ...any) (pgx.Rows, error) {
+	c.calls++
+	return emptyRows{}, nil
 }
 
 const someAccount = "6f1c1e2a-0d4b-4c58-9b53-2f1f0f0a1111"
@@ -105,13 +130,13 @@ const someAccount = "6f1c1e2a-0d4b-4c58-9b53-2f1f0f0a1111"
 func TestReadCostsNoQueryForAGuestWithNoWayIn(t *testing.T) {
 	for _, a := range []Access{{}, {Token: "not a token!"}, {AccountID: "not-a-uuid"}} {
 		q := &countingQ{}
-		if _, err := Read(context.Background(), q, "doi-24817", a); !errors.Is(err, ErrNotFound) || q.calls != 0 {
-			t.Errorf("%+v: %v after %d queries", a, err, q.calls)
+		if _, err := Read(context.Background(), q, "doi-24817", a); !errors.Is(err, ErrNotFound) || q.calls != 0 || q.opened != 0 {
+			t.Errorf("%+v: %v after %d transactions and %d queries", a, err, q.opened, q.calls)
 		}
 	}
 	q := &countingQ{}
-	if _, err := Read(context.Background(), q, "DOI 24817", Access{AccountID: someAccount}); !errors.Is(err, ErrNotFound) || q.calls != 0 {
-		t.Errorf("a bad id: %v after %d queries", err, q.calls)
+	if _, err := Read(context.Background(), q, "DOI 24817", Access{AccountID: someAccount}); !errors.Is(err, ErrNotFound) || q.calls != 0 || q.opened != 0 {
+		t.Errorf("a bad id: %v after %d transactions and %d queries", err, q.opened, q.calls)
 	}
 }
 
@@ -120,15 +145,15 @@ func TestReadAsksOnceForACustomerWithNoTokenAndForAGuestWithOne(t *testing.T) {
 	if _, err := Read(context.Background(), q, "doi-24817", Access{AccountID: someAccount}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("a customer with no token: %v", err)
 	}
-	if q.calls != 1 || q.args[1] != nil || q.args[2] != someAccount {
-		t.Errorf("a customer with no token: %d queries, args %v", q.calls, q.args)
+	if q.opened != 1 || q.calls != 1 || q.args[1] != nil || q.args[2] != someAccount {
+		t.Errorf("a customer with no token: %d transactions, %d queries, args %v", q.opened, q.calls, q.args)
 	}
 	q = &countingQ{}
 	if _, err := Read(context.Background(), q, "doi-24817", Access{Token: "abcdefghijklmnopqrstuvwxyz012345"}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("a guest with a token: %v", err)
 	}
 	hash, ok := q.args[1].([]byte)
-	if q.calls != 1 || !ok || len(hash) != 32 || q.args[2] != nil {
-		t.Errorf("a guest with a token: %d queries, args %v", q.calls, q.args)
+	if q.opened != 1 || q.calls != 1 || !ok || len(hash) != 32 || q.args[2] != nil {
+		t.Errorf("a guest with a token: %d transactions, %d queries, args %v", q.opened, q.calls, q.args)
 	}
 }
