@@ -1,50 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 import { buildRequest, detailProblems, keyKeeper, payAddress, placeOrder, rememberOrder, sizeOfVariant, storedOrders, type Placed } from "../lib/orders";
 
 // The browser's side of POST /v1/orders: what it sends, what each answer means
 // to the page, and what this browser keeps of an order. fetch is stubbed.
-=======
-
-vi.mock("../lib/mock/checkout-and-placing-an-order", () => ({ postOrder: vi.fn(), getPaymentOptions: vi.fn() }));
-
-import { postOrder } from "../lib/mock/checkout-and-placing-an-order";
-import { buildRequest, detailProblems, keyKeeper, placeOrder, rememberOrder, sizeOfVariant, storedOrders, type Placed } from "../lib/orders";
-
-// The browser's side of POST /v1/orders: what it sends, what each answer
-// means to the page, and what this browser keeps of an order. The transport
-// is stubbed, so these hold unchanged when the mock shop is replaced by the API.
->>>>>>> refs/heads/main
 
 const details = { name: " Lan Nguyen ", phone: "0912 345 678", address: "12 Example Street, Ward 1", city: "Da Nang", note: "" };
 const line = { id: "samba-og-w-crystal-white", name: "Samba OG", price: 3000000, variant: "EU 36 2/3", qty: 2 };
 const order = { id: "doi-24818", number: "DOI-24818", placed_at: "2026-11-25T10:00:00+07:00", status: "placed", paid: false, total: 6180000 };
 const placed = (url = "") => ({ order, token: "q3J0n8Zk2LmPa7Vx9TrBwE", payment_url: url });
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 const send = vi.fn();
 
 function answer(status: number, body: unknown) {
   send.mockResolvedValueOnce({ status, json: () => Promise.resolve(body) });
 }
-=======
-const send = vi.mocked(postOrder);
->>>>>>> refs/heads/main
 
 beforeEach(() => {
   localStorage.clear();
   send.mockReset();
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
   vi.stubGlobal("fetch", send);
-=======
->>>>>>> refs/heads/main
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
   vi.unstubAllGlobals();
-=======
->>>>>>> refs/heads/main
 });
 
 describe("the order request", () => {
@@ -60,7 +38,6 @@ describe("the order request", () => {
     expect(sizeOfVariant("EU 43 1/3")).toBe("43 1/3");
     expect(sizeOfVariant(undefined)).toBe("");
   });
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 
   it("is one POST to /v1/orders with the key as a header, once, with the cookie", async () => {
     answer(201, placed());
@@ -74,8 +51,6 @@ describe("the order request", () => {
     expect(init.headers).toMatchObject({ "Idempotency-Key": "tc-key-0001", "Content-Type": "application/json" });
     expect(JSON.parse(init.body as string)).toEqual(request);
   });
-=======
->>>>>>> refs/heads/main
 });
 
 describe("the details the shop would refuse", () => {
@@ -102,12 +77,7 @@ describe("the details the shop would refuse", () => {
 describe("the idempotency key", () => {
   it("is one key for one bag with one set of details, and a new one when either changes", () => {
     const keyFor = keyKeeper();
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
     const key = keyFor(buildRequest([line], details));
-=======
-    const first = buildRequest([line], details);
-    const key = keyFor(first);
->>>>>>> refs/heads/main
     expect(key).toMatch(/^[A-Za-z0-9._-]{8,100}$/);
     expect(keyFor(buildRequest([line], details))).toBe(key);
     const other = keyFor(buildRequest([line], { ...details, phone: "0912 345 679" }));
@@ -118,22 +88,12 @@ describe("the idempotency key", () => {
 
 describe("what an answer means", () => {
   it("201 is the placed order with its token, and an empty payment address stays empty", async () => {
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
     answer(201, placed());
     expect(await placeOrder(buildRequest([line], details), "tc-key-0001")).toEqual({ ok: true, placed: placed() });
   });
 
   it("a replay (200) is the same order again", async () => {
     answer(200, placed());
-=======
-    send.mockResolvedValue({ status: 201, body: placed() });
-    const r = await placeOrder(buildRequest([line], details), "tc-key-0001");
-    expect(r).toEqual({ ok: true, placed: placed() });
-  });
-
-  it("a replay (200) is the same order again", async () => {
-    send.mockResolvedValue({ status: 200, body: placed() });
->>>>>>> refs/heads/main
     expect((await placeOrder(buildRequest([line], details), "tc-key-0001")).ok).toBe(true);
   });
 
