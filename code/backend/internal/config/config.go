@@ -29,6 +29,18 @@ type Config struct {
 	// put in an error.
 	AdminEmail    string
 	AdminPassword string
+	// VNPayTmnCode and VNPayHashSecret are the owner's VNPay keys (sandbox first),
+	// read only from the environment. Neither is required: with one missing the
+	// server starts and online payment is unavailable. The secret prints as
+	// [redacted] however the config is printed.
+	VNPayTmnCode    string
+	VNPayHashSecret Secret
+	// VNPayPaymentURL is VNPay's payment page: the sandbox unless the owner sets the
+	// live one. It holds no query and no fragment.
+	VNPayPaymentURL string
+	// PublicBaseURL is the shop's own origin for VNPay's return address. Empty means
+	// the origin is read from the request.
+	PublicBaseURL string
 }
 
 // Load reads the real environment.
@@ -43,12 +55,24 @@ func load(get func(string) string) (Config, error) {
 	if dsn == "" {
 		return Config{}, errors.New("DATABASE_URL is not set")
 	}
+	page, err := paymentPage(get("VNPAY_PAYMENT_URL"))
+	if err != nil {
+		return Config{}, err
+	}
+	origin, err := publicOrigin(get("PUBLIC_BASE_URL"))
+	if err != nil {
+		return Config{}, err
+	}
 	return Config{
 		Port:               port,
 		DatabaseURL:        dsn,
 		CORSAllowedOrigins: list(get("CORS_ALLOWED_ORIGINS")),
 		AdminEmail:         strings.TrimSpace(get("ADMIN_EMAIL")),
 		AdminPassword:      get("ADMIN_PASSWORD"),
+		VNPayTmnCode:       strings.TrimSpace(get("VNPAY_TMN_CODE")),
+		VNPayHashSecret:    NewSecret(get("VNPAY_HASH_SECRET")),
+		VNPayPaymentURL:    page,
+		PublicBaseURL:      origin,
 	}, nil
 }
 
