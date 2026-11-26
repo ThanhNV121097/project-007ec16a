@@ -530,9 +530,9 @@ Traces: SC-27 (ADMIN-021 AC-15; story decision 3 "a 401 included")
 Check: interact_page
 
 **Scenario**: SC-27d — "Try again" shows the loading view, asks again, and a good answer replaces the message
-**Given**: The first overview answer is replaced by a 500; the second is held for 2 seconds and then answered 200 with FX-ANS-A.
-**When**: The run opens `/admin`, waits for the failure view, presses "Try again" and reads the page at once, again at about 1 s, and after the release.
-**Then**: Right after the press: "We could not load the overview." and the "Try again" button are gone and "Loading the overview…" (`role="status"`) is shown with no figure; the log holds a second `GET /api/v1/admin/overview`; after the release the four figures and five panels of SC-18a are drawn and neither the failure message nor the loading line remains.
+**Given**: The interception runs in two phases, switched by the run and not counted by request number, because the client sends **two** requests for one failed attempt (`api.ts`: "A failed GET is tried once more" on a 5xx or no answer). Phase 1: every overview request is answered 500. Phase 2, set by the run just before it presses "Try again": the next overview request is held for 2 seconds and then answered 200 with FX-ANS-A.
+**When**: The run opens `/admin` in phase 1, waits for the failure view and reads the number N1 of overview requests in the log (expected 2: the try and its one retry), switches to phase 2, presses "Try again" and reads the page at once, again at about 1 s, and after the release.
+**Then**: Right after the press: "We could not load the overview." and the "Try again" button are gone and "Loading the overview…" (`role="status"`) is shown with no figure and no panel; the log holds exactly one more overview request than N1 (the held one; a 200 is not retried), so the log holds N1 + 1 in all; after the release the four figures and five panels of SC-18a are drawn and neither the failure message nor the loading line remains. A page that shows the failure view at the second request without a press, or that never asks again after the press, fails.
 Traces: SC-27 (ADMIN-021 item 4, AC-15; story decision 4)
 Check: interact_page
 
