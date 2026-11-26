@@ -22,14 +22,14 @@ func momoAt(api string, origin string) *MoMo {
 	}, nil, quiet(), nil)
 }
 
-var lockedOrder = orders.Locked{ID: "doi-24818", Number: "DOI-24818", Total: 3140000}
+var momoOrder = orders.Locked{ID: "doi-24818", Number: "DOI-24818", Total: 3140000}
 
 // PAY-021 AC-3, SC-6, SC-7: every member of the request for a 3.140.000 VND order, and a
 // signature that verifies with the shop's secret and with no other.
 func TestTheMoMoRequestCarriesTheStoredAmountAndAVerifiableSignature(t *testing.T) {
 	m := momoAt("https://test-payment.momo.vn", "https://shop.example.test")
 	// The browser's own origin is never used when the shop's is configured.
-	req, err := m.build(lockedOrder, "DOI-24818-1", orders.Client{Origin: "https://evil.example"})
+	req, err := m.build(momoOrder, "DOI-24818-1", orders.Client{Origin: "https://evil.example"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestTheMoMoRequestCarriesTheStoredAmountAndAVerifiableSignature(t *testing.
 	if strings.Contains(string(body), momoAccess) || strings.Contains(string(body), momoSecretKey) || !strings.Contains(string(body), `"amount":3140000`) {
 		t.Errorf("the body: %s", body)
 	}
-	next, _ := m.build(lockedOrder, "DOI-24818-2", orders.Client{})
+	next, _ := m.build(momoOrder, "DOI-24818-2", orders.Client{})
 	if next.RequestID != "DOI-24818-2" || next.Signature == req.Signature {
 		t.Error("a second attempt must have its own reference and signature")
 	}
@@ -65,12 +65,12 @@ func TestTheMoMoRequestCarriesTheStoredAmountAndAVerifiableSignature(t *testing.
 // With no configured origin the request's own is used, and a forged host is an error, never an address.
 func TestTheMoMoAddressesFollowTheOriginRule(t *testing.T) {
 	m := momoAt("https://test-payment.momo.vn", "")
-	req, err := m.build(lockedOrder, "DOI-24818-1", orders.Client{Origin: "https://shop.example.com"})
+	req, err := m.build(momoOrder, "DOI-24818-1", orders.Client{Origin: "https://shop.example.com"})
 	if err != nil || req.RedirectURL != "https://shop.example.com/payment/return" {
 		t.Errorf("%v %+v", err, req)
 	}
 	for _, origin := range []string{"javascript:alert(1)", "https://shop.example.com/x y", "https://a@b.test", ""} {
-		if _, err := m.build(lockedOrder, "DOI-24818-1", orders.Client{Origin: origin}); err == nil {
+		if _, err := m.build(momoOrder, "DOI-24818-1", orders.Client{Origin: origin}); err == nil {
 			t.Errorf("the origin %q was accepted", origin)
 		}
 	}
@@ -138,7 +138,7 @@ func TestMoMoMustGiveAUsableAddressOrTheAskFails(t *testing.T) {
 	} {
 		stub := &standIn{status: c.status, body: c.body, delay: c.delay}
 		m := momoAt(stub.server(t).URL, "https://shop.example.test")
-		req, _ := m.build(lockedOrder, "DOI-24818-1", orders.Client{})
+		req, _ := m.build(momoOrder, "DOI-24818-1", orders.Client{})
 		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 		got, err := m.ask(ctx, "DOI-24818", req)
 		cancel()
