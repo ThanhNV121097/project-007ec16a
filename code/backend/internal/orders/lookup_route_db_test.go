@@ -71,7 +71,7 @@ func lkReset(t *testing.T, pool *pgxpool.Pool) {
 func lkMiss(t *testing.T, h http.Handler, n int, number, addr string) {
 	t.Helper()
 	for i := range n {
-		if rec := lkCall(h, number, "0938 410 55"+strconv.Itoa(i), addr); rec.Code != 404 {
+		if rec := lkCall(h, number, "0938 410 00"+strconv.Itoa(i), addr); rec.Code != 404 {
 			t.Fatalf("miss %d: %d %s", i+1, rec.Code, rec.Body)
 		}
 	}
@@ -114,7 +114,7 @@ func TestLookupGivesARightPairItsFourKeysAndANewToken(t *testing.T) {
 	if lkCount(t, pool, "order_tokens") != before+1 || scalar[int](t, pool, "SELECT count(*)::int FROM order_tokens WHERE order_id = 'doi-24817' AND token_hash = $1", hashToken(token)) != 1 {
 		t.Errorf("the lookup did not add exactly its own hashed token")
 	}
-	if scalar[int](t, pool, "SELECT count(*)::int FROM order_tokens t WHERE t::text LIKE '%' || $1 || '%'", token) != 0 {
+	if scalar[int](t, pool, "SELECT count(*)::int FROM order_tokens t WHERE t::text LIKE '%' || $1::text || '%'", token) != 0 {
 		t.Errorf("the token text is stored")
 	}
 
@@ -132,9 +132,9 @@ func TestLookupGivesARightPairItsFourKeysAndANewToken(t *testing.T) {
 	}
 
 	// Another right pair mints another token, and both work.
-	second := lkJSON(t, lkCall(h, lkSample, lkSamplePhone, ""))["token"]
-	if second == token || fetch(h, "/v1/orders/doi-24817", second.(string)).Code != 200 || fetch(h, "/v1/orders/doi-24817", token).Code != 200 {
-		t.Errorf("the second lookup: %v", second)
+	second, _ := lkJSON(t, lkCall(h, lkSample, lkSamplePhone, ""))["token"].(string)
+	if second == "" || second == token || fetch(h, "/v1/orders/doi-24817", second).Code != 200 || fetch(h, "/v1/orders/doi-24817", token).Code != 200 {
+		t.Errorf("the second lookup: %q", second)
 	}
 }
 
@@ -289,23 +289,23 @@ func TestLookupTheLockCountsDownAndEndsAfterFifteenMinutes(t *testing.T) {
 	if first < 890 {
 		t.Errorf("the first wait is %d seconds, want about 900", first)
 	}
-	var locked string
 	for range 3 {
-		locked = scalar[string](t, pool, "SELECT locked_until::text FROM rate_limits WHERE scope = 'order_lookup_number'")
+		locked := scalar[string](t, pool, "SELECT locked_until::text FROM rate_limits WHERE scope = 'order_lookup_number'")
 		lkRetryAfter(t, lkCall(h, lkSample, "0938 410 000", ""))
 		if after := scalar[string](t, pool, "SELECT locked_until::text FROM rate_limits WHERE scope = 'order_lookup_number'"); after != locked {
 			t.Errorf("a refused try moved the lock from %s to %s", locked, after)
 		}
 	}
 
-	back := func(interval string) {
-		exec(t, pool, "UPDATE rate_limits SET locked_until = locked_until - $1::interval, window_started_at = window_started_at - $1::interval", interval)
+	// The database's clock is the only one, so time is moved in the table.
+	back := func(minutes int) {
+		exec(t, pool, "UPDATE rate_limits SET locked_until = locked_until - make_interval(mins => $1::int), window_started_at = window_started_at - make_interval(mins => $1::int)", minutes)
 	}
-	back("14 minutes")
+	back(14)
 	if wait := lkRetryAfter(t, lkCall(h, lkSample, lkSamplePhone, "")); wait > 60 {
 		t.Errorf("after 14 minutes the wait is %d seconds", wait)
 	}
-	back("2 minutes")
+	back(2)
 	if rec := lkCall(h, lkSample, "0938 410 000", ""); rec.Code != 404 || lkHits(t, pool, "order_lookup_number") != 1 || lkHits(t, pool, "order_lookup_address") != 1 {
 		t.Errorf("a miss after 16 minutes: %d, hits %d and %d", rec.Code, lkHits(t, pool, "order_lookup_number"), lkHits(t, pool, "order_lookup_address"))
 	}
@@ -344,6 +344,7 @@ func TestLookupTenTriesAtOnceLetFiveFailuresThrough(t *testing.T) {
 // SC-12: a body the route refuses is not a try; an empty phone is a miss.
 func TestLookupARefusedBodyCountsNothingAndAnEmptyPhoneCountsOne(t *testing.T) {
 	h, pool := lkShop(t)
+	tokens := lkCount(t, pool, "order_tokens")
 	for _, c := range []struct{ body, contentType string }{
 		{`{"number":"DOI-24817"}`, "application/json"},
 		{`{"number":"DOI-24817","phone":"1","email":"a@b.co"}`, "application/json"},
@@ -359,7 +360,7 @@ func TestLookupARefusedBodyCountsNothingAndAnEmptyPhoneCountsOne(t *testing.T) {
 			t.Errorf("%s: %d", c.body, rec.Code)
 		}
 	}
-	if lkCount(t, pool, "rate_limits") != 0 || lkCount(t, pool, "order_tokens") != scalar[int](t, pool, "SELECT count(*)::int FROM order_tokens") {
+	if lkCount(t, pool, "rate_limits") != 0 || lkCount(t, pool, "order_tokens") != tokens {
 		t.Errorf("a refused body was counted")
 	}
 	if rec := lkCall(h, lkSample, "", ""); rec.Code != 404 || lkHits(t, pool, "order_lookup_number") != 1 {
