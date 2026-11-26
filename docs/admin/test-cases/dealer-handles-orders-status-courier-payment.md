@@ -63,6 +63,8 @@ Written before the implementation exists, from the requirements, the story and t
 7. **A body that is refused names which fields?** SC-17 says "a refused body applies nothing". For `{"status":"confirmed","total":1}` the cases assert `errors.total` is present; they do not assert whether `errors` also holds `status` (it should not, `placed → confirmed` is legal).
 8. **Plan item 8's payment tables.** Until `payment_attempts` and `payment_notices` exist the transaction number is `""` for every order; the number half of SC-19 and the "payment attempts are gone" half of SC-21 are UNVERIFIED then, and say so.
 9. **The status control's labels.** `schema.json` labels `shipped` "Shipped"; the story (decision 1) says the status control and the lists read "On its way". The cases follow the story.
+10. **What `<n>` counts in "ordered <n> pairs".** The story and ADMIN-016 item 6 say "an order of two pairs" for two order lines, but a line can hold a quantity above 1 (FX-TWO has 1 + 2 shoes in 2 lines). It is not written whether `<n>` is the number of lines or the sum of quantities. SC-29a uses two lines of one pair each, where both readings give 2; no case pins `<n>` for a line with a quantity above 1 (SC-29b asserts only the rows). The product owner / TL should say which it is.
+11. **The note field and a delivered order's "locked" drawing.** The story draws locked fields "read-only"; whether that is `readonly`, `disabled` or plain text is not fixed. SC-33 accepts any of the three as "not editable" and pins only that the Internal note is an enabled, editable control.
 
 ## 5. Who may call, and what the dealer reads — SC-1 … SC-3
 
