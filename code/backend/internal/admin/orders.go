@@ -44,8 +44,8 @@ func orderGone(w http.ResponseWriter) {
 // internal answers a failed statement, a lock that timed out or a database that
 // cannot be reached: the generic 500, with the cause (SQLSTATE and constraint
 // only) in the log and never a field value.
-func (h *ordersHandler) internal(w http.ResponseWriter, r *http.Request, operation string, err error) {
-	auth.LogFailure(h.log, "order request failed", operation+" request "+httpx.RequestIDFrom(r.Context()), err)
+func (h *ordersHandler) internal(w http.ResponseWriter, operation string, err error) {
+	auth.LogFailure(h.log, "order request failed", operation, err)
 	refuse(w, http.StatusInternalServerError, "internal", internalMessage, nil)
 }
 
