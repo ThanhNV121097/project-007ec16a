@@ -8,7 +8,7 @@ The order half of the original item (moving an order along, cancelling, deleting
 
 | Change | What |
 |---|---|
-| **New table** | `uploads` (project ERD §3.20, migration 10 `uploads`). The columns, checks and the `bytea` decision are already written there and are not restated; §6 gives the exact DDL the migration must hold so that nobody has to re-derive it |
+| **New table** | `uploads` (project ERD §3.20, migration 10 `uploads`). The columns, checks and the `bytea` decision are already written there and are not restated; §7 gives the exact DDL the migration must hold so that nobody has to re-derive it |
 | **Existing tables** | **No column, constraint, index, trigger or view is added, changed or dropped.** Every rule this story enforces already has its backstop in the schema (§3) |
 | **Seed / data migration** | None. The twelve placeholder shoes, their reviews, their ratings and the shop's 4.8 from 181 reviews stay exactly as seeded until an event of §4 recalculates them (story decision 6) |
 | **Indexes** | None added. Every new statement is by primary key, by a unique key or by an index that exists (§5) |
@@ -37,7 +37,7 @@ Each row is **the only code allowed to write that table**, matching the ownershi
 |---|---|---|
 | A price is never below 0 | `ck_products_price_not_negative` | `23514` is a bug (the API refused it first with 422): logged, answered `500 internal` |
 | A count is never below 0, even if every other layer fails | `ck_product_sizes_pairs_not_negative` | same |
-| One shoe at a time opens the home page | `uq_products_featured` (partial unique). The handler clears the old one first; the index is the backstop | `23505` on `uq_products_featured`: the whole transaction is retried once (it cannot happen under the write lock of §4; the retry is for a second server instance) |
+| One shoe at a time opens the home page | `uq_products_featured` (partial unique). The handler clears the old one first; the index is the backstop | `23505` on `uq_products_featured`: the whole transaction is retried once (it cannot happen under the write lock of §6; the retry is for a second server instance) |
 | An id is unique | primary keys of the ten tables | `23505` on `<table>_pkey`: the id is generated again (next suffix, or new hex) up to 5 times, then `500` |
 | A line or category used by a shoe is not deleted | `fk_products_line_id`, `fk_products_category_id` `ON DELETE RESTRICT` | `23503` on delete: re-count, answer `409` with the sentence |
 | A shoe an order refers to is not deleted | `order_items.product_id → products(id)` `RESTRICT` | `23503` on delete: answer `409` with the sentence (this is the backstop; the handler checks first, under the lock) |
