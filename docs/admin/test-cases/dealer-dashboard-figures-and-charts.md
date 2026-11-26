@@ -688,3 +688,4 @@ Check: manual
 - `interact_page` for every case of the page (SC-14c, SC-18 … SC-29): it signs in, substitutes, holds or fails the overview answer, sets the viewport and the browser's time zone, reads the network log, presses, reloads and reads computed boxes and colours.
 - `manual` is used three times only — SC-13c (the server's log) and S-1a, S-1b (the repository) — each because no instrument reads that place.
 - Cases that depend on an instrument feature the task may not offer are named in §5 point 9; they come back UNVERIFIED with the missing feature named, never failed.
+- SC-14a places a real order and so needs the VNPay merchant settings in the run (§5 point 11); without them it is UNVERIFIED for that reason alone, and the overview's side of SC-14 is still proved by SC-14b and SC-14c. SC-27d and SC-27e are written for the client's one retry of a failed GET (§2, §5 point 12).
