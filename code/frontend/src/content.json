@@ -463,6 +463,17 @@
       "thanks": "Thank you — your order is placed.",
       "title": "Your order",
       "track_cta": "Track an order",
+      "transfer": {
+        "account": "Account number",
+        "amount": "Amount",
+        "bank": "Bank",
+        "failed": "We could not load the bank transfer details. Please refresh the page.",
+        "heading": "Pay by bank transfer",
+        "holder": "Account holder",
+        "line": "Scan this QR code with any banking app. We send the pair as soon as the money lands.",
+        "note": "Transfer note",
+        "qr": "QR code to pay order {number} by bank transfer"
+      },
       "wrong": "Wrong size?",
       "wrong_link": "Return policy",
       "wrong_text": "Exchanges are not accepted. For a wrong or damaged delivery, or any question, message us."
@@ -481,6 +492,12 @@
       },
       "description": "Whether your payment on VNPay went through, and what to do next.",
       "keep_shopping": "Keep shopping",
+      "momo": {
+        "timed_out": {
+          "heading": "We have not heard from MoMo yet.",
+          "line": "If money left your account it will show on your order once MoMo confirms it. Please do not pay again."
+        }
+      },
       "no_match": {
         "heading": "We can't match this payment to an order on this browser.",
         "line": "Look the order up with its number and phone."
