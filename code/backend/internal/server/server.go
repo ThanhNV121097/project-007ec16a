@@ -20,6 +20,7 @@ import (
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/orders"
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/payments"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -38,10 +39,22 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	svc := auth.New(pool, log)
 	svc.Register(mux)
 	admin.RegisterStaff(mux, pool, log)
+	admin.RegisterOverview(mux, pool, log, time.Now)
 	data.Register(mux, pool, log)
 	catalogue.Register(mux, pool, log)
+<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
 	orders.Register(mux, pool, log, orders.Options{})
 	account.Register(mux, account.Deps{Auth: svc, DB: pool, Log: log})
+=======
+	// The VNPay provider is registered even with no keys: with one missing, placing
+	// and "Pay now" answer 503 and the notice answers 97, and the server still starts.
+	vnpay := payments.NewVNPay(payments.VNPayConfig{
+		TmnCode: cfg.VNPayTmnCode, HashSecret: cfg.VNPayHashSecret,
+		PaymentURL: cfg.VNPayPaymentURL, PublicBaseURL: cfg.PublicBaseURL,
+	}, pool, log, nil)
+	orders.Register(mux, pool, log, orders.Options{Providers: map[string]orders.Provider{"vnpay": vnpay}})
+	payments.Register(mux, vnpay)
+>>>>>>> refs/heads/main
 	mux.HandleFunc("/", notFound)
 
 	// The chain, outermost first: RequestID, Recover, AccessLog, CORS, CleanPaths

@@ -217,7 +217,9 @@
         "col_kind": "For",
         "col_product": "Shoe",
         "col_stock": "In stock",
+        "error": "We could not load the overview.",
         "lines_title": "Pairs sold by line",
+        "loading": "Loading the overview…",
         "low": "Running low",
         "low_none": "Nothing is running low.",
         "low_note": "last pairs left",
@@ -225,6 +227,7 @@
         "low_title": "Running low",
         "orders_note": "{n} orders",
         "recent_title": "Latest orders",
+        "retry": "Try again",
         "sales": "Sales this month",
         "stock": "Pairs in stock",
         "stock_note": "across {n} shoes",
@@ -455,9 +458,62 @@
       "thanks": "Thank you — your order is placed.",
       "title": "Your order",
       "track_cta": "Track an order",
+      "transfer": {
+        "account": "Account number",
+        "amount": "Amount",
+        "bank": "Bank",
+        "failed": "We could not load the bank transfer details. Please refresh the page.",
+        "heading": "Pay by bank transfer",
+        "holder": "Account holder",
+        "line": "Scan this QR code with any banking app. We send the pair as soon as the money lands.",
+        "note": "Transfer note",
+        "qr": "QR code to pay order {number} by bank transfer"
+      },
       "wrong": "Wrong size?",
       "wrong_link": "Return policy",
       "wrong_text": "Exchanges are not accepted. For a wrong or damaged delivery, or any question, message us."
+    },
+    "payment_return": {
+      "cancelled": {
+        "heading": "This order was cancelled.",
+        "line": "The time to pay ran out, so the pairs went back on the shelf. You can order again."
+      },
+      "check_failed": {
+        "line": "We could not check your payment. Please open your order to see its state."
+      },
+      "confirming": {
+        "heading": "We are confirming your payment…",
+        "line": "This usually takes a few seconds. Please do not pay again."
+      },
+      "description": "Whether your payment on VNPay went through, and what to do next.",
+      "keep_shopping": "Keep shopping",
+      "momo": {
+        "timed_out": {
+          "heading": "We have not heard from MoMo yet.",
+          "line": "If money left your account it will show on your order once MoMo confirms it. Please do not pay again."
+        }
+      },
+      "no_match": {
+        "heading": "We can't match this payment to an order on this browser.",
+        "line": "Look the order up with its number and phone."
+      },
+      "not_completed": {
+        "heading": "Payment was not completed.",
+        "line": "You can try again, or place a new order."
+      },
+      "paid": {
+        "heading": "Payment received.",
+        "line": "Your order {number} is paid. We will pack it next."
+      },
+      "timed_out": {
+        "heading": "We have not heard from VNPay yet.",
+        "line": "If money left your account it will show on your order once VNPay confirms it. Please do not pay again."
+      },
+      "title": "Your payment",
+      "track": "Track an order",
+      "try_again": "Try again",
+      "try_again_error": "We could not open the payment page. Please try again.",
+      "view_order": "View your order"
     },
     "product": {
       "add": "Add to bag",
@@ -583,6 +639,7 @@
       "description": "Every adidas pair at Đôi, narrowed by who it's for, line, colour, price and EU size.",
       "empty": "No pair matches that.",
       "empty_line": "Try another size or fewer filters — or ask us, and we will tell you when it comes in.",
+      "error": "We could not load the shoes.",
       "filter_colour": "Colour",
       "filter_for": "For",
       "filter_line": "Line",
@@ -592,8 +649,11 @@
       "head_alt": "A pair of Samba OG in crystal white, close up",
       "head_image": "/images/ref/category-gifts.jpg",
       "heading": "All shoes",
+      "loading": "Loading the shoes…",
+      "loading_more": "Loading…",
       "more": "Show more",
       "results": "Results for “{q}”",
+      "retry": "Try again",
       "search": "Search by name, line, colour or code",
       "sort": "Sort",
       "sort_high": "Price, high to low",

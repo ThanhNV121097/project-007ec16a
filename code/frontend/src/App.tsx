@@ -24,6 +24,7 @@ import Checkout from "./pages/Checkout";
 import Contact from "./pages/Contact";
 import Home from "./pages/Home";
 import Order from "./pages/Order";
+import PaymentReturn from "./pages/PaymentReturn";
 import Product from "./pages/Product";
 import Returns from "./pages/Returns";
 import Shipping from "./pages/Shipping";
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders/:id" element={<Order />} />
+        <Route path="/payment/return" element={<PaymentReturn />} />
         <Route path="/track" element={<Track />} />
         <Route path="/shipping" element={<Shipping />} />
         <Route path="/returns" element={<Returns />} />

@@ -47,7 +47,19 @@ func (s *service) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
 	res, err := s.place(r.Context(), key, req, callerAccount(r))
+=======
+	// The provider's keys are checked after the fields and before anything is
+	// written or locked: with a key missing no order is made and no pair leaves the
+	// shelf. A replay of a used key gets the same answer while the keys are missing.
+	if prov := s.providers[req.Payment]; prov != nil && !prov.Available() {
+		httpx.Error(w, http.StatusServiceUnavailable, "payment_unavailable", msgUnavailable, nil)
+		return
+	}
+
+	res, err := s.place(r.Context(), key, req)
+>>>>>>> refs/heads/main
 	if err != nil {
 		s.refuse(w, r, err)
 		return

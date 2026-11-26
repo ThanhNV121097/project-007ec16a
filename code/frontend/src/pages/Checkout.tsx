@@ -60,6 +60,7 @@ export default function Checkout() {
     headAlt: useContent("pages.checkout.head_alt"),
   };
   const [form, setForm] = useState<Details>({ name: "", phone: "", address: "", city: "", note: "" });
+  useSavedDetailsFill(setForm);
   const [problems, setProblems] = useState<string[]>([]);
   const [placing, setPlacing] = useState(false);
   const [closed, setClosed] = useState(false);

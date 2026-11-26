@@ -4,7 +4,8 @@
 // collection: GET /v1/orders is the shop team's list (401 with no session, 403
 // for a customer, never a phone, email, address or note), and GET /v1/orders/{id}
 // answers the public view (never phone, email, address or note) to the order's
-// X-Order-Token and 404 to everything else.
+// X-Order-Token and 404 to everything else. POST /v1/orders/{id}/payment is "Pay
+// now"; it opens the order through the same function (authorize, access.go).
 //
 // Placing goes through one transaction that takes the pairs off the shelf and
 // saves the order, its pairs and a hashed token together. The lock order, which
@@ -89,7 +90,7 @@ type service struct {
 	now       func() time.Time
 }
 
-// Register mounts the four routes of the story on mux.
+// Register mounts the five routes of the order on mux.
 func Register(mux *http.ServeMux, db DB, log *slog.Logger, opts Options) {
 	s := &service{db: db, log: log, providers: opts.Providers, now: opts.Now}
 	if s.now == nil {
@@ -97,6 +98,9 @@ func Register(mux *http.ServeMux, db DB, log *slog.Logger, opts Options) {
 	}
 	mux.HandleFunc("POST /v1/orders", s.create)
 	mux.HandleFunc("GET /v1/orders/{id}", s.read)
+	// "Pay now": no body, the order's own X-Order-Token. Another method on this path
+	// falls to the server's catch-all and answers 404.
+	mux.HandleFunc("POST /v1/orders/{id}/payment", s.payHandler)
 	// The team's list: auth.Require answers 401 with no session and 403 for a
 	// customer before the query string is read; a dealer reads the list the generic
 	// reader's grammar gives every collection, over dealerList (list.go).
