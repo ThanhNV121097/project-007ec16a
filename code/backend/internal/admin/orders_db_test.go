@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -64,7 +65,13 @@ func (e *env) shoe(id string, pairs map[string]int) {
 		e.t.Fatal(err)
 	}
 	for size, n := range pairs {
-		if _, err := e.pool.Exec(ctx, "INSERT INTO product_sizes (product_id, size, size_value, pairs) VALUES ($1, $2, $2::numeric, $3)", id, size, n); err != nil {
+		// The numeric value is its own parameter: one $2 used as text and as a
+		// numeric cast is a type PostgreSQL cannot deduce (SQLSTATE 42P08).
+		value, err := strconv.Atoi(size)
+		if err != nil {
+			e.t.Fatal(err)
+		}
+		if _, err := e.pool.Exec(ctx, "INSERT INTO product_sizes (product_id, size, size_value, pairs) VALUES ($1, $2, $3, $4)", id, size, value, n); err != nil {
 			e.t.Fatal(err)
 		}
 	}
