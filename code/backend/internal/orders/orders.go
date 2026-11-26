@@ -115,11 +115,13 @@ func (s *service) internal(w http.ResponseWriter, r *http.Request, what string, 
 	httpx.Error(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.", nil)
 }
 
-// WriteNotFound writes the one body every way of not being let in to an order
-// answers, so the bytes cannot differ between GET /v1/orders/{id} and
-// GET /v1/account/orders/{id}.
-func WriteNotFound(w http.ResponseWriter) {
+func notFound(w http.ResponseWriter) {
 	httpx.Error(w, http.StatusNotFound, "not_found", "Not found.", nil)
 }
+
+// WriteNotFound is notFound for the account package: the one body every way of
+// not being let in to an order answers, so the bytes cannot differ between
+// GET /v1/orders/{id} and GET /v1/account/orders/{id}.
+func WriteNotFound(w http.ResponseWriter) { notFound(w) }
 
 func noStore(w http.ResponseWriter) { w.Header().Set("Cache-Control", "no-store") }
