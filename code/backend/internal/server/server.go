@@ -38,11 +38,8 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	svc := auth.New(pool, log)
 	svc.Register(mux)
 	admin.RegisterStaff(mux, pool, log)
-<<<<<<< refs/heads/feature/dealer-handles-orders-status-courier-payment-be
 	admin.RegisterOrders(mux, pool, log)
-=======
 	admin.RegisterOverview(mux, pool, log, time.Now)
->>>>>>> refs/heads/main
 	data.Register(mux, pool, log)
 	catalogue.Register(mux, pool, log)
 	// The VNPay provider is registered even with no keys: with one missing, placing
