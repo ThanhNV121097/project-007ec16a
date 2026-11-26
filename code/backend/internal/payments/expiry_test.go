@@ -3,6 +3,7 @@ package payments
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,20 +60,11 @@ func TestTheExpiryLoopRunsAtStartUpAndStopsWithItsContext(t *testing.T) {
 // extra conditions, so the index serves it and a sample is never due.
 func TestTheDueQueryRepeatsTheIndexPredicate(t *testing.T) {
 	for _, part := range []string{"NOT paid", "NOT is_sample", "status IN ('placed', 'confirmed', 'packed')", "payment_method_id = ANY($1)", "placed_at <= $2", "ORDER BY placed_at LIMIT 100"} {
-		if !contains(dueSQL, part) {
+		if !strings.Contains(dueSQL, part) {
 			t.Errorf("the due query lacks %q", part)
 		}
 	}
 	if len(thirtyMinuteWays) != 1 || thirtyMinuteWays[0] != "vnpay" {
 		t.Errorf("the ways the rule covers: %v", thirtyMinuteWays)
 	}
-}
-
-func contains(s, part string) bool {
-	for i := 0; i+len(part) <= len(s); i++ {
-		if s[i:i+len(part)] == part {
-			return true
-		}
-	}
-	return false
 }
