@@ -237,7 +237,7 @@ Traces: SC-8 (ADMIN-010 AC-14, item 4, item 9)
 Check: fetch_url
 
 **Scenario**: TC-22 — a different id in the body of a PUT is ignored
-**Given**: FX-SHOE and FX-OTHER exist; ADMIN is signed in.
+**Given**: FX-SHOE and FX-OTHER exist; the line `tc-line-one` (made as TC-11 makes it) and a review of FX-SHOE made by `POST /v1/reviews` exist; ADMIN is signed in.
 **When**: `PUT /v1/products/tc-shoe` `{"id":"tc-other","price":3500000}`; then `GET /v1/products/tc-shoe`, `/v1/products/tc-other`. The same for `PUT /v1/lines/tc-line-one` `{"id":"samba","blurb":"Tc blurb"}` and `PUT /v1/reviews/<a review id>` `{"id":"r-01","rating":3}`.
 **Then**: The first answer is 200 with `id` `tc-shoe` and `price` 3500000; `tc-shoe` reads 3500000 and `tc-other` is unchanged (its `price` is still 2000000); the line answer has `id` `tc-line-one` and the seeded `samba` still has its original `blurb`; the review answer has its own id and `r-01` keeps its `rating` 5.
 Traces: SC-8 (ADMIN-010 AC-15)
