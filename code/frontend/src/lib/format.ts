@@ -70,10 +70,20 @@ export function formatDate(value: When, style: DateStyle = "short"): string {
   return new Intl.DateTimeFormat(style === "short" ? locale : wordsLocale(locale), DATE[style]).format(d);
 }
 
-/** A time of day: 14:30 in vi-VN, 2:30 PM in en-US. "" for none. */
+/**
+ * A time of day: 14:30 and 05:30 in vi-VN (a 24-hour clock writes the hour with
+ * two digits, so the column of times in a list lines up), 2:30 PM in en-US.
+ * "" for none.
+ */
 export function formatTime(value: When): string {
   const d = toDate(value);
-  return d ? new Intl.DateTimeFormat(siteLocale(), { hour: "numeric", minute: "2-digit" }).format(d) : "";
+  if (!d) return "";
+  const locale = siteLocale();
+  const twelveHour = new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions().hour12 === true;
+  const options: Intl.DateTimeFormatOptions = twelveHour
+    ? { hour: "numeric", minute: "2-digit" }
+    : { hour: "2-digit", minute: "2-digit", hourCycle: "h23" };
+  return new Intl.DateTimeFormat(locale, options).format(d);
 }
 
 /** A date and its time: 16/10/2026, 14:30 in vi-VN; the date in any of formatDate's styles. */

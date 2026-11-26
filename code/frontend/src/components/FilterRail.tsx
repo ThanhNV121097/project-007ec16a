@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { useTableQuery } from "../lib/table";
+import { useTableQuery, type TableQuery } from "../lib/table";
 
 export interface FilterGroup {
   /** The record field it narrows by, and the name it takes in the address. */
@@ -25,15 +25,22 @@ export interface FilterGroup {
  *
  * Below 1024px the groups fold behind their own headings, so a phone opens
  * on the goods and not on a screen of checkboxes.
+ *
+ * A page that reads the same address itself passes its own `table`, so the
+ * rail and the page can never disagree about what "Clear all" removes (the
+ * shop opts in to `size` being a filter; see useTableQuery). Without one the
+ * rail reads the address with the hook's defaults, as every other list does.
  */
-export default function FilterRail({ groups, clear = "Clear all", className = "" }: {
+export default function FilterRail({ groups, table, clear = "Clear all", className = "" }: {
   groups: readonly FilterGroup[];
+  table?: TableQuery;
   clear?: ReactNode;
   className?: string;
 }) {
-  const t = useTableQuery();
+  const own = useTableQuery();
+  const t = table ?? own;
   const shown = groups.filter((g) => g.options.length > 1);
-  if (shown.length === 0) return null;
+  if (shown.length === 0 && !t.filtering) return null;
   return (
     <aside data-block="filters" className={`flex flex-col gap-6 text-sm ${className}`} aria-label="Filters">
       {shown.map((g) => {

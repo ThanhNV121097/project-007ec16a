@@ -23,7 +23,7 @@ export default function AdminBars({ rows, kind = "columns", caption }: {
         <ul className="flex flex-col gap-3">
           {rows.map((r) => (
             <li key={r.label} className="grid grid-cols-3 items-center gap-3 text-sm sm:grid-cols-5">
-              <span className="text-ink-soft">{r.label}</span>
+              <span className="min-w-0 break-words text-ink-soft">{r.label}</span>
               <span className="col-span-1 h-2 rounded-sm bg-wash sm:col-span-3">
                 <span className="block h-full rounded-sm bg-accent" style={{ width: `${(r.value / max) * 100}%` }} />
               </span>

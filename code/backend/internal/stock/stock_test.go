@@ -62,6 +62,34 @@ func TestTakePassesADatabaseErrorOn(t *testing.T) {
 	}
 }
 
+// Return puts every line back in lock order, adds the quantity, and treats a size
+// that no longer exists (no row changed) as nothing to do rather than an error.
+func TestReturnPutsPairsBackInLockOrderAndSkipsAMissingSize(t *testing.T) {
+	tx := &fakeTx{tags: []pgconn.CommandTag{pgconn.NewCommandTag("UPDATE 1"), pgconn.NewCommandTag("UPDATE 0"), pgconn.NewCommandTag("UPDATE 1")}}
+	err := Return(context.Background(), tx, []Line{
+		{Key{"samba", "40"}, 2}, {Key{"gazelle", "38"}, 1}, {Key{"samba", "38"}, 3},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [][]any{{"gazelle", "38", 1}, {"samba", "38", 3}, {"samba", "40", 2}}
+	if len(tx.args) != len(want) {
+		t.Fatalf("%d statements, want %d", len(tx.args), len(want))
+	}
+	for i, a := range tx.args {
+		if a[0] != want[i][0] || a[1] != want[i][1] || a[2] != want[i][2] {
+			t.Errorf("statement %d: %v, want %v", i, a, want[i])
+		}
+	}
+}
+
+func TestReturnPassesADatabaseErrorOn(t *testing.T) {
+	cause := errors.New("connection reset")
+	if err := Return(context.Background(), &fakeTx{err: cause}, []Line{{Key{"samba", "38"}, 1}}); !errors.Is(err, cause) {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestLockWithNoKeysAsksNothing(t *testing.T) {
 	held, err := Lock(context.Background(), &fakeTx{err: errors.New("must not be asked")}, nil)
 	if err != nil || len(held) != 0 {

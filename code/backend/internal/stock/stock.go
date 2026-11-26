@@ -68,6 +68,29 @@ func Lock(ctx context.Context, tx Tx, keys []Key) (map[Key]int, error) {
 	return held, nil
 }
 
+const returnSQL = `UPDATE product_sizes SET pairs = pairs + $3 WHERE product_id = $1 AND size = $2`
+
+// Return puts pairs back, one statement per line in (shoe, size) order, in the
+// caller's transaction: two cancels never lock the same two counts in opposite
+// orders. Unlike Take, a statement that changes no row is not an error: a size the
+// dealer took off the shoe since the order was placed has no count to return to,
+// and that is correct, the size no longer exists.
+func Return(ctx context.Context, tx Tx, lines []Line) error {
+	sorted := append([]Line(nil), lines...)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].Product != sorted[j].Product {
+			return sorted[i].Product < sorted[j].Product
+		}
+		return sorted[i].Size < sorted[j].Size
+	})
+	for _, l := range sorted {
+		if _, err := tx.Exec(ctx, returnSQL, l.Product, l.Size, l.Qty); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 const takeSQL = `UPDATE product_sizes SET pairs = pairs - $3 WHERE product_id = $1 AND size = $2 AND pairs >= $3`
 
 // Take removes the pairs of every line, one statement per line in lock order. The
