@@ -29,7 +29,7 @@ const filtersSQL = `SELECT
               FROM (SELECT DISTINCT t.colour FROM products t
                     WHERE t.status = 'live' AND t.colour <> '') c), '[]'::json)::text AS colours,
     coalesce((SELECT json_agg(s.size)
-              FROM (SELECT DISTINCT x AS size FROM products t, unnest(t.sizes) AS x
+              FROM (SELECT DISTINCT z.size FROM product_sizes z JOIN products t ON t.id = z.product_id
                     WHERE t.status = 'live') s), '[]'::json)::text AS sizes`
 
 // Filters is the shop's options: every colour and EU size a live shoe has.

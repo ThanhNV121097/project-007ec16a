@@ -149,7 +149,7 @@ func TestTheHelpersExist(t *testing.T) {
 		t.Fatal(err)
 	}
 	time.Sleep(10 * time.Millisecond)
-	if _, err := pool.Exec(ctx, "UPDATE products SET stock = stock WHERE id = 'samba-og-w-core-black'"); err != nil {
+	if _, err := pool.Exec(ctx, "UPDATE products SET price = price WHERE id = 'samba-og-w-core-black'"); err != nil {
 		t.Fatal(err)
 	}
 	if err := pool.QueryRow(ctx, "SELECT updated_at FROM products WHERE id = 'samba-og-w-core-black'").Scan(&after); err != nil || !after.After(before) {
@@ -188,13 +188,17 @@ func TestRestartKeepsChangesAndInsertsNothing(t *testing.T) {
 func TestSeedMeetingAnExistingIDFailsLoudly(t *testing.T) {
 	pool := schemaPool(t)
 	ctx := context.Background()
+	// The schema the seed lands in is every migration stamped before it. A later
+	// migration (the per-size stock, the order checkout) assumes the seeded rows
+	// are there and rewrites the columns the seed fills, so it cannot run first.
+	const seedVersion = "20261125100200"
 	before := fstest.MapFS{}
 	entries, err := fs.ReadDir(migrations.FS, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".sql") && !strings.Contains(e.Name(), "seed_collections") {
+		if strings.HasSuffix(e.Name(), ".sql") && e.Name() < seedVersion {
 			data, err := fs.ReadFile(migrations.FS, e.Name())
 			if err != nil {
 				t.Fatal(err)
@@ -251,9 +255,7 @@ func TestListsPageFilterAndKeepTheSeedOrder(t *testing.T) {
 		"/v1/faqs?topic=returns": 2, "/v1/reviews?product=samba-og-w-core-black": 3,
 		"/v1/products?sizes_low=40": 2, "/v1/products?sizes_low=4": 0,
 		"/v1/products?price=3290000": 2, "/v1/products?rating=4.8": 4,
-		"/v1/orders?status=shipped": 3, "/v1/orders?product=gazelle-indoor-solar-gold": 2,
-		"/v1/orders?qty=2": 1, "/v1/orders?placed_at=2026-11-23T16:05:00%2B07:00": 1,
-		"/v1/orders?eta=2026-11-26": 2, "/v1/sizes?cm=21.6": 1, "/v1/delivery?fee=0": 1,
+		"/v1/sizes?cm=21.6": 1, "/v1/delivery?fee=0": 1,
 		"/v1/products?zzz=1&Category=men&sort=&q=%20": 12,
 	} {
 		code, body, raw := get(t, pool, target)
@@ -278,7 +280,7 @@ func TestRecordsKeepTheirTypesListsAndNulls(t *testing.T) {
 		t.Fatalf("%d %s", code, raw)
 	}
 	for key, want := range map[string]any{
-		"price": float64(3290000), "rating": 4.8, "review_count": float64(23), "stock": float64(18), "featured": true, "is_new": true,
+		"price": float64(3290000), "rating": 4.8, "review_count": float64(23), "stock": float64(20), "featured": true, "is_new": true,
 		"released": "2026-11-03", "line": "samba", "category": "women", "swatch": "black",
 		"sizes":     []any{"36", "36 2/3", "37 1/3", "38", "38 2/3", "39 1/3", "40", "40 2/3", "41 1/3"},
 		"sizes_low": []any{"37 1/3", "40"}, "sizes_out": []any{"41 1/3"},
@@ -340,13 +342,6 @@ func TestNoBodyHoldsAPrivateOrBookkeepingValue(t *testing.T) {
 					t.Errorf("%s/%s has %s", c.Name, id, key)
 				}
 			}
-			if c.Name == "orders" {
-				for _, key := range []string{"phone", "email", "address", "note"} {
-					if _, has := rec[key]; has {
-						t.Errorf("orders/%s has %s", id, key)
-					}
-				}
-			}
 		}
 		for _, b := range bodies {
 			for _, secret := range secrets {
@@ -357,22 +352,11 @@ func TestNoBodyHoldsAPrivateOrBookkeepingValue(t *testing.T) {
 		}
 	}
 
-	_, order, _ := get(t, pool, "/v1/orders/doi-24817")
-	want := map[string]any{
-		"id": "doi-24817", "number": "DOI-24817", "placed_at": "2026-11-23T16:05:00+07:00", "status": "shipped",
-		"product": "samba-og-w-crystal-white", "size": "39 1/3", "qty": float64(1), "total": float64(3090000),
-		"payment": "momo", "paid": true, "delivery": "standard", "carrier": "GHN", "tracking": "GHN-PT27XM",
-		"eta": "2026-11-26", "customer": "Hoàng Nam", "city": "Đà Nẵng",
-	}
-	if !reflect.DeepEqual(order, want) {
-		t.Errorf("order: %v", order)
-	}
-	_, cancelled, _ := get(t, pool, "/v1/orders/doi-24811")
-	if cancelled["eta"] != "" {
-		t.Errorf("an undated order's eta is %#v, want \"\"", cancelled["eta"])
-	}
-	if code, _, _ := get(t, pool, "/v1/orders?phone=0938%20410%20552"); code != http.StatusBadRequest {
-		t.Errorf("a filter on phone answered %d", code)
+	// Orders are no collection of the generic reader: it answers neither the list nor a record.
+	for _, target := range []string{"/v1/orders", "/v1/orders/doi-24817"} {
+		if code, _, _ := get(t, pool, target); code != http.StatusNotFound {
+			t.Errorf("%s answered %d, want 404 (served by internal/orders)", target, code)
+		}
 	}
 	_, pay, _ := get(t, pool, "/v1/payments")
 	for _, it := range pay["items"].([]any) {

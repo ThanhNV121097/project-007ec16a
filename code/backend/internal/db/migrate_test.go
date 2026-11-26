@@ -142,6 +142,20 @@ func TestMigrateAppliesOnceAndRunsConcurrentIndexesOutsideATransaction(t *testin
 	}
 }
 
+// holdLock takes the migration lock on conn the way Migrate does, by asking
+// for it until it is free. The lock key is database-wide, not per schema, so
+// another package's test may be running Migrate (and CREATE INDEX
+// CONCURRENTLY, which waits for every running statement in the database) at
+// the moment this one asks. A blocked pg_advisory_lock here is such a statement
+// and closes the cycle: PostgreSQL fails one side with SQLSTATE 40P01.
+func holdLock(ctx context.Context, t *testing.T, conn *pgxpool.Conn) {
+	t.Helper()
+	if err := takeLock(ctx, conn); err != nil {
+		conn.Release()
+		t.Fatal(err)
+	}
+}
+
 // Two instances that start together while a third holds the lock: whichever
 // gets it next runs CREATE INDEX CONCURRENTLY, which waits for every running
 // transaction. The other must be idle, not blocked inside pg_advisory_lock, or
@@ -160,10 +174,7 @@ func TestMigrateWaitingForTheLockDoesNotDeadlockAConcurrentIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := holder.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
-		holder.Release()
-		t.Fatal(err)
-	}
+	holdLock(ctx, t, holder)
 
 	var wg sync.WaitGroup
 	errs := make(chan error, 2)
@@ -194,15 +205,14 @@ func TestMigrateWaitingForTheLockDoesNotDeadlockAConcurrentIndex(t *testing.T) {
 
 func TestMigrateGivesUpWaitingForTheLockWhenItsContextIsDone(t *testing.T) {
 	pool := testPool(t)
-	ctx := context.Background()
+	ctx, stop := context.WithTimeout(context.Background(), 30*time.Second)
+	defer stop()
 	holder, err := pool.Acquire(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer holder.Release()
-	if _, err := holder.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
-		t.Fatal(err)
-	}
+	holdLock(ctx, t, holder)
 	defer func() { _, _ = holder.Exec(ctx, "SELECT pg_advisory_unlock($1)", migrationLockKey) }()
 
 	waitCtx, cancel := context.WithTimeout(ctx, 3*lockPollInterval)

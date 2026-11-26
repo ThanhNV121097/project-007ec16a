@@ -1,8 +1,9 @@
 // Package data serves the shop's records — shoes, lines, categories, reviews,
-// orders, shop terms, delivery options, ways to pay, questions and the size
-// chart — to anyone, a page at a time, and one record by id.
+// shop terms, delivery options, ways to pay, questions and the size chart — to
+// anyone, a page at a time, and one record by id. Orders hold a customer's
+// details and are served by internal/orders, not here.
 //
-// collections.go is the registry: the ten collections as Go values, a
+// collections.go is the registry: the nine collections as Go values, a
 // hand-written mirror of the frontend's src/data/schema.json (the backend image
 // is built from code/backend and cannot embed a file of the frontend; a test
 // reads the schema and fails when the two drift). Every column carries an
@@ -117,7 +118,7 @@ func (c Column) sortExpr() string {
 	return c.filterExpr()
 }
 
-// Collection is one of the ten collections the API serves.
+// Collection is one of the nine collections the generic reader serves.
 type Collection struct {
 	// Name is the path segment: /v1/<Name>.
 	Name string
@@ -128,8 +129,8 @@ type Collection struct {
 	// searched fields only (never a private column); {w} stands for the word,
 	// folded by the database. A record matches when every word meets it.
 	Search string
-	// Sizes is the condition "at least one of the given EU sizes is listed and
-	// not sold out"; {s} stands for the sizes as a text array. Empty for every
+	// Sizes is the condition "at least one of the given EU sizes has pairs
+	// left"; {s} stands for the sizes as a text array. Empty for every
 	// collection but the shoes.
 	Sizes string
 }
@@ -232,8 +233,11 @@ func over(columns ...string) string {
 	return "strpos(doi_fold(" + strings.Join(parts, " || ' ' || ") + "), {w}) > 0"
 }
 
-// registry lists the ten collections. The only one with a join is orders: an
-// order's shoe, size and pairs are its first pair line.
+// registry lists the nine collections the generic reader serves. Orders are not
+// one of them: they hold a customer's details, so internal/orders reads them,
+// by the order's own token. The only one with a join is products: a shoe's
+// sizes, last-pairs list, sold-out list and stock are derived from the count of
+// pairs per size (the view product_stock), never stored on the shoe.
 var registry = []*Collection{
 	build("categories", "categories t",
 		text("id"), text("name"), text("blurb"), text("image")).
@@ -247,30 +251,10 @@ var registry = []*Collection{
 	build("lines", "lines t",
 		text("id"), text("name"), text("blurb"), nullable(col("since", Int)), text("fit_note")).
 		searching(over("name", "blurb")),
-	build("orders", "orders t LEFT JOIN order_items oi ON oi.order_id = t.id AND oi.line_no = 1",
-		text("id"), text("number"),
-		Column{Name: "placed_at", Kind: Instant,
-			Select: "to_char(t.placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD\"T\"HH24:MI:SS') || '+07:00'",
-			Filter: "t.placed_at"},
-		text("status"),
-		Column{Name: "product", Kind: Text, Select: "coalesce(oi.product_id,'')", Filter: "oi.product_id", Nullable: true},
-		Column{Name: "size", Kind: Text, Select: "coalesce(oi.size,'')", Filter: "oi.size", Nullable: true},
-		Column{Name: "qty", Kind: Int, Select: "coalesce(oi.qty,0)", Filter: "oi.qty", Nullable: true},
-		col("total", Int),
-		ref("payment", "payment_method_id"), col("paid", Bool), ref("delivery", "delivery_option_id"),
-		text("carrier"), text("tracking"),
-		Column{Name: "eta", Kind: Date, Select: "coalesce(to_char(t.eta,'YYYY-MM-DD'),'')", Filter: "t.eta", Nullable: true},
-		text("customer"),
-		private("phone"), private("email"), private("address"),
-		text("city"),
-		private("note")).
-		// The order number and the customer's name, and nothing else: a phone,
-		// an e-mail, an address or a note is never searched.
-		searching(over("number", "customer")),
 	build("payments", "payment_methods t",
 		text("id"), text("name"), text("note"), col("online", Bool), text("icon")).
 		searching(over("name", "note")),
-	build("products", "products t",
+	build("products", "products t JOIN product_stock ps ON ps.product_id = t.id",
 		text("id"), text("name"), text("model"),
 		optRef("line", "line_id"), optRef("category", "category_id"),
 		col("price", Int),
@@ -279,8 +263,11 @@ var registry = []*Collection{
 		text("description"), text("code"), text("colourway"), text("colour"), text("swatch"),
 		text("upper"), text("lining"), text("sole"), text("fit"), text("care"),
 		day("released"),
-		col("sizes", List), col("sizes_low", List), col("sizes_out", List),
-		col("stock", Int), productRating(), col("review_count", Int),
+		Column{Name: "sizes", Kind: List, Select: "ps.sizes"},
+		Column{Name: "sizes_low", Kind: List, Select: "ps.sizes_low"},
+		Column{Name: "sizes_out", Kind: List, Select: "ps.sizes_out"},
+		Column{Name: "stock", Kind: Int, Select: "ps.stock"},
+		productRating(), col("review_count", Int),
 		text("image"), text("image_back"), text("image_detail")).
 		// search_text is the shoe's own five fields, folded by the database
 		// (migration products_search_text); the line's and the category's name
@@ -289,9 +276,11 @@ var registry = []*Collection{
 		searching("strpos(t.search_text, {w}) > 0" +
 			" OR t.line_id IN (SELECT l.id FROM lines l WHERE strpos(doi_fold(l.name), {w}) > 0)" +
 			" OR t.category_id IN (SELECT c.id FROM categories c WHERE strpos(doi_fold(c.name), {w}) > 0)").
-		// A size is available when the shoe lists it and has not sold it out; a
-		// size on its last pairs is still available.
-		sizing("EXISTS (SELECT 1 FROM unnest({s}::text[]) AS w(s) WHERE w.s = ANY(t.sizes) AND NOT (w.s = ANY(t.sizes_out)))"),
+		// A size is available when the shoe holds at least one pair of it; a
+		// size on its last pairs is still available. The count is read from
+		// product_sizes itself, the one place a pair is counted.
+		sizing("EXISTS (SELECT 1 FROM product_sizes sz WHERE sz.product_id = t.id" +
+			" AND sz.size = ANY({s}::text[]) AND sz.pairs > 0)"),
 	build("reviews", "reviews t",
 		text("id"), ref("product", "product_id"), text("name"), nullable(col("rating", Int)), day("date"),
 		text("size_bought"), text("fit"), text("body"), text("status")).

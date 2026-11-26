@@ -16,20 +16,29 @@ import (
 // fault, not a slow page.
 const queryTimeout = 5 * time.Second
 
-// Register mounts the twenty read routes on mux: GET /v1/<collection> and
-// GET /v1/<collection>/{id} for each of the ten collections. They are public:
+// Register mounts the eighteen read routes on mux: GET /v1/<collection> and
+// GET /v1/<collection>/{id} for each of the nine collections. They are public:
 // no session, no cookie is read. Routes carry no /api prefix — the edge proxy
 // strips it.
 //
-// This is the temporary public read of orders (story DATA-004 item 4): the
-// checkout, track and sign-in stories remove orders from the registry in the
-// same pull request that mounts the protected routes.
+// Orders are not among them: they hold a customer's details, so internal/orders
+// serves them — a record by the order's own token, the list to the shop's team.
 func Register(mux *http.ServeMux, db Querier, log *slog.Logger) {
 	h := &handler{store: store{db: db}, log: log}
 	for _, c := range registry {
 		mux.HandleFunc("GET /v1/"+c.Name, h.list(c))
 		mux.HandleFunc("GET /v1/"+c.Name+"/{id}", h.record(c))
 	}
+}
+
+// ListHandler is the list reader of one collection that is not in the registry,
+// for a package that serves it under a guard of its own (internal/orders mounts
+// the team's list of orders behind auth.Require). It is the reader the registry's
+// collections use: the same grammar for filters, ranges, sort, search and paging,
+// the same answers and the same errors. A second query language is never written.
+func ListHandler(db Querier, log *slog.Logger, c *Collection) http.Handler {
+	h := &handler{store: store{db: db}, log: log}
+	return h.list(c)
 }
 
 type handler struct {

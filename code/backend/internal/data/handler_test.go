@@ -53,6 +53,8 @@ func (r *recorder) QueryRow(_ context.Context, sql string, args ...any) pgx.Row 
 
 func quiet() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
+// serve is the reader as a visitor with no session sees it: every collection it
+// serves is public.
 func serve(db Querier) http.Handler {
 	mux := http.NewServeMux()
 	Register(mux, db, quiet())
@@ -116,11 +118,10 @@ func TestABadParameterIsA400WithTheEnvelopeAndNoQuery(t *testing.T) {
 	for _, target := range []string{
 		"/v1/products?page=0", "/v1/products?page=-1", "/v1/products?page=abc", "/v1/products?page=1.5",
 		"/v1/products?limit=0", "/v1/products?limit=-1", "/v1/products?limit=abc", "/v1/products?limit=1.5",
-		"/v1/orders?phone=0938%20410%20552", "/v1/orders?email=", "/v1/orders?address=x", "/v1/orders?note=x",
 		"/v1/lines?_source=owner", "/v1/products?_invented=x", "/v1/products?price_listed=US%24130",
 		"/v1/products?category=a%00b", "/v1/products?colour=%ff%fe", "/v1/products?released=0000-01-01",
-		"/v1/products?sort=zzz", "/v1/products?sort=price_listed", "/v1/orders?sort=phone", "/v1/products?price_from=abc",
-		"/v1/products?released_to=2026-13-40", "/v1/products?price_ranges=3000000", "/v1/orders?phone_from=1",
+		"/v1/products?sort=zzz", "/v1/products?sort=price_listed", "/v1/lines?sort=_source", "/v1/products?price_from=abc",
+		"/v1/products?released_to=2026-13-40", "/v1/products?price_ranges=3000000", "/v1/products?price_listed_from=1",
 		"/v1/products?q=" + strings.Repeat("a", 101), "/v1/products?q=%00", "/v1/products?size=%ff",
 	} {
 		rec := &recorder{row: fakeRow{total: 1, text: "[]"}}
@@ -158,10 +159,7 @@ func TestIgnoredParametersSendTheSameStatementAsNone(t *testing.T) {
 func TestPublicSQLNamesNoPrivateColumn(t *testing.T) {
 	forbidden := func(collection string) []string {
 		names := []string{"source", "invented"}
-		switch collection {
-		case "orders":
-			names = append(names, "phone", "email", "address", "note")
-		case "products":
+		if collection == "products" {
 			names = append(names, "price_listed")
 		}
 		return names
@@ -196,7 +194,7 @@ func TestPublicSQLNamesNoPrivateColumn(t *testing.T) {
 
 func TestEveryStatementFailureIsAGeneric500(t *testing.T) {
 	cause := errors.New("dial tcp 10.0.0.1:5432: connection refused")
-	for _, target := range []string{"/v1/products", "/v1/products/samba", "/v1/orders", "/v1/shop/shop"} {
+	for _, target := range []string{"/v1/products", "/v1/products/samba", "/v1/shop/shop"} {
 		rec := &recorder{row: fakeRow{err: cause}}
 		res := request(serve(rec), target)
 		if res.Code != http.StatusInternalServerError || !strings.Contains(res.Body.String(), `"error":"internal"`) {
@@ -239,7 +237,25 @@ func TestARecordIsTheBareObject(t *testing.T) {
 	}
 }
 
-func TestOnlyTheTwentyReadRoutesExist(t *testing.T) {
+// Orders are no collection of this reader: neither the list nor a record of
+// them is a route here (internal/orders serves both, behind its own guards), and
+// the shoes stay public.
+func TestOrdersAreNotServedHereAndTheShoesStayPublic(t *testing.T) {
+	for _, target := range []string{"/v1/orders", "/v1/orders/doi-24817"} {
+		rec := &recorder{row: fakeRow{total: 1, text: "{}"}}
+		if res := request(serve(rec), target); res.Code != http.StatusNotFound || len(rec.sqls) != 0 {
+			t.Errorf("%s: %d, want 404 and no statement", target, res.Code)
+		}
+	}
+	for _, target := range []string{"/v1/products", "/v1/lines", "/v1/products/samba"} {
+		rec := &recorder{row: fakeRow{total: 1, text: "{}"}}
+		if res := request(serve(rec), target); res.Code != http.StatusOK {
+			t.Errorf("%s with no session: %d, want 200", target, res.Code)
+		}
+	}
+}
+
+func TestOnlyTheEighteenReadRoutesExist(t *testing.T) {
 	h := serve(&recorder{})
 	for _, c := range []struct{ method, path string }{
 		{http.MethodPost, "/v1/products"}, {http.MethodDelete, "/v1/products/samba"}, {http.MethodPut, "/v1/lines/samba"},

@@ -201,7 +201,8 @@
         "overview": "Overview",
         "products": "Shoes",
         "reviews": "Reviews",
-        "sales": "Sales"
+        "sales": "Sales",
+        "staff": "Staff"
       },
       "orders": {
         "cancelled": "Cancelled",
@@ -264,6 +265,65 @@
         ],
         "note": "Accounts are for the dealer and staff. Ask the owner for one.",
         "title": "Đôi — dealer sign-in"
+      },
+      "staff": {
+        "add": "Add staff member",
+        "columns": {
+          "email": "Email",
+          "name": "Name",
+          "role": "Role",
+          "status": "Status"
+        },
+        "confirm": {
+          "off": {
+            "note": "They are signed out at once and cannot sign in until you switch them on.",
+            "title": "Switch off {name}?",
+            "verb": "Switch off"
+          },
+          "remove": {
+            "note": "The account is deleted and cannot be restored. Their work stays.",
+            "title": "Remove {name}?",
+            "verb": "Remove"
+          }
+        },
+        "couldNotSave": "We could not save. Please try again.",
+        "dialog": {
+          "add": {
+            "cancel": "Cancel",
+            "email": "Email",
+            "hint": "At least 10 characters.",
+            "name": "Name",
+            "password": "Starting password",
+            "submit": "Add",
+            "title": "Add staff member"
+          },
+          "reset": {
+            "cancel": "Cancel",
+            "password": "New password",
+            "saved": "Saved.",
+            "submit": "Save",
+            "title": "Reset password for {name}"
+          }
+        },
+        "error": "We could not load the staff.",
+        "loading": "Loading the staff…",
+        "menu": {
+          "off": "Switch off",
+          "on": "Switch on",
+          "remove": "Remove",
+          "reset": "Reset password"
+        },
+        "retry": "Try again",
+        "roles": {
+          "admin": "Admin",
+          "staff": "Staff"
+        },
+        "saving": "Saving…",
+        "status": {
+          "active": "Active",
+          "off": "Switched off"
+        },
+        "title": "Staff"
       }
     },
     "cart": {
@@ -290,13 +350,15 @@
       "delivery_title": "Free delivery",
       "description": "Your address, delivery and payment for your adidas order.",
       "empty": "Nothing to check out yet.",
+      "failed": "We could not place your order. Nothing was charged. Please try again.",
       "head_alt": "A parcel sealed with packing tape",
       "heading": "Checkout",
       "line": "{variant} · Qty {qty}",
       "missing": "Fill in your name, street address and city.",
       "name": "Full name",
-      "next_online": "After you press Place order you pay on the {method} page; the order is marked paid at once and packed today.",
+      "next_online": "After you press Place order you pay on the {method} page; we pack your order after the payment is confirmed.",
       "note": "Note for the courier (optional)",
+      "offline": "You seem to be offline. Check your connection and try again.",
       "paying": "Placing your order…",
       "phone": "Phone",
       "phone_bad": "Check the phone number — we text you when the pair is on its way.",
@@ -307,7 +369,8 @@
       "step_payment": "Payment",
       "summary": "Your order",
       "terms": "By placing the order you accept the delivery information and that exchanges are not accepted.",
-      "title": "Checkout"
+      "title": "Checkout",
+      "unavailable": "Online payment is not available right now. Please try again later."
     },
     "contact": {
       "about": "You are asking about",
