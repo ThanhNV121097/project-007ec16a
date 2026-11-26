@@ -77,7 +77,7 @@ function StatusControl({ p }: { p: Props }) {
 
 const GRID = "grid gap-x-4 gap-y-5 md:grid-cols-2";
 
-function Panel({ children }: { children: ReactNode }) {
+function Grid({ children }: { children: ReactNode }) {
   return <div className={GRID}>{children}</div>;
 }
 
@@ -98,25 +98,25 @@ export default function OrderTabs(p: Props) {
         {
           label: "Delivery",
           content: (
-            <Panel>
+            <Grid>
               <Plain label="Delivery option" value={p.deliveryName} wide />
               <Typed k="carrier" p={p} />
               <Typed k="tracking" p={p} />
               <Typed k="eta" p={p} hint="Year-month-day, for example 2026-11-26" />
-            </Panel>
+            </Grid>
           ),
         },
         {
           label: "Customer",
           content: (
-            <Panel>
+            <Grid>
               <Typed k="customer" p={p} />
               <Typed k="phone" p={p} type="tel" />
               <Typed k="email" p={p} type="email" />
               <Typed k="city" p={p} />
               <Typed k="address" p={p} wide />
               <Note p={p} />
-            </Panel>
+            </Grid>
           ),
         },
       ]}
