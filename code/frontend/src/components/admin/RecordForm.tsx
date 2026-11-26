@@ -115,9 +115,12 @@ export default function RecordForm({ collection, record, specs, title, backTo, r
   const form = areas.length > 0
     ? (
       <Tabs value={tab} onValueChange={setTab} className="gap-4">
-        <TabsList>
-          {areas.map((area) => <TabsTrigger key={area} value={area}>{area}</TabsTrigger>)}
-        </TabsList>
+        {/* Five tabs are wider than a 320px screen: the row scrolls, the page does not. */}
+        <div className="max-w-full overflow-x-auto">
+          <TabsList>
+            {areas.map((area) => <TabsTrigger key={area} value={area}>{area}</TabsTrigger>)}
+          </TabsList>
+        </div>
         {areas.map((area) => (
           <TabsContent key={area} value={area}>
             <Form fields={specs.filter((f) => (f.section ?? "") === area)} {...shown} />
