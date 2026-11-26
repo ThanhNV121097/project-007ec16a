@@ -93,3 +93,26 @@ func Take(ctx context.Context, tx Tx, lines []Line) error {
 	}
 	return nil
 }
+
+const returnSQL = `UPDATE product_sizes SET pairs = pairs + $3 WHERE product_id = $1 AND size = $2`
+
+// Return puts the pairs of every line back, one statement per line in (shoe,
+// size) order, inside the caller's transaction. Unlike Take, zero rows is not an
+// error: a size the dealer took off the shoe since the order was placed has no
+// count to return to, and that is correct. Only orders.Cancel calls it, and only
+// after stock.Lock has taken these counts, so no statement here ever waits.
+func Return(ctx context.Context, tx Tx, lines []Line) error {
+	sorted := append([]Line(nil), lines...)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].Product != sorted[j].Product {
+			return sorted[i].Product < sorted[j].Product
+		}
+		return sorted[i].Size < sorted[j].Size
+	})
+	for _, l := range sorted {
+		if _, err := tx.Exec(ctx, returnSQL, l.Product, l.Size, l.Qty); err != nil {
+			return err
+		}
+	}
+	return nil
+}
