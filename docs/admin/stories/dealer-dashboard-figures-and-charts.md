@@ -5,7 +5,7 @@ Design system: `design/design-system.md` (§1.1 management area; the `Stat`, `Pa
 
 ## 1. User story
 
-As the **dealer** (the admin, or a staff member the admin added), I want the Overview page at `/admin` to show this month's sales, what waits to be packed, the pairs on the shelf, the shoes running low, sales for each of the last 14 days, pairs sold by line, the latest orders and the shoes running low — all added up by the shop in one request — so that I see what needs me today however many orders there are, and no customer's order is sent to my browser to be added up.
+As the **dealer** (the admin, or a staff member the admin added), I want the Overview page at `/admin` to show this month's sales, what waits to be packed, the pairs on the shelf, sales for each of the last 14 days, pairs sold by line, the latest orders and the shoes running low — all added up by the shop in one request — so that I see what needs me today however many orders there are, and no customer's order is sent to my browser to be added up.
 
 Other actors this story touches:
 
