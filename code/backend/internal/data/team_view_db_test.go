@@ -64,7 +64,8 @@ func TestADraftShoeAndAHiddenReviewAreTheTeamsAlone(t *testing.T) {
 	insertShoe(t, pool, shoe{id: "live-one", name: "Samba Live", line: "samba", category: "women", price: 2790000, sizes: []string{"38"}})
 	insertShoe(t, pool, shoe{id: "draft-one", name: "Samba Draft", line: "samba", category: "women", price: 2790000, sizes: []string{"38"}, status: "draft"})
 	if _, err := pool.Exec(context.Background(), `INSERT INTO reviews (id, product_id, name, rating, status) VALUES
-		('r-live', 'live-one', 'Lan', 5, 'live'), ('r-hidden', 'live-one', 'Mai', 1, 'hidden')`); err != nil {
+		('r-live', 'live-one', 'Lan', 5, 'live'), ('r-hidden', 'live-one', 'Mai', 1, 'hidden'),
+		('r-ondraft', 'draft-one', 'Hoa', 4, 'live')`); err != nil {
 		t.Fatal(err)
 	}
 	h := serve(pool)
@@ -78,6 +79,7 @@ func TestADraftShoeAndAHiddenReviewAreTheTeamsAlone(t *testing.T) {
 			{"/v1/products?status=draft", []string{}},
 			{"/v1/reviews", []string{"r-live"}},
 			{"/v1/reviews?product=live-one", []string{"r-live"}},
+			{"/v1/reviews?product=draft-one", []string{}},
 			{"/v1/reviews?status=hidden", []string{}},
 		} {
 			if got := listAs(t, h, role, c.target); !reflect.DeepEqual(got, c.want) {
@@ -86,7 +88,7 @@ func TestADraftShoeAndAHiddenReviewAreTheTeamsAlone(t *testing.T) {
 		}
 		// A draft shoe and a hidden review answer as an id that does not exist.
 		missing := readAs(h, role, "/v1/products/nope")
-		for _, target := range []string{"/v1/products/draft-one", "/v1/reviews/r-hidden"} {
+		for _, target := range []string{"/v1/products/draft-one", "/v1/reviews/r-hidden", "/v1/reviews/r-ondraft"} {
 			rec := readAs(h, role, target)
 			if rec.Code != http.StatusNotFound {
 				t.Errorf("%s as %q: %d, want 404", target, role, rec.Code)
@@ -111,7 +113,8 @@ func TestADraftShoeAndAHiddenReviewAreTheTeamsAlone(t *testing.T) {
 			{"/v1/products", []string{"draft-one", "live-one"}},
 			{"/v1/products?q=samba", []string{"draft-one", "live-one"}},
 			{"/v1/products?status=draft", []string{"draft-one"}},
-			{"/v1/reviews", []string{"r-hidden", "r-live"}},
+			{"/v1/reviews", []string{"r-hidden", "r-live", "r-ondraft"}},
+			{"/v1/reviews?product=draft-one", []string{"r-ondraft"}},
 			{"/v1/reviews?status=hidden", []string{"r-hidden"}},
 		} {
 			if got := listAs(t, h, role, c.target); !reflect.DeepEqual(got, c.want) {
