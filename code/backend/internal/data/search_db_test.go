@@ -285,15 +285,17 @@ func TestSizeMatchesOnlyAvailableSizes(t *testing.T) {
 	}
 }
 
-// SC-11: a draft shoe that matches everything else is not returned when the
-// request carries status=live; a request without it still sees it (the API
-// refusing a draft to a visitor whatever is asked is the admin story's).
-func TestADraftShoeIsLeftOutByStatusLive(t *testing.T) {
+// SC-11: a draft shoe that matches everything else is not returned to a visitor,
+// with status=live asked for or without it: a draft is the team's alone (the
+// team's own view is read in team_view_db_test.go).
+func TestADraftShoeIsLeftOutOfEveryVisitorRead(t *testing.T) {
 	pool := emptyShop(t)
 	insertShoe(t, pool, shoe{id: "live-one", name: "Samba Live", line: "samba", category: "women", price: 2790000, sizes: []string{"38"}})
 	insertShoe(t, pool, shoe{id: "draft-one", name: "Samba Draft", line: "samba", category: "women", price: 2790000, sizes: []string{"38"}, status: "draft"})
 	expectSet(t, pool, "/v1/products?q=samba&status=live&category=women&size=38&price_to=2999999", "live-one")
-	expectSet(t, pool, "/v1/products?q=samba", "live-one", "draft-one")
+	expectSet(t, pool, "/v1/products?q=samba", "live-one")
+	expectSet(t, pool, "/v1/products?size=38", "live-one")
+	expectSet(t, pool, "/v1/products?status=draft")
 }
 
 // SC-12: the true count over several pages.
