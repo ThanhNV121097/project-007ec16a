@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { readOverview } from "./mock/dealer-dashboard-figures-and-charts";
+import { api } from "./api";
 
 /**
  * The overview's one door to the shop (services §3.25): every figure and chart
@@ -61,8 +61,8 @@ export type OverviewState =
   | { status: "error" }
   | { status: "ready"; data: Overview };
 
-/** The one read. At the backend step this becomes api.get<unknown>("admin/overview"). */
-const read: () => Promise<unknown> = readOverview;
+/** The one read: GET /v1/admin/overview, for the shop's team only. */
+const read: () => Promise<unknown> = () => api.get<unknown>("admin/overview");
 
 function hasFigures(v: Partial<Overview>): boolean {
   return (
