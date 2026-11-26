@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../lib/mock/manage-shoes-lines-categories-reviews-and-orders", () => ({
+vi.mock("../lib/manage-shoes-lines-categories-reviews-and-orders-wire", () => ({
   default: { create: vi.fn(), update: vi.fn(), remove: vi.fn(), read: vi.fn(), upload: vi.fn(), setPairs: vi.fn() },
 }));
 
@@ -10,7 +10,7 @@ import {
 import { bodyOf, EMPTY_COUNT, stockErrors, valuesOf, WHOLE_COUNT } from "../components/admin/payload";
 import { deleteRow, newId, saveCount, saveRow, uploadFile } from "../components/admin/store";
 import { schema, setCollection, type Row } from "../data";
-import transport from "../lib/mock/manage-shoes-lines-categories-reviews-and-orders";
+import transport from "../lib/manage-shoes-lines-categories-reviews-and-orders-wire";
 
 const shop = vi.mocked(transport);
 const reply = (status: number, body?: unknown) => ({ status, body });
