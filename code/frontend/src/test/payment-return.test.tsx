@@ -9,8 +9,8 @@ vi.hoisted(() => {
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { decide, GIVE_UP_MS, navigation, orderNumberOf, POLL_MS, type Wire } from "../lib/online-payment-with-vnpay";
+import { afterEach, beforeEach, describe, expect, it, type MockInstance } from "vitest";
+import { decide, GIVE_UP_MS, navigation, orderNumberOf, POLL_MS, type Transport, type Wire } from "../lib/online-payment-with-vnpay";
 import { transport } from "../lib/mock/online-payment-with-vnpay";
 import { rememberOrder } from "../lib/orders";
 import PaymentReturn from "../pages/PaymentReturn";
@@ -23,9 +23,9 @@ const SANDBOX = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=D
 const answer = (status: number, body: unknown = {}): Promise<Wire> => Promise.resolve({ status, body });
 const order = (extra: { status?: string; paid?: boolean } = {}) => ({ id: ID, number: "DOI-30001", status: "placed", paid: false, ...extra });
 
-let read: ReturnType<typeof vi.spyOn<typeof transport, "read">>;
-let pay: ReturnType<typeof vi.spyOn<typeof transport, "pay">>;
-let leave: ReturnType<typeof vi.spyOn<typeof navigation, "to">>;
+let read: MockInstance<Transport["read"]>;
+let pay: MockInstance<Transport["pay"]>;
+let leave: MockInstance<typeof navigation.to>;
 
 beforeEach(() => {
   vi.useFakeTimers();
