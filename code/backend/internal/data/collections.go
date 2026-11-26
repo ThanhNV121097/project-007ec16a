@@ -133,6 +133,14 @@ type Collection struct {
 	// left"; {s} stands for the sizes as a text array. Empty for every
 	// collection but the shoes.
 	Sizes string
+	// Live is the condition a record must meet to be seen by a caller who is
+	// not the shop's team (a shoe on sale, a review that is shown). Empty when
+	// every record is public. The dealer's view is not narrowed by it.
+	Live string
+	// Dealer are the columns only the shop's team is served, beside the
+	// bookkeeping ones (a shoe's pairs in each size). They are not fields of the
+	// schema, so no filter, sort or search can name them.
+	Dealer []Column
 }
 
 // public returns the columns a caller with no session may read, in output order.
@@ -154,6 +162,37 @@ func (c *Collection) selectList() string {
 		parts = append(parts, col.Select+` AS "`+col.Name+`"`)
 	}
 	return strings.Join(parts, ", ")
+}
+
+// viewList is the SELECT list of one of the two views. The public view is the
+// Public columns. The dealer view adds the bookkeeping columns and the
+// dealer-only ones; a Private column (an order's phone) is in neither.
+func (c *Collection) viewList(dealer bool) string {
+	if !dealer {
+		return c.selectList()
+	}
+	parts := make([]string, 0, len(c.Columns)+len(c.Dealer))
+	for _, col := range c.Columns {
+		if col.Access != Private {
+			parts = append(parts, col.Select+` AS "`+col.Name+`"`)
+		}
+	}
+	for _, col := range c.Dealer {
+		parts = append(parts, col.Select+` AS "`+col.Name+`"`)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// onlyLive sets the condition a record must meet to be public.
+func (c *Collection) onlyLive(cond string) *Collection {
+	c.Live = cond
+	return c
+}
+
+// dealerSees adds columns only the shop's team is served.
+func (c *Collection) dealerSees(cols ...Column) *Collection {
+	c.Dealer = append(c.Dealer, cols...)
+	return c
 }
 
 // searching sets what a typed word is looked for in.
@@ -280,12 +319,18 @@ var registry = []*Collection{
 		// size on its last pairs is still available. The count is read from
 		// product_sizes itself, the one place a pair is counted.
 		sizing("EXISTS (SELECT 1 FROM product_sizes sz WHERE sz.product_id = t.id" +
-			" AND sz.size = ANY({s}::text[]) AND sz.pairs > 0)"),
+			" AND sz.size = ANY({s}::text[]) AND sz.pairs > 0)").
+		// A draft is the team's: a visitor never sees it, by list, search, size
+		// filter or id. The team also reads each size's count, as one object.
+		onlyLive("t.status = 'live'").
+		dealerSees(Column{Name: "pairs", Kind: Text, Select: "(SELECT coalesce(jsonb_object_agg(z.size, z.pairs), '{}'::jsonb)" +
+			" FROM product_sizes z WHERE z.product_id = t.id)"}),
 	build("reviews", "reviews t",
 		text("id"), ref("product", "product_id"), text("name"), nullable(col("rating", Int)), day("date"),
 		text("size_bought"), text("fit"), text("body"), text("status")).
 		searching("strpos(doi_fold(t.name || ' ' || t.body), {w}) > 0" +
-			" OR t.product_id IN (SELECT p.id FROM products p WHERE strpos(doi_fold(p.name), {w}) > 0)"),
+			" OR t.product_id IN (SELECT p.id FROM products p WHERE strpos(doi_fold(p.name), {w}) > 0)").
+		onlyLive("t.status = 'live'"),
 	build("shop", "shop_terms t",
 		text("id"), text("standard_days"), text("dispatch_cutoff"), text("reply_time"),
 		decimal("rating"), col("review_count", Int)).
