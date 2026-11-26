@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { demoHeld, transport } from "./mock/online-payment-with-vnpay";
+import { api, ApiError } from "./api";
 import { payAddress, storedOrders, type StoredOrder } from "./orders";
 
 /**
@@ -16,8 +16,8 @@ import { payAddress, storedOrders, type StoredOrder } from "./orders";
  * here marks anything paid.
  *
  * The calls go through one `transport`: the shop's GET /v1/orders/{id} and
- * POST /v1/orders/{id}/payment, each with the order's token in X-Order-Token.
- * It is the one thing the backend step swaps.
+ * POST /v1/orders/{id}/payment, each with the order's token in X-Order-Token and
+ * nowhere else (never an address, a query or a log).
  */
 export type PaymentState = "paid" | "confirming" | "timed-out" | "not-completed" | "cancelled" | "no-match" | "check-failed";
 
@@ -38,6 +38,32 @@ export interface Wire {
 export interface Transport {
   read(id: string, token: string): Promise<Wire>;
   pay(id: string, token: string): Promise<Wire>;
+}
+
+/**
+ * What the shop's answer is on the wire: a 2xx is status 200 with its body, a
+ * refusal is its status with `{ error: <code> }`, and no answer at all (no
+ * connection, a timeout, anything thrown) is status 0.
+ */
+async function wire(run: () => Promise<unknown>): Promise<Wire> {
+  try {
+    return { status: 200, body: await run() };
+  } catch (e) {
+    if (e instanceof ApiError && e.status !== 0) return { status: e.status, body: { error: e.code } };
+    return { status: 0, body: undefined };
+  }
+}
+
+const transport: Transport = {
+  read: (id, token) => wire(() => api.get<unknown>(`orders/${encodeURIComponent(id)}`, undefined, { "X-Order-Token": token })),
+  // No body, sent once, never retried: a press is not idempotent.
+  pay: (id, token) => wire(() => api.post<unknown>(`orders/${encodeURIComponent(id)}/payment`, undefined, { "X-Order-Token": token })),
+};
+
+/** The `error` word of a refusal's body, or "" when it has none. */
+function codeOf(body: unknown): string {
+  const code = typeof body === "object" && body !== null ? (body as { error?: unknown }).error : undefined;
+  return typeof code === "string" ? code : "";
 }
 
 /** How often the shop is asked again while a payment is being confirmed, and for how long. */
@@ -62,9 +88,7 @@ export function orderNumberOf(reference: string | null): string | null {
 /** The stored order of that number, with its token: the only token this page ever tries. */
 export function heldFor(number: string | null): StoredOrder | null {
   if (number === null) return null;
-  // The demo orders are the UI stage's mock; the backend step drops them.
-  const mine = [...storedOrders(), ...demoHeld];
-  return mine.find((o) => typeof o.token === "string" && String(o.number ?? "").toUpperCase() === number) ?? null;
+  return storedOrders().find((o) => typeof o.token === "string" && String(o.number ?? "").toUpperCase() === number) ?? null;
 }
 
 function orderOf(body: unknown): OrderState | null {
@@ -85,10 +109,14 @@ async function call(run: () => Promise<Wire>): Promise<Wire> {
 
 export type Read = { kind: "order"; order: OrderState } | { kind: "no-match" } | { kind: "failed" };
 
-/** Asks the shop what the order is. A 404 is "this browser's token opens nothing"; any other failure is "could not check". */
+/**
+ * Asks the shop what the order is. Only the shop's own 404 (code not_found) is
+ * "this browser's token opens nothing"; any other failure, another 404 included (a
+ * gateway's own page, a mis-routed address), is "could not check".
+ */
 export async function readOrder(held: StoredOrder): Promise<Read> {
   const { status, body } = await call(() => transport.read(held.id, held.token));
-  if (status === 404) return { kind: "no-match" };
+  if (status === 404 && codeOf(body) === "not_found") return { kind: "no-match" };
   const order = status === 200 ? orderOf(body) : null;
   return order ? { kind: "order", order } : { kind: "failed" };
 }
@@ -208,6 +236,7 @@ export function usePaymentReturn(reference: string | null, code: string | null):
     })();
   }, [held, trying]);
 
-  const order = held ? { id: held.id, number: held.number } : null;
+  // When the shop says it knows nothing of the token, nothing about any order is drawn.
+  const order = held && phase.kind !== "no-match" ? { id: held.id, number: held.number } : null;
   return { state: stateOf(phase, code, timedOut), order, trying, tryFailed, again };
 }
