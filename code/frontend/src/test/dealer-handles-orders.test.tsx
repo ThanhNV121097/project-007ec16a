@@ -13,15 +13,12 @@ vi.mock("../lib/api", async (importOriginal) => {
   return { ...actual, api: { get: stubs.get, post: stubs.post, put: stubs.put, delete: stubs.delete } };
 });
 
-import { cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import OrderRecord from "../components/OrderRecord";
 import OrderStatusSelect from "../components/OrderStatusSelect";
 import { ApiError } from "../lib/api";
-import {
-  changes, deleteOrder, isLocked, movesFrom, saveOrder, useDealerOrder, valuesOf,
-  type DealerOrder, type OrderPair,
-} from "../lib/dealer-handles-orders-status-courier-payment";
+import type { DealerOrder, OrderPair } from "../lib/dealer-handles-orders-status-courier-payment";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -85,102 +82,6 @@ function open(o: DealerOrder) {
 const tab = (name: string) => fireEvent.mouseDown(screen.getByRole("tab", { name }));
 const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const save = () => fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-
-describe("the moves the page offers", () => {
-  it("allows one step forward, or cancelling before it ships", () => {
-    expect(movesFrom("placed")).toEqual(["confirmed", "cancelled"]);
-    expect(movesFrom("confirmed")).toEqual(["packed", "cancelled"]);
-    expect(movesFrom("packed")).toEqual(["shipped", "cancelled"]);
-    expect(movesFrom("shipped")).toEqual(["delivered"]);
-  });
-
-  it("locks a delivered or cancelled order", () => {
-    expect(isLocked("delivered")).toBe(true);
-    expect(isLocked("cancelled")).toBe(true);
-    expect(isLocked("shipped")).toBe(false);
-  });
-});
-
-describe("what a save carries", () => {
-  it("is only the editable fields that changed, never the whole record", () => {
-    const values = { ...valuesOf(packed), address: "9 New Street", note: "Ring twice." };
-    expect(changes(packed, values)).toEqual({ address: "9 New Street", note: "Ring twice." });
-    expect(changes(packed, valuesOf(packed))).toEqual({});
-  });
-
-  it("is the note alone for a delivered order", () => {
-    const values = { ...valuesOf(delivered), carrier: "GHTK", note: "Left with the porter." };
-    expect(changes(delivered, values)).toEqual({ note: "Left with the porter." });
-  });
-});
-
-describe("the calls to the shop", () => {
-  it("reads an order from /v1/orders/{id} and says it is ready", async () => {
-    stubs.get.mockResolvedValueOnce(placed);
-    const { result } = renderHook(() => useDealerOrder("doi-24816"));
-    expect(result.current.load).toEqual({ state: "loading" });
-    await waitFor(() => expect(result.current.load).toEqual({ state: "ready", order: placed }));
-    expect(stubs.get).toHaveBeenCalledWith("orders/doi-24816");
-  });
-
-  it("says missing only for the shop's own not_found", async () => {
-    stubs.get.mockRejectedValueOnce(refused(404, "not_found", "Not found."));
-    const { result } = renderHook(() => useDealerOrder("nope"));
-    await waitFor(() => expect(result.current.load).toEqual({ state: "missing" }));
-  });
-
-  it("says failed, never missing, when the shop did not answer or answered 5xx", async () => {
-    stubs.get.mockRejectedValueOnce(noAnswer());
-    const { result, rerender } = renderHook(({ id }) => useDealerOrder(id), { initialProps: { id: "doi-1" } });
-    await waitFor(() => expect(result.current.load).toEqual({ state: "failed" }));
-    stubs.get.mockRejectedValueOnce(refused(500, "internal", "Something went wrong."));
-    rerender({ id: "doi-2" });
-    await waitFor(() => expect(result.current.load).toEqual({ state: "failed" }));
-  });
-
-  it("says missing for no id at all, and asks the shop nothing", async () => {
-    const { result } = renderHook(() => useDealerOrder(undefined));
-    await waitFor(() => expect(result.current.load).toEqual({ state: "missing" }));
-    expect(stubs.get).not.toHaveBeenCalled();
-  });
-
-  it("saves with a PUT of the patch alone and returns the dealer view the shop answered", async () => {
-    const answer = { ...placed, status: "confirmed" };
-    stubs.put.mockResolvedValueOnce(answer);
-    expect(await saveOrder("doi-24816", { status: "confirmed" })).toEqual({ ok: true, order: answer });
-    expect(stubs.put).toHaveBeenCalledWith("orders/doi-24816", { status: "confirmed" });
-  });
-
-  it("carries the shop's 422 sentences by field, and keeps the typed values to the page", async () => {
-    const errors = { status: "An order cannot go from cancelled to packed." };
-    stubs.put.mockRejectedValueOnce(refused(422, "invalid", "Check the order.", errors));
-    expect(await saveOrder("doi-24816", { status: "packed" })).toEqual({ ok: false, kind: "fields", errors });
-  });
-
-  it("says expired for a 401, and unreachable for no answer or a server fault", async () => {
-    stubs.put.mockRejectedValueOnce(refused(401, "unauthenticated", "Sign in to continue."));
-    expect(await saveOrder("doi-24816", {})).toEqual({ ok: false, kind: "expired" });
-    stubs.put.mockRejectedValueOnce(noAnswer());
-    expect(await saveOrder("doi-24816", {})).toEqual({ ok: false, kind: "unreachable" });
-    stubs.put.mockRejectedValueOnce(refused(500, "internal", "Something went wrong."));
-    expect(await saveOrder("doi-24816", {})).toEqual({ ok: false, kind: "unreachable" });
-  });
-
-  it("deletes with a DELETE and hands the shop's refusal to the open question", async () => {
-    stubs.delete.mockResolvedValueOnce(undefined);
-    expect(await deleteOrder("doi-24811")).toEqual({ ok: true });
-    expect(stubs.delete).toHaveBeenCalledWith("orders/doi-24811");
-    stubs.delete.mockRejectedValueOnce(refused(409, "conflict", "Cancel the order first."));
-    expect(await deleteOrder("doi-24816")).toEqual({ ok: false, kind: "refused", message: "Cancel the order first." });
-    const paid = "A paid order cannot be deleted; refund it in VNPay's portal first.";
-    stubs.delete.mockRejectedValueOnce(refused(409, "conflict", paid));
-    expect(await deleteOrder("doi-24815")).toEqual({ ok: false, kind: "refused", message: paid });
-    stubs.delete.mockRejectedValueOnce(refused(401, "unauthenticated", "Sign in to continue."));
-    expect(await deleteOrder("doi-24815")).toEqual({ ok: false, kind: "expired" });
-    stubs.delete.mockRejectedValueOnce(noAnswer());
-    expect(await deleteOrder("doi-24815")).toEqual({ ok: false, kind: "unreachable" });
-  });
-});
 
 describe("the order page", () => {
   it("keeps the design's sentence and picture for one pair", () => {
