@@ -57,10 +57,13 @@ function failure(status: number, body: unknown): ApiError {
   return new ApiError(status, code, message, errors);
 }
 
-async function send(url: string, signal: AbortSignal): Promise<unknown> {
+/** Request headers a call may add to the ones every call carries (an order's `X-Order-Token`). */
+export type ExtraHeaders = Record<string, string>;
+
+async function send(url: string, signal: AbortSignal, extra?: ExtraHeaders): Promise<unknown> {
   let res: Response;
   try {
-    res = await fetch(url, { credentials: "include", signal, headers: { Accept: "application/json" } });
+    res = await fetch(url, { credentials: "include", signal, headers: { Accept: "application/json", ...extra } });
   } catch {
     throw new ApiError(0, "network", "The server cannot be reached.");
   }
@@ -88,8 +91,8 @@ async function timed<T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> {
 }
 
 /** One GET try, abandoned after 15 seconds. */
-async function attempt(url: string): Promise<unknown> {
-  return timed((signal) => send(url, signal));
+async function attempt(url: string, extra?: ExtraHeaders): Promise<unknown> {
+  return timed((signal) => send(url, signal, extra));
 }
 
 /** No answer, or a 5xx, may pass on a second try. A 404 or any other 4xx is an answer. */
@@ -110,24 +113,27 @@ function shared<T>(key: string, run: () => Promise<T>): Promise<T> {
 
 /**
  * GET `${base}/v1/<path>`. A failed GET is tried once more; a 404 never is.
- * Resolves with the parsed body; rejects with an ApiError.
+ * Resolves with the parsed body; rejects with an ApiError. `headers` are added to
+ * the request; two reads share a request only when their address AND their
+ * headers are the same, so one caller's credential never answers another's.
  */
-async function get<T>(path: string, params?: Params): Promise<T> {
+async function get<T>(path: string, params?: Params, headers?: ExtraHeaders): Promise<T> {
   const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}${queryString(params)}`;
-  return shared(url, async () => {
+  const key = headers ? `${url}\n${JSON.stringify(Object.entries(headers).sort())}` : url;
+  return shared(key, async () => {
     try {
-      return (await attempt(url)) as T;
+      return (await attempt(url, headers)) as T;
     } catch (e) {
       if (!retriable(e)) throw e;
-      return (await attempt(url)) as T;
+      return (await attempt(url, headers)) as T;
     }
   });
 }
 
 type Write = "POST" | "PUT" | "DELETE";
 
-async function sendWrite(method: Write, url: string, body: unknown, signal: AbortSignal): Promise<unknown> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+async function sendWrite(method: Write, url: string, body: unknown, signal: AbortSignal, extra?: ExtraHeaders): Promise<unknown> {
+  const headers: ExtraHeaders = { Accept: "application/json", ...extra };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   let res: Response;
   try {
@@ -146,18 +152,19 @@ async function sendWrite(method: Write, url: string, body: unknown, signal: Abor
   return parsed;
 }
 
-async function write<T>(method: Write, path: string, body?: unknown): Promise<T> {
+async function write<T>(method: Write, path: string, body?: unknown, headers?: ExtraHeaders): Promise<T> {
   const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}`;
-  return (await timed((signal) => sendWrite(method, url, body, signal))) as T;
+  return (await timed((signal) => sendWrite(method, url, body, signal, headers))) as T;
 }
 
 /**
  * POST `${base}/v1/<path>` with a JSON body, or none. Never tried again: a POST
  * is not idempotent. A 204 resolves undefined; any other failure rejects with
- * an ApiError, a refusal carrying the server's envelope.
+ * an ApiError, a refusal carrying the server's envelope. `headers` are added to
+ * the request; with no body the call sends none and no content type.
  */
-async function post<T = void>(path: string, body?: unknown): Promise<T> {
-  return write<T>("POST", path, body);
+async function post<T = void>(path: string, body?: unknown, headers?: ExtraHeaders): Promise<T> {
+  return write<T>("POST", path, body, headers);
 }
 
 /** PUT `${base}/v1/<path>` with a JSON body. Never tried again; failures as post. */
