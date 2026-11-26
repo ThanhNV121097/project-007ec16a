@@ -79,7 +79,7 @@ erDiagram
 |---|---|---|---|---|---|
 | `id` | `uuid` | no | `gen_random_uuid()` | PK | Not exposed |
 | `attempt_id` | `uuid` | no | — | | FK `payment_attempts` |
-| `transaction_no` | `text` | no | — | | `vnp_TransactionNo`, as sent; `''` when the notice carries none. A cancelled payment carries `0` |
+| `transaction_no` | `text` | no | — | | `vnp_TransactionNo`, as sent; `''` when the notice carries none |
 | `bank_code` | `text` | no | `''` | | `vnp_BankCode` (the bank or scheme the customer paid with), `''` when absent |
 | `amount` | `bigint` | no | — | | VND: `vnp_Amount ÷ 100`. Only a notice whose amount equals the attempt's is ever stored, so it equals the attempt's `amount`. `CHECK ck_payment_notices_amount_not_negative`: `amount >= 0` |
 | `response_code` | `text` | no | — | | `vnp_ResponseCode` as sent (`00` = success, `24` = the customer cancelled); `''` when absent |
@@ -214,7 +214,7 @@ Three files, in this order, stamped after `20261125140000_users_and_sessions` (t
 
 **Why each backward step is acceptable.** The two table drops are irreversible in the sense that matters — after real payments exist they erase the only shop-side record of a VNPay transaction (the refund is made against it) — so the file says so and the server never runs a `.down.sql` (overview §4). Reverting this story's code does **not** run them: the tables stay, unread, and a revert of the backend PR leaves a schema the previous build ignores (it neither reads nor writes either table). **No data is migrated or backfilled**: no order has ever had an attempt, and the 14 sample orders keep `is_sample = true` and are excluded by the index predicate itself.
 
-**Assertions in the migrations.** None needed: nothing is seeded. (`migrations_test.go` applies every file to a scratch schema and already fails a file that does not apply.)
+**Assertions in the migrations.** None needed: nothing is seeded. Dev adds a database test (skips without `TEST_DATABASE_URL`, as the project's others) that applies the three files and proves the constraints of §2 refuse what they are there for: a 101-character reference, a second attempt with an existing reference, a success notice with response code `24`, two success notices of one attempt, two identical failure notices of one attempt.
 
 ## 9. Arranging test data
 
