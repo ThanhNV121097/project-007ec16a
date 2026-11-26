@@ -18,10 +18,12 @@ import (
 // TEST_DATABASE_URL, like every test that needs a database.
 
 // readAs reads a path as a signed-in account of the given role, the way
-// auth.Resolve puts the account on the request.
+// auth.Resolve puts the account on the request; an empty role is a visitor.
 func readAs(h http.Handler, role auth.Role, target string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodGet, target, nil)
-	req = req.WithContext(auth.WithUser(req.Context(), auth.User{ID: "00000000-0000-4000-8000-0000000000aa", Email: "who@example.com", Role: role, Active: true}))
+	if role != "" {
+		req = req.WithContext(auth.WithUser(req.Context(), auth.User{ID: "00000000-0000-4000-8000-0000000000aa", Email: "who@example.com", Role: role, Active: true}))
+	}
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
@@ -32,7 +34,7 @@ func listAs(t *testing.T, h http.Handler, role auth.Role, target string) []strin
 	t.Helper()
 	rec := readAs(h, role, target)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("%s as %s: %d %s", target, role, rec.Code, rec.Body)
+		t.Fatalf("%s as %q: %d %s", target, role, rec.Code, rec.Body)
 	}
 	var body struct {
 		Items []map[string]any `json:"items"`
@@ -47,9 +49,14 @@ func listAs(t *testing.T, h http.Handler, role auth.Role, target string) []strin
 	}
 	sort.Strings(got)
 	if body.Total != len(got) {
-		t.Errorf("%s as %s: total %d for %d items", target, role, body.Total, len(got))
+		t.Errorf("%s as %q: total %d for %d items", target, role, body.Total, len(got))
 	}
 	return got
+}
+
+type listCase struct {
+	target string
+	want   []string
 }
 
 func TestADraftShoeAndAHiddenReviewAreTheTeamsAlone(t *testing.T) {
@@ -62,51 +69,53 @@ func TestADraftShoeAndAHiddenReviewAreTheTeamsAlone(t *testing.T) {
 	}
 	h := serve(pool)
 
-	for _, role := range []auth.Role{auth.Customer, auth.Role("")} {
-		for target, want := range map[string][]string{
-			"/v1/products":               {"live-one"},
-			"/v1/products?q=samba":       {"live-one"},
-			"/v1/products?size=38":       {"live-one"},
-			"/v1/products?status=draft":  {},
-			"/v1/reviews":                {"r-live"},
-			"/v1/reviews?product=live-one": {"r-live"},
-			"/v1/reviews?status=hidden":  {},
+	// A visitor and a customer see what is on sale and shown, and nothing else.
+	for _, role := range []auth.Role{"", auth.Customer} {
+		for _, c := range []listCase{
+			{"/v1/products", []string{"live-one"}},
+			{"/v1/products?q=samba", []string{"live-one"}},
+			{"/v1/products?size=38", []string{"live-one"}},
+			{"/v1/products?status=draft", []string{}},
+			{"/v1/reviews", []string{"r-live"}},
+			{"/v1/reviews?product=live-one", []string{"r-live"}},
+			{"/v1/reviews?status=hidden", []string{}},
 		} {
-			var got []string
-			if role == "" {
-				got = listAs(t, h, auth.Customer, target)
-			} else {
-				got = listAs(t, h, role, target)
-			}
-			if !reflect.DeepEqual(got, want) {
-				t.Errorf("%s as %q: %v, want %v", target, role, got, want)
+			if got := listAs(t, h, role, c.target); !reflect.DeepEqual(got, c.want) {
+				t.Errorf("%s as %q: %v, want %v", c.target, role, got, c.want)
 			}
 		}
-	}
-
-	// A draft shoe and a hidden review answer as an id that does not exist.
-	missing := readAs(h, auth.Customer, "/v1/products/nope")
-	for _, target := range []string{"/v1/products/draft-one", "/v1/reviews/r-hidden"} {
-		rec := readAs(h, auth.Customer, target)
-		if rec.Code != http.StatusNotFound {
-			t.Errorf("%s: %d, want 404", target, rec.Code)
+		// A draft shoe and a hidden review answer as an id that does not exist.
+		missing := readAs(h, role, "/v1/products/nope")
+		for _, target := range []string{"/v1/products/draft-one", "/v1/reviews/r-hidden"} {
+			rec := readAs(h, role, target)
+			if rec.Code != http.StatusNotFound {
+				t.Errorf("%s as %q: %d, want 404", target, role, rec.Code)
+			}
+			if target == "/v1/products/draft-one" && rec.Body.String() != missing.Body.String() {
+				t.Errorf("a draft shoe answers %s, an unknown id %s", rec.Body, missing.Body)
+			}
 		}
-		if target == "/v1/products/draft-one" && rec.Body.String() != missing.Body.String() {
-			t.Errorf("a draft shoe answers %s, an unknown id %s", rec.Body, missing.Body)
+		// What is served carries nothing only the team reads.
+		var seen map[string]any
+		_ = json.Unmarshal(readAs(h, role, "/v1/products/live-one").Body.Bytes(), &seen)
+		for _, key := range []string{"pairs", "price_listed", "_source", "_invented"} {
+			if _, has := seen[key]; has {
+				t.Errorf("a shoe served to %q carries %s", role, key)
+			}
 		}
 	}
 
 	// The team reads everything, and a shoe carries what only the team is served.
 	for _, role := range []auth.Role{auth.Admin, auth.Staff} {
-		for target, want := range map[string][]string{
-			"/v1/products":               {"draft-one", "live-one"},
-			"/v1/products?q=samba":       {"draft-one", "live-one"},
-			"/v1/products?status=draft":  {"draft-one"},
-			"/v1/reviews":                {"r-hidden", "r-live"},
-			"/v1/reviews?status=hidden":  {"r-hidden"},
+		for _, c := range []listCase{
+			{"/v1/products", []string{"draft-one", "live-one"}},
+			{"/v1/products?q=samba", []string{"draft-one", "live-one"}},
+			{"/v1/products?status=draft", []string{"draft-one"}},
+			{"/v1/reviews", []string{"r-hidden", "r-live"}},
+			{"/v1/reviews?status=hidden", []string{"r-hidden"}},
 		} {
-			if got := listAs(t, h, role, target); !reflect.DeepEqual(got, want) {
-				t.Errorf("%s as %s: %v, want %v", target, role, got, want)
+			if got := listAs(t, h, role, c.target); !reflect.DeepEqual(got, c.want) {
+				t.Errorf("%s as %s: %v, want %v", c.target, role, got, c.want)
 			}
 		}
 		rec := readAs(h, role, "/v1/products/draft-one")
@@ -123,16 +132,6 @@ func TestADraftShoeAndAHiddenReviewAreTheTeamsAlone(t *testing.T) {
 		}
 		if rec := readAs(h, role, "/v1/reviews/r-hidden"); rec.Code != http.StatusOK {
 			t.Errorf("a hidden review as %s: %d", role, rec.Code)
-		}
-	}
-
-	// A shoe's page for a visitor never carries the team's fields.
-	live := readAs(h, auth.Customer, "/v1/products/live-one")
-	var seen map[string]any
-	_ = json.Unmarshal(live.Body.Bytes(), &seen)
-	for _, key := range []string{"pairs", "price_listed", "_source", "_invented"} {
-		if _, has := seen[key]; has {
-			t.Errorf("a visitor's shoe carries %s", key)
 		}
 	}
 }
