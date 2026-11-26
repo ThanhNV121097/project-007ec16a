@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/orders"
 	"github.com/jackc/pgx/v5"
@@ -88,5 +87,3 @@ func (s pgStore) success(ctx context.Context, a attemptRow, f facts) (bool, erro
 	}
 	return true, nil
 }
-
-var _ = time.Second
