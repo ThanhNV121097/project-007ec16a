@@ -7,36 +7,52 @@ vi.hoisted(() => {
   vi.stubEnv("NODE_ENV", "test");
 });
 
+// The shop is the API client's: its two calls are stubbed, its real ApiError is kept.
+vi.mock("../lib/api", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../lib/api")>();
+  return { ...real, api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } };
+});
+
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance } from "vitest";
-import { decide, GIVE_UP_MS, navigation, orderNumberOf, POLL_MS, type Transport, type Wire } from "../lib/online-payment-with-vnpay";
-import { transport } from "../lib/mock/online-payment-with-vnpay";
+import { api, ApiError } from "../lib/api";
+import { decide, GIVE_UP_MS, navigation, orderNumberOf, POLL_MS } from "../lib/online-payment-with-vnpay";
 import { rememberOrder } from "../lib/orders";
 import PaymentReturn from "../pages/PaymentReturn";
 
-// The shop's two answers are the transport's; the browser's store is the real one.
+type Call = (path: string, second?: unknown, headers?: Record<string, string>) => Promise<unknown>;
+const get = api.get as unknown as MockInstance<Call>;
+const post = api.post as unknown as MockInstance<Call>;
+
 const TOKEN = "token-of-doi-30001";
 const ID = "doi-30001";
 const SANDBOX = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=DOI-30001-2";
+const HEADERS = { "X-Order-Token": TOKEN };
 
-const answer = (status: number, body: unknown = {}): Promise<Wire> => Promise.resolve({ status, body });
+const ok = (body: unknown): Promise<unknown> => Promise.resolve(body);
+const refuse = (status: number, code: string): Promise<unknown> => Promise.reject(new ApiError(status, code, "The shop said no."));
+const offline = (): Promise<unknown> => Promise.reject(new ApiError(0, "network", "The server cannot be reached."));
 const order = (extra: { status?: string; paid?: boolean } = {}) => ({ id: ID, number: "DOI-30001", status: "placed", paid: false, ...extra });
 
-let read: MockInstance<Transport["read"]>;
-let pay: MockInstance<Transport["pay"]>;
 let leave: MockInstance<typeof navigation.to>;
+
+function hold(id: string, number: string, token: string) {
+  rememberOrder({
+    order: { id, number, placed_at: "2026-11-26T09:00:00+07:00", status: "placed", paid: false, total: 3140000 },
+    token,
+    payment_url: "",
+  });
+}
 
 beforeEach(() => {
   vi.useFakeTimers();
   localStorage.clear();
-  rememberOrder({
-    order: { id: ID, number: "DOI-30001", placed_at: "2026-11-26T09:00:00+07:00", status: "placed", paid: false, total: 3140000 },
-    token: TOKEN,
-    payment_url: "",
-  });
-  read = vi.spyOn(transport, "read").mockImplementation(() => answer(200, order()));
-  pay = vi.spyOn(transport, "pay").mockImplementation(() => answer(200, { payment_url: SANDBOX }));
+  hold(ID, "DOI-30001", TOKEN);
+  get.mockReset();
+  post.mockReset();
+  get.mockImplementation(() => ok(order()));
+  post.mockImplementation(() => ok({ payment_url: SANDBOX }));
   leave = vi.spyOn(navigation, "to").mockImplementation(() => undefined);
 });
 
@@ -81,21 +97,21 @@ describe("what the address may and may not decide", () => {
 
 describe("the Payment result page", () => {
   it("shows only a quiet placeholder until the shop has answered", async () => {
-    let release!: (w: Wire) => void;
-    read.mockReturnValue(new Promise<Wire>((resolve) => { release = resolve; }));
+    let release!: (body: unknown) => void;
+    get.mockReturnValue(new Promise<unknown>((resolve) => { release = resolve; }));
     await open(returned("00"));
     expect(document.querySelector("[aria-busy='true']")).not.toBeNull();
     expect(screen.queryByTestId("payment-state")).toBeNull();
     expect(tryAgain()).toBeNull();
-    await act(async () => { release({ status: 200, body: order() }); });
+    await act(async () => { release(order()); });
     expect(heading()).toHaveAttribute("data-state", "confirming");
     expect(document.querySelector("[aria-busy='true']")).toBeNull();
   });
 
   it("says paid whatever the address says, with the token the browser holds", async () => {
-    read.mockImplementation(() => answer(200, order({ paid: true, status: "confirmed" })));
+    get.mockImplementation(() => ok(order({ paid: true, status: "confirmed" })));
     await open(returned("24"));
-    expect(read).toHaveBeenCalledWith(ID, TOKEN);
+    expect(get).toHaveBeenCalledWith(`orders/${ID}`, undefined, HEADERS);
     expect(heading().textContent).toBe("Payment received.");
     expect(heading()).toHaveAttribute("data-state", "paid");
     expect(line().textContent).toBe("Your order DOI-30001 is paid. We will pack it next.");
@@ -110,10 +126,10 @@ describe("the Payment result page", () => {
     const region = line().closest("[role='status']");
     expect(region).not.toBeNull();
     expect(tryAgain()).toBeNull();
-    expect(read).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledTimes(1);
     await elapse(POLL_MS);
-    expect(read).toHaveBeenCalledTimes(2);
-    read.mockImplementation(() => answer(200, order({ paid: true, status: "confirmed" })));
+    expect(get).toHaveBeenCalledTimes(2);
+    get.mockImplementation(() => ok(order({ paid: true, status: "confirmed" })));
     await elapse(POLL_MS);
     expect(heading()).toHaveAttribute("data-state", "paid");
     expect(region).toBe(line().closest("[role='status']"));
@@ -128,32 +144,34 @@ describe("the Payment result page", () => {
     expect(line().textContent).toBe("If money left your account it will show on your order once VNPay confirms it. Please do not pay again.");
     expect(screen.getByTestId("payment-view-order")).toBeInTheDocument();
     expect(tryAgain()).toBeNull();
-    const asked = read.mock.calls.length;
+    const asked = get.mock.calls.length;
     await elapse(15_000);
-    expect(read.mock.calls.length).toBe(asked);
+    expect(get.mock.calls.length).toBe(asked);
   });
 
   it("offers Try again for an unpaid order the address says was not paid, and sends the browser to the new address", async () => {
     await open(returned("24"));
     expect(heading().textContent).toBe("Payment was not completed.");
     expect(line().textContent).toBe("You can try again, or place a new order.");
-    expect(read).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledTimes(1);
     fireEvent.click(tryAgain() as HTMLElement);
     expect(tryAgain()).toBeDisabled();
     await elapse(0);
-    expect(pay).toHaveBeenCalledWith(ID, TOKEN);
+    // One POST, no body, with the order's token in the header and nowhere else.
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith(`orders/${ID}/payment`, undefined, HEADERS);
     expect(leave).toHaveBeenCalledWith(SANDBOX);
   });
 
   it("keeps the page and says so when the payment page cannot be opened", async () => {
-    pay.mockImplementation(() => answer(503, { error: "payment_unavailable" }));
+    post.mockImplementation(() => refuse(503, "payment_unavailable"));
     await open(returned("24"));
     fireEvent.click(tryAgain() as HTMLElement);
     await elapse(0);
     expect(screen.getByRole("alert").textContent).toBe("We could not open the payment page. Please try again.");
     expect(tryAgain()).toBeEnabled();
     expect(leave).not.toHaveBeenCalled();
-    pay.mockImplementation(() => Promise.reject(new Error("offline")));
+    post.mockImplementation(() => offline());
     fireEvent.click(tryAgain() as HTMLElement);
     await elapse(0);
     expect(screen.getByRole("alert")).toBeInTheDocument();
@@ -161,9 +179,9 @@ describe("the Payment result page", () => {
   });
 
   it("asks for the order again after a 409 and draws what it now is", async () => {
-    pay.mockImplementation(() => answer(409, { error: "conflict" }));
+    post.mockImplementation(() => refuse(409, "conflict"));
     await open(returned("24"));
-    read.mockImplementation(() => answer(200, order({ status: "cancelled" })));
+    get.mockImplementation(() => ok(order({ status: "cancelled" })));
     fireEvent.click(tryAgain() as HTMLElement);
     await elapse(0);
     expect(heading()).toHaveAttribute("data-state", "cancelled");
@@ -171,7 +189,7 @@ describe("the Payment result page", () => {
   });
 
   it("draws a given-up order as cancelled, even if a payment arrived late", async () => {
-    read.mockImplementation(() => answer(200, order({ status: "cancelled", paid: true })));
+    get.mockImplementation(() => ok(order({ status: "cancelled", paid: true })));
     await open(returned("00"));
     expect(heading().textContent).toBe("This order was cancelled.");
     expect(heading()).toHaveAttribute("data-state", "cancelled");
@@ -191,11 +209,27 @@ describe("the Payment result page", () => {
       expect(document.body.textContent).not.toMatch(/DOI-\d|paid|₫/);
       cleanup();
     }
-    expect(read).not.toHaveBeenCalled();
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it("draws the one cannot-match view when the shop answers not_found for a held token", async () => {
+    get.mockImplementation(() => refuse(404, "not_found"));
+    await open(returned("00"));
+    expect(heading()).toHaveAttribute("data-state", "no-match");
+    expect(screen.getByTestId("payment-track")).toHaveAttribute("href", "/track");
+    expect(screen.queryByTestId("payment-view-order")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/DOI-\d/);
+  });
+
+  it("does not call a 404 that is not the shop's own answer a no-match", async () => {
+    get.mockImplementation(() => refuse(404, "internal"));
+    await open(returned("00"));
+    expect(heading()).toHaveAttribute("data-state", "check-failed");
+    expect(screen.getByTestId("payment-view-order")).toHaveAttribute("href", `/orders/${ID}`);
   });
 
   it("says it could not check, never a result, when the shop fails", async () => {
-    read.mockImplementation(() => answer(500, { error: "internal" }));
+    get.mockImplementation(() => refuse(500, "internal"));
     await open(returned("00"));
     expect(heading()).toHaveAttribute("data-state", "check-failed");
     expect(screen.getByRole("alert").textContent).toBe("We could not check your payment. Please open your order to see its state.");
@@ -203,16 +237,34 @@ describe("the Payment result page", () => {
     expect(document.body.textContent).not.toMatch(/Payment received|cancelled|can't match/);
     expect(tryAgain()).toBeNull();
     cleanup();
-    read.mockImplementation(() => Promise.reject(new Error("offline")));
+    get.mockImplementation(() => offline());
+    await open(returned("00"));
+    expect(heading()).toHaveAttribute("data-state", "check-failed");
+    cleanup();
+    get.mockImplementation(() => ok({ not: "an order" }));
     await open(returned("00"));
     expect(heading()).toHaveAttribute("data-state", "check-failed");
   });
 
   it("keeps what it knew when a later ask fails while confirming", async () => {
     await open(returned("00"));
-    read.mockImplementation(() => answer(500));
+    get.mockImplementation(() => refuse(500, "internal"));
     await elapse(POLL_MS);
     expect(heading()).toHaveAttribute("data-state", "confirming");
+  });
+
+  it("sends only the token of the order the reference names, in the header and never in an address", async () => {
+    hold("doi-30002", "DOI-30002", "token-of-doi-30002");
+    await open(returned("00"));
+    await elapse(POLL_MS);
+    expect(get.mock.calls.length).toBeGreaterThan(1);
+    for (const [path, params, headers] of get.mock.calls) {
+      expect(path).toBe(`orders/${ID}`);
+      expect(params).toBeUndefined();
+      expect(headers).toEqual(HEADERS);
+    }
+    expect(JSON.stringify([...get.mock.calls, ...post.mock.calls])).not.toContain("token-of-doi-30002");
+    expect(JSON.stringify(leave.mock.calls)).not.toContain(TOKEN);
   });
 
   it("has one h1 and every word from the content", async () => {
