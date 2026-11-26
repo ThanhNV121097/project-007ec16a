@@ -95,7 +95,7 @@ A request the browser abandoned (`context.Canceled` while `r.Context()` is itsel
 
 Money and counts are JSON integers (never a string, never a fraction); every list is a JSON array — `[]`, never `null`. With no orders, no shoes and no lines the answer is `200` with every number `0`, `running_low` `[]`, 14 entries of `0`, `pairs_by_line` `[]` and `latest_orders` `[]` (SC-12). With lines and no orders every line is present with `0`.
 
-## 4.1 Errors
+### 4.1 Errors
 
 | Code | HTTP | Trigger | `message` |
 |---|---|---|---|
@@ -264,7 +264,7 @@ Database cases use `dbtest.Migrated(t)` (a schema of its own with the 14 sample 
 |---|---|---|
 | `TestOverviewIsDealerOnly` (no database: a fake reader that fails the test if called) | No user → `401`, a `customer` → `403`, both before the reader runs, with the error envelope and none of the eight keys; `admin` and `staff` → `200` | SC-1, SC-2 |
 | `TestOverviewShape` (fake reader) | The body's top-level keys are exactly the eight; each row has exactly its keys (decode into `map[string]any`); numbers have no decimal point; `Cache-Control: no-store`; `Content-Type: application/json; charset=utf-8`; `?zzz=1&now=2020-01-01&month=1` gives the **identical** body; with an empty answer every list is `[]` in the **raw** bytes, never `null` | SC-3, SC-12 |
-| `TestOverviewDatabaseFailureIsGeneric500` | A reader that fails (an error text holding SQL, a table name and the sentinel `0999000TCOV`) → `500`, `{"error":"internal","message":"Something went wrong. Please try again."}` and nothing else; the log holds the cause by SQLSTATE only. A **closed pool** through the real store gives the same | SC-13 |
+| `TestOverviewDatabaseFailureIsGeneric500` | A reader that fails (an error text holding SQL, a table name and the sentinel `0999000TCOV`) → `500`, `{"error":"internal","message":"Something went wrong. Please try again."}` and nothing else (none of the error's text, SQL or sentinel is in the body); the cause is in the log. A **closed pool** through the real store gives the same | SC-13 |
 | `TestOverviewAbandonedRequestWritesNothing` | A cancelled request context → no body, no `500` logged as an error | §3 |
 | `TestOverviewSampleSetAtTheSRSClock` | `month` 47660000 / 13; `waiting_orders` 2; `sales_by_day` 14 entries `2026-11-12`…`2026-11-25` with the SRS amounts, summing to 47660000, `2026-11-16` and `2026-11-20` 0; `pairs_by_line` Samba 8, Gazelle 2, Megaride 2, Handball Spezial 1, Adizero 1 in that order; `latest_orders` DOI-24816, 24815, 24814, 24817, 24813 with `placed_at` `…+07:00` and `product`/`size` of the first pair. **Running low is compared with the oracle, not with a literal:** the seed's placeholder counts (ERD Q1) decide which shoes qualify | SC-4 to SC-8 |
 | `TestOverviewCancelledAndWaiting` | Setting each status on DOI-24816 in turn moves `waiting_orders` only for `placed` / `confirmed`; cancelling DOI-24813 removes it from `month`, its day and its line and **keeps it among the five latest as `cancelled`**; placing an order through `orders.Place` (or inserting one) changes `month`, `waiting_orders`, its day and its line on the next read | SC-5, SC-7, SC-14 |
