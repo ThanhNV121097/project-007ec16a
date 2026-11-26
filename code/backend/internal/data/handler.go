@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
 )
 
@@ -26,7 +27,7 @@ const queryTimeout = 5 * time.Second
 func Register(mux *http.ServeMux, db Querier, log *slog.Logger) {
 	h := &handler{store: store{db: db}, log: log}
 	for _, c := range registry {
-		mux.HandleFunc("GET /v1/"+c.Name, h.list(c))
+		mux.HandleFunc("GET /v1/"+c.Name, h.list(c, false))
 		mux.HandleFunc("GET /v1/"+c.Name+"/{id}", h.record(c))
 	}
 }
@@ -36,9 +37,11 @@ func Register(mux *http.ServeMux, db Querier, log *slog.Logger) {
 // the team's list of orders behind auth.Require). It is the reader the registry's
 // collections use: the same grammar for filters, ranges, sort, search and paging,
 // the same answers and the same errors. A second query language is never written.
+// It always serves the public columns, whoever is signed in: the team's view of
+// a collection is the registry's, not this one's.
 func ListHandler(db Querier, log *slog.Logger, c *Collection) http.Handler {
 	h := &handler{store: store{db: db}, log: log}
-	return h.list(c)
+	return h.list(c, true)
 }
 
 type handler struct {
@@ -58,7 +61,7 @@ type listAnswer struct {
 // list answers GET /v1/<collection>. data.list is the handler that leaves the
 // private and bookkeeping columns out of the query: it reads only the Public
 // columns of the collection's registry entry (collections.go).
-func (h *handler) list(c *Collection) http.HandlerFunc {
+func (h *handler) list(c *Collection, pinnedPublic bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		req, faults := parseList(c, r.URL.Query())
 		if faults != nil {
@@ -67,6 +70,7 @@ func (h *handler) list(c *Collection) http.HandlerFunc {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
 		defer cancel()
+		req.dealer = !pinnedPublic && isDealer(r)
 		p, err := h.store.list(ctx, c, req)
 		if err != nil {
 			h.fail(w, c, err)
@@ -88,7 +92,7 @@ func (h *handler) record(c *Collection) http.HandlerFunc {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
 		defer cancel()
-		body, err := h.store.record(ctx, c, id)
+		body, err := h.store.record(ctx, c, id, isDealer(r))
 		if errors.Is(err, errNotFound) {
 			notFound(w)
 			return
@@ -110,6 +114,13 @@ func (h *handler) record(c *Collection) http.HandlerFunc {
 func (h *handler) fail(w http.ResponseWriter, c *Collection, err error) {
 	h.log.Error("data read failed", "collection", c.Name, "error", err)
 	httpx.Error(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.", nil)
+}
+
+// isDealer says whether the request carries a session of the shop's team (admin
+// or staff). A customer is served as a visitor.
+func isDealer(r *http.Request) bool {
+	u, ok := auth.FromContext(r.Context())
+	return ok && (u.Role == auth.Admin || u.Role == auth.Staff)
 }
 
 func notFound(w http.ResponseWriter) {
