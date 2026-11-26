@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { OrderStatus } from "./shop";
-import { BANK, viaDemo } from "./more-ways-to-pay-vietqr-transfer-and-momo";
+import { BANK } from "./more-ways-to-pay-vietqr-transfer-and-momo";
 import { getOrder, postPayment } from "./mock/order-page-and-pay-now";
 
 /**
@@ -57,7 +57,7 @@ export type OrderRead =
 async function readOrder(id: string): Promise<OrderRead> {
   try {
     const answer = await getOrder(id);
-    if (answer.status === 200 && answer.body) return { state: "ready", order: viaDemo(answer.body as PublicOrder) };
+    if (answer.status === 200 && answer.body) return { state: "ready", order: answer.body as PublicOrder };
     // Only the shop's 404 is "not found": a 500, a 401 or a body with nothing in it is a failure to read.
     return answer.status === 404 ? { state: "missing" } : { state: "failed" };
   } catch {
