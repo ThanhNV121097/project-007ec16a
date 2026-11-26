@@ -639,6 +639,7 @@
     "track": {
       "contact_cta": "Message us",
       "description": "Find your order with its number and your phone.",
+      "failed": "We could not look that up. Please try again.",
       "faq_heading": "While you wait",
       "head_alt": "A cardboard parcel on a wooden table",
       "heading": "Track an order",
@@ -646,8 +647,10 @@
       "lead": "Type the order number from your confirmation message and the phone number you ordered with.",
       "not_found": "No order matches that number and phone. Check both, or message us.",
       "number": "Order number",
+      "offline": "You seem to be offline. Check your connection and try again.",
       "phone": "Phone",
       "placeholder": "DOI-24817",
+      "searching": "Searching…",
       "steps": {
         "confirmed": "Paid online; the pair is set aside for you.",
         "delivered": "In your hands. If anything is wrong with the delivery, message us.",
@@ -658,6 +661,7 @@
       "steps_heading": "What each step means",
       "submit": "Find my order",
       "title": "Track an order",
+      "too_many": "Too many tries. Please wait 15 minutes, or message us with your order number.",
       "yours": "Ordered on this phone"
     }
   },
