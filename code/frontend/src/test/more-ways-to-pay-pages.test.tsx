@@ -11,23 +11,16 @@ vi.mock("../lib/mock/more-ways-to-pay-vietqr-transfer-and-momo", async (original
   getTransfer: vi.fn(),
   putPaid: vi.fn(),
 }));
-vi.mock("../lib/api", async (importOriginal) => {
-  const real = await importOriginal<typeof import("../lib/api")>();
-  return { ...real, api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } };
-});
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, type MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import AdminOrderPayment from "../components/AdminOrderPayment";
 import OrderDetails from "../components/OrderDetails";
 import TransferBlock from "../components/TransferBlock";
-import { api, ApiError } from "../lib/api";
 import { getTransfer, putPaid, standInModules } from "../lib/mock/more-ways-to-pay-vietqr-transfer-and-momo";
-import { payByTransfer, readReturn } from "../lib/more-ways-to-pay-vietqr-transfer-and-momo";
+import { payByTransfer } from "../lib/more-ways-to-pay-vietqr-transfer-and-momo";
 import { canPay, type PublicOrder } from "../lib/order-page-and-pay-now";
-import { rememberOrder } from "../lib/orders";
-import PaymentReturn from "../pages/PaymentReturn";
 
 const details = {
   holder: "NGUYEN VAN AN", bank: "Vietcombank", account_number: "0071001234567", amount: 3140000, note: "DOI-24818", payload: "0002010102",
