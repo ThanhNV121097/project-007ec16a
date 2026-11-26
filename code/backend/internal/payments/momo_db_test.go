@@ -1,7 +1,6 @@
 package payments
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -289,7 +288,4 @@ func TestTheMoMoNoteIsReworded(t *testing.T) {
 	if note := one[string](t, w, "SELECT note FROM payment_methods WHERE id = 'momo'"); note != "Confirm the payment in the MoMo app." {
 		t.Errorf("the note is %q", note)
 	}
-	var body bytes.Buffer
-	body.WriteString("ok")
-	_ = body
 }
