@@ -135,15 +135,9 @@ type Write = "POST" | "PUT" | "PATCH" | "DELETE";
 /** A form is sent as it is, so the browser writes its own multipart Content-Type and boundary. */
 const isForm = (body: unknown): body is FormData => typeof FormData !== "undefined" && body instanceof FormData;
 
-<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
-async function sendWrite(method: Write, url: string, body: unknown, signal: AbortSignal): Promise<unknown> {
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (body !== undefined && !isForm(body)) headers["Content-Type"] = "application/json";
-=======
 async function sendWrite(method: Write, url: string, body: unknown, signal: AbortSignal, extra?: ExtraHeaders): Promise<unknown> {
   const headers: ExtraHeaders = { Accept: "application/json", ...extra };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
->>>>>>> refs/heads/main
+  if (body !== undefined && !isForm(body)) headers["Content-Type"] = "application/json";
   let res: Response;
   try {
     res = await fetch(url, {
@@ -161,15 +155,9 @@ async function sendWrite(method: Write, url: string, body: unknown, signal: Abor
   return parsed;
 }
 
-<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
-async function write<T>(method: Write, path: string, body?: unknown, ms: number = TIMEOUT_MS): Promise<T> {
+async function write<T>(method: Write, path: string, body?: unknown, headers?: ExtraHeaders, ms: number = TIMEOUT_MS): Promise<T> {
   const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}`;
-  return (await timed((signal) => sendWrite(method, url, body, signal), ms)) as T;
-=======
-async function write<T>(method: Write, path: string, body?: unknown, headers?: ExtraHeaders): Promise<T> {
-  const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}`;
-  return (await timed((signal) => sendWrite(method, url, body, signal, headers))) as T;
->>>>>>> refs/heads/main
+  return (await timed((signal) => sendWrite(method, url, body, signal, headers), ms)) as T;
 }
 
 /**
@@ -205,7 +193,7 @@ const UPLOAD_TIMEOUT_MS = 30_000;
  * post, and the 30 seconds an upload on a phone's connection may need.
  */
 async function upload<T = void>(path: string, form: FormData): Promise<T> {
-  return write<T>("POST", path, form, UPLOAD_TIMEOUT_MS);
+  return write<T>("POST", path, form, undefined, UPLOAD_TIMEOUT_MS);
 }
 
 export const api = { get, post, put, patch, delete: del, upload };
