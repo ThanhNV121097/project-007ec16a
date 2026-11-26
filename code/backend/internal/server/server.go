@@ -18,6 +18,7 @@ import (
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/data"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/orders"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -38,15 +39,19 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	admin.RegisterStaff(mux, pool, log)
 	data.Register(mux, pool, log)
 	catalogue.Register(mux, pool, log)
+	orders.Register(mux, pool, log, orders.Options{})
 	mux.HandleFunc("/", notFound)
 
-	// The chain, outermost first: Recover, AccessLog, CORS, Resolve (who is
-	// signed in), the route recorder (for the access log), the mux.
+	// The chain, outermost first: RequestID, Recover, AccessLog, CORS, CleanPaths
+	// (an address that is not clean is a 404 before anything is looked up),
+	// Resolve (who is signed in), the route recorder (for the access log), the mux.
 	var h http.Handler = httpx.RecordRoute(mux)
 	h = svc.Resolve()(h)
+	h = httpx.CleanPaths(h)
 	h = httpx.CORS(cfg.CORSAllowedOrigins)(h)
 	h = httpx.AccessLog(log)(h)
 	h = httpx.Recover(log)(h)
+	h = httpx.RequestID()(h)
 	return h
 }
 

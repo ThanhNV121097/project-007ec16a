@@ -31,8 +31,11 @@ func TestOnlyShoesHaveASizeCondition(t *testing.T) {
 		}
 	}
 	sizes := byName["products"].Sizes
-	if !strings.Contains(sizes, "{s}") || !strings.Contains(sizes, "sizes_out") {
-		t.Errorf("the size condition reads the sizes and the sold-out sizes: %s", sizes)
+	if !strings.Contains(sizes, "{s}") || !strings.Contains(sizes, "product_sizes") || !strings.Contains(sizes, "pairs > 0") {
+		t.Errorf("the size condition reads the pairs left of each size in product_sizes: %s", sizes)
+	}
+	if strings.Contains(sizes, "sizes_out") || strings.Contains(sizes, "t.sizes") {
+		t.Errorf("the size condition names a column products no longer has: %s", sizes)
 	}
 }
 
@@ -43,7 +46,6 @@ func TestNullableColumnsAreTheOnesThatCanHoldNothing(t *testing.T) {
 		"lines":    {"since"},
 		"reviews":  {"rating"},
 		"sizes":    {"cm"},
-		"orders":   {"product", "size", "qty", "eta"},
 		"products": {"line", "category", "rating"},
 	}
 	for _, c := range registry {

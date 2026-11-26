@@ -1,4 +1,22 @@
 import { useEffect, useState } from "react";
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+import { api, apiBase } from "./api";
+import type { CartLine } from "./cart";
+import { digitsOf } from "./shop";
+
+/**
+ * PLACING AN ORDER, FROM THE BROWSER'S SIDE (docs/architecture/services/
+ * checkout-and-placing-an-order.md §3.1, §3.4): the request the shop is sent,
+ * the Idempotency-Key that makes a repeated send safe, what each answer means
+ * to the page, and the store of orders this browser has placed.
+ *
+ * This is the one file Checkout reads orders through. A POST is never retried
+ * (a second send would be a second order unless the key says otherwise), so it
+ * does not go through api.get; it uses the same base and the same envelope.
+ *
+ * The request never carries a price, a delivery fee or a total: the shop reads
+ * its own prices and the browser's numbers are not trusted.
+=======
 import type { CartLine } from "./cart";
 import { getPaymentOptions, postOrder } from "./mock/checkout-and-placing-an-order";
 import { digitsOf } from "./shop";
@@ -16,6 +34,7 @@ import { digitsOf } from "./shop";
  *
  * The request never carries a price, a delivery fee or a total: the shop
  * reads its own prices and the browser's numbers are not trusted.
+>>>>>>> refs/heads/main
  */
 export interface OrderRequest {
   items: { product: string; size: string; qty: number }[];
@@ -150,6 +169,30 @@ function interpret({ status, body }: Wire): PlaceResult {
 
 const offline = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+const TIMEOUT_MS = 15_000;
+
+/** POST /v1/orders with the key as a header. One try, abandoned after 15 seconds; never retried. */
+async function postOrder(request: OrderRequest, key: string): Promise<Wire> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`${apiBase()}/v1/orders`, {
+      method: "POST",
+      credentials: "include",
+      signal: abort.signal,
+      headers: { Accept: "application/json", "Content-Type": "application/json", "Idempotency-Key": key },
+      body: JSON.stringify(request),
+    });
+    const body: unknown = await res.json().catch(() => ({}));
+    return { status: res.status, body: typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {} };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+=======
+>>>>>>> refs/heads/main
 /** Sends the order. Never throws: every way it can go wrong is a `PlaceResult`. */
 export async function placeOrder(request: OrderRequest, key: string): Promise<PlaceResult> {
   if (offline()) return { ok: false, kind: "offline", problems: [] };
@@ -160,13 +203,36 @@ export async function placeOrder(request: OrderRequest, key: string): Promise<Pl
   }
 }
 
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+/** The address to send the browser to, only when it is an https: address. */
+export function payAddress(url: string): string | null {
+  try {
+    return new URL(url).protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The ways to pay the shop offers (GET /v1/payment-options): `loading` until the
+ * read has finished, and then whatever it gave — an empty list when it failed,
+ * which Checkout draws as the unavailable state.
+ */
+=======
 /** The ways to pay the shop offers (GET /v1/payment-options); none until it answers. */
+>>>>>>> refs/heads/main
 export function usePaymentOptions(): { items: PaymentOption[]; loading: boolean } {
   const [state, setState] = useState<{ items: PaymentOption[]; loading: boolean }>({ items: [], loading: true });
   useEffect(() => {
     let live = true;
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+    api
+      .get<{ items: PaymentOption[] }>("payment-options")
+      .then((r) => live && setState({ items: Array.isArray(r.items) ? r.items : [], loading: false }))
+=======
     getPaymentOptions()
       .then((r) => live && setState({ items: r.items, loading: false }))
+>>>>>>> refs/heads/main
       .catch(() => live && setState({ items: [], loading: false }));
     return () => {
       live = false;
@@ -176,7 +242,36 @@ export function usePaymentOptions(): { items: PaymentOption[]; loading: boolean 
 }
 
 /**
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+ * The shop's price today for each shoe in the bag (GET /v1/products/{id}, one per
+ * distinct shoe — a bag holds a few). A shoe the shop does not answer for keeps
+ * the price its bag line saved; the shop's answer to placing is the authority.
+ */
+export function useCurrentPrices(ids: string[]): Map<string, number> {
+  const wanted = [...new Set(ids)].sort().join(",");
+  const [prices, setPrices] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    let live = true;
+    for (const id of wanted.split(",").filter(Boolean)) {
+      api
+        .get<{ price?: number }>(`products/${encodeURIComponent(id)}`)
+        .then((p) => {
+          if (live && typeof p.price === "number") setPrices((m) => new Map(m).set(id, p.price as number));
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      live = false;
+    };
+  }, [wanted]);
+  return prices;
+}
+
+/**
+ * The orders this browser has placed, kept under a key of its own — never
+=======
  * The orders this browser has placed, kept under a key of their own — never
+>>>>>>> refs/heads/main
  * the design's "doi:orders" — as the order's id, number, placed time and
  * token and nothing else about it. A browser that refuses storage keeps them
  * for this page load.

@@ -6,6 +6,10 @@ import (
 	"testing"
 )
 
+// servedElsewhere are the collections schema.json lists and the generic reader
+// does not serve: orders are read by internal/orders, with the order's token.
+var servedElsewhere = map[string]bool{"orders": true}
+
 func column(c *Collection, name string) (Column, bool) {
 	for _, col := range c.Columns {
 		if col.Name == name {
@@ -36,10 +40,13 @@ func TestRegistryMirrorsTheSchema(t *testing.T) {
 	if err := json.Unmarshal(raw, &schema); err != nil {
 		t.Fatal(err)
 	}
-	if len(schema.Collections) != len(registry) {
-		t.Errorf("schema has %d collections, the registry %d", len(schema.Collections), len(registry))
+	if len(schema.Collections) != len(registry)+len(servedElsewhere) {
+		t.Errorf("schema has %d collections, the registry %d and %d are served elsewhere", len(schema.Collections), len(registry), len(servedElsewhere))
 	}
 	for name, sc := range schema.Collections {
+		if servedElsewhere[name] {
+			continue
+		}
 		c, ok := byName[name]
 		if !ok {
 			t.Errorf("schema collection %q is not in the registry", name)
@@ -66,8 +73,11 @@ func TestRegistryMirrorsTheSchema(t *testing.T) {
 }
 
 func TestBookkeepingAndCustomerDetailsAreNeverPublic(t *testing.T) {
-	if len(registry) != 10 {
-		t.Fatalf("the registry holds %d collections, want 10", len(registry))
+	if len(registry) != 9 {
+		t.Fatalf("the registry holds %d collections, want 9", len(registry))
+	}
+	if byName["orders"] != nil {
+		t.Fatal("orders are a customer's details: the generic reader must not serve them")
 	}
 	for _, c := range registry {
 		for _, name := range []string{"_source", "_invented"} {
@@ -79,11 +89,6 @@ func TestBookkeepingAndCustomerDetailsAreNeverPublic(t *testing.T) {
 	if col, _ := column(byName["products"], "price_listed"); col.Access == Public {
 		t.Error("products.price_listed is public")
 	}
-	for _, name := range []string{"phone", "email", "address", "note"} {
-		if col, ok := column(byName["orders"], name); !ok || col.Access != Private {
-			t.Errorf("orders.%s must exist and be private", name)
-		}
-	}
 	// private is per collection: note is an ordinary field of delivery and payments.
 	for _, name := range []string{"delivery", "payments"} {
 		if col, _ := column(byName[name], "note"); col.Access != Public {
@@ -94,7 +99,7 @@ func TestBookkeepingAndCustomerDetailsAreNeverPublic(t *testing.T) {
 
 func TestPublicColumnCounts(t *testing.T) {
 	want := map[string]int{
-		"products": 29, "orders": 16, "lines": 5, "categories": 4, "reviews": 9,
+		"products": 29, "lines": 5, "categories": 4, "reviews": 9,
 		"shop": 6, "delivery": 5, "payments": 5, "faqs": 4, "sizes": 6,
 	}
 	for name, n := range want {

@@ -6,7 +6,11 @@ import { useCollection, useRecord } from "../data";
 import { clearCart, useCart, type CartLine } from "../lib/cart";
 import { useDemo } from "../lib/demo";
 import {
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+  buildRequest, detailProblems, keyKeeper, payAddress, placeOrder, rememberOrder, useCurrentPrices, usePaymentOptions,
+=======
   buildRequest, detailProblems, keyKeeper, placeOrder, rememberOrder, usePaymentOptions,
+>>>>>>> refs/heads/main
   type Details, type PlaceResult,
 } from "../lib/orders";
 import type { DeliveryOption, Product } from "../lib/shop";
@@ -43,9 +47,15 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { lines: real } = useCart();
   const demo = useDemo();
-  const products = useCollection<Product>("products", { where: { status: "live" }, pageSize: 500 }).items;
+  const products = useCollection<Product>("products", { where: { status: "live" }, pageSize: 3 }).items;
   const standard = useRecord<DeliveryOption>("delivery", "standard").item;
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+  const options = usePaymentOptions();
+  const option = options.items.find((o) => o.id === "vnpay");
+  const current = useCurrentPrices(real.map((l) => l.id));
+=======
   const option = usePaymentOptions().items.find((o) => o.id === "vnpay");
+>>>>>>> refs/heads/main
   const words = {
     free: useContent("pages.cart.free"),
     deliveryTitle: useContent("pages.checkout.delivery_title"),
@@ -67,12 +77,22 @@ export default function Checkout() {
     id: p.id, name: p.name, price: p.price, image: p.image, variant: `EU ${(p.sizes ?? [])[3] ?? ""}`, qty: 1,
   }));
   const showingExample = demo && real.length === 0;
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+  // The shop's price today, not the one the bag saved: a shoe the shop does not
+  // answer for keeps its saved price here and is refused by name when ordered.
+  const lines = (showingExample ? example : real).map((l) => ({ ...l, price: showingExample ? l.price : current.get(l.id) ?? l.price }));
+  const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
+  // The one way to pay is closed when the shop says so, and when the read of what
+  // it offers has finished without VNPay in it (it failed, or it is not listed).
+  const blocked = closed || option?.is_available === false || (!options.loading && !option);
+=======
   // The shop's price today, not the one the bag saved: a shoe that left the
   // shop keeps its saved price here and is refused by name when ordered.
   const current = new Map(products.map((p) => [p.id, p.price]));
   const lines = (showingExample ? example : real).map((l) => ({ ...l, price: current.get(l.id) ?? l.price }));
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
   const blocked = closed || option?.is_available === false;
+>>>>>>> refs/heads/main
   const set = (k: keyof Details) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   if (lines.length === 0) return <EmptyBag heading="pages.checkout.empty" />;
@@ -103,7 +123,12 @@ export default function Checkout() {
     rememberOrder(result.placed);
     if (!showingExample) clearCart();
     const { payment_url: pay, order } = result.placed;
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
+    const address = payAddress(pay);
+    if (address) window.location.assign(address);
+=======
     if (pay) window.location.assign(pay);
+>>>>>>> refs/heads/main
     else navigate(`/orders/${order.id}?placed=1`);
   };
 
