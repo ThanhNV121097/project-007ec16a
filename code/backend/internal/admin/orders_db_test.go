@@ -91,7 +91,7 @@ func (e *env) put(id, body string) *httptest.ResponseRecorder {
 	return e.call(http.MethodPut, "/v1/orders/"+id, body, e.admin)
 }
 
-func errorsOf(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
+func orderErrors(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 	t.Helper()
 	errs, _ := decode(t, rec)["errors"].(map[string]any)
 	return errs
@@ -117,14 +117,14 @@ func TestADealerMovesCancelsAndDeletesAnOrderAgainstPostgres(t *testing.T) {
 	}
 
 	// SC-5, SC-17, SC-18: refused bodies apply nothing.
-	if rec := e.put(id, `{"status":"packed"}`); rec.Code != 422 || errorsOf(t, rec)["status"] != "An order cannot go from placed to packed." {
+	if rec := e.put(id, `{"status":"packed"}`); rec.Code != 422 || orderErrors(t, rec)["status"] != "An order cannot go from placed to packed." {
 		t.Errorf("a skip: %d %s", rec.Code, rec.Body)
 	}
-	if rec := e.put(id, `{"status":"confirmed","total":1}`); rec.Code != 422 || errorsOf(t, rec)["total"] != "This cannot be changed." {
+	if rec := e.put(id, `{"status":"confirmed","total":1}`); rec.Code != 422 || orderErrors(t, rec)["total"] != "This cannot be changed." {
 		t.Errorf("a frozen field: %d %s", rec.Code, rec.Body)
 	}
 	for _, body := range []string{`{"paid":true}`, `{"paid":false}`} {
-		if rec := e.put(id, body); rec.Code != 422 || errorsOf(t, rec)["paid"] != "Only the payment provider marks this order paid." {
+		if rec := e.put(id, body); rec.Code != 422 || orderErrors(t, rec)["paid"] != "Only the payment provider marks this order paid." {
 			t.Errorf("%s: %d %s", body, rec.Code, rec.Body)
 		}
 	}
@@ -158,11 +158,11 @@ func TestADealerMovesCancelsAndDeletesAnOrderAgainstPostgres(t *testing.T) {
 	if rec := e.put(id, `{"status":"cancelled"}`); rec.Code != 200 || decode(t, rec)["status"] != "cancelled" || e.pairs("tc-order-a", "38") != 5 {
 		t.Fatalf("cancelled: %d %s, %d pairs", rec.Code, rec.Body, e.pairs("tc-order-a", "38"))
 	}
-	if rec := e.put(id, `{"status":"cancelled"}`); rec.Code != 422 || errorsOf(t, rec)["status"] != "An order cannot go from cancelled to cancelled." || e.pairs("tc-order-a", "38") != 5 {
+	if rec := e.put(id, `{"status":"cancelled"}`); rec.Code != 422 || orderErrors(t, rec)["status"] != "An order cannot go from cancelled to cancelled." || e.pairs("tc-order-a", "38") != 5 {
 		t.Errorf("a second cancel: %d %s", rec.Code, rec.Body)
 	}
 	// SC-16: a cancelled order keeps its courier and customer, and its note stays open.
-	if rec := e.put(id, `{"carrier":"GHTK","note":"after"}`); rec.Code != 422 || errorsOf(t, rec)["carrier"] == nil {
+	if rec := e.put(id, `{"carrier":"GHTK","note":"after"}`); rec.Code != 422 || orderErrors(t, rec)["carrier"] == nil {
 		t.Errorf("the courier of a cancelled order: %d %s", rec.Code, rec.Body)
 	}
 	if rec := e.put(id, `{"note":"after"}`); rec.Code != 200 || decode(t, rec)["note"] != "after" {
