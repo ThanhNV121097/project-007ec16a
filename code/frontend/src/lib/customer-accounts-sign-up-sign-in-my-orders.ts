@@ -1,4 +1,3 @@
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { ApiError, api } from "./api";
 import { refreshSession, signOut, useAuth, type Session } from "./session";
@@ -16,29 +15,6 @@ import type { OrderStatus } from "./shop";
 
 export type Me = Session;
 export type Role = Session["role"];
-=======
-import { useEffect, useState, useSyncExternalStore, type Dispatch, type SetStateAction } from "react";
-import type { OrderStatus } from "./shop";
-import * as shop from "./mock/customer-accounts-sign-up-sign-in-my-orders";
-
-/**
- * THE STORY'S API CLIENT: what the customer-account screens ask the shop.
- *
- * Today every call goes to the story's mock; the backend step points `shop`
- * at src/lib/api.ts (credentials: "include") and deletes the mock, and no
- * component changes. Who is signed in comes ONLY from GET /v1/auth/me:
- * nothing here keeps a session of its own, so a forged browser value opens
- * nothing, and every sign-in, sign-up and sign-out ends by asking again.
- */
-
-export type Role = "customer" | "staff" | "admin";
-
-export interface Me {
-  email: string;
-  name: string;
-  role: Role;
-}
->>>>>>> refs/heads/main
 
 export interface Account {
   name: string;
@@ -82,7 +58,6 @@ export type Outcome<T> =
   | { kind: "limited" }
   | { kind: "unreachable" };
 
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
 /** Ten rows at a time (services 3.20). */
 export const PAGE_SIZE = 10;
 
@@ -127,41 +102,6 @@ async function ask<T>(run: () => Promise<unknown>, valid: (body: unknown) => bod
 }
 
 // ── who is signed in: GET /v1/auth/me, and nothing else ────────────────────────────────────────
-=======
-/** Ten rows at a time (services.md 3.20). */
-export const PAGE_SIZE = 10;
-
-function fieldErrors(body: unknown): FieldErrors {
-  const raw = (body as { errors?: unknown } | null)?.errors;
-  const out: FieldErrors = {};
-  if (raw && typeof raw === "object") {
-    for (const [key, value] of Object.entries(raw)) if (typeof value === "string") out[key] = value;
-  }
-  return out;
-}
-
-/** A network failure and a 5xx are one thing to the customer: the shop could not be reached. */
-async function ask<T>(run: () => Promise<shop.Reply>): Promise<Outcome<T>> {
-  let answer: shop.Reply;
-  try {
-    answer = await run();
-  } catch {
-    return { kind: "unreachable" };
-  }
-  if (answer.status >= 200 && answer.status < 300) return { kind: "ok", value: answer.body as T };
-  switch (answer.status) {
-    case 401: return { kind: "unauthenticated" };
-    case 403: return { kind: "forbidden" };
-    case 404: return { kind: "notfound" };
-    case 409: return { kind: "conflict", errors: fieldErrors(answer.body) };
-    case 422: return { kind: "invalid", errors: fieldErrors(answer.body) };
-    case 429: return { kind: "limited" };
-    default: return { kind: "unreachable" };
-  }
-}
-
-// ── who is signed in: GET /v1/auth/me, and nothing else ──────────────────────
->>>>>>> refs/heads/main
 
 export interface MeState {
   /** True until /v1/auth/me has answered once: draw nothing that depends on the visitor. */
@@ -169,7 +109,6 @@ export interface MeState {
   me: Me | null;
 }
 
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
 /** The visitor as the shop knows them (session.ts holds the one answer). */
 export function useMe(): MeState {
   const { checking, session } = useAuth();
@@ -178,74 +117,26 @@ export function useMe(): MeState {
 
 /** Asks /v1/auth/me again. A 401 or an unreachable shop is "nobody", and draws no error. */
 export const refreshMe = refreshSession;
-=======
-let state: MeState = { checking: true, me: null };
-let asked = false;
-const listeners = new Set<() => void>();
-
-function publish(next: MeState) {
-  state = next;
-  listeners.forEach((l) => l());
-}
-
-function subscribe(l: () => void) {
-  listeners.add(l);
-  return () => {
-    listeners.delete(l);
-  };
-}
-
-/** Asks /v1/auth/me again. A 401 or an unreachable shop is "nobody", and draws no error. */
-export async function refreshMe(): Promise<void> {
-  const out = await ask<Me>(() => shop.getMe());
-  publish({ checking: false, me: out.kind === "ok" ? out.value : null });
-}
-
-/** The visitor as the shop knows them. Every component that reads it draws again when it changes. */
-export function useMe(): MeState {
-  const current = useSyncExternalStore(subscribe, () => state, () => state);
-  useEffect(() => {
-    if (asked) return;
-    asked = true;
-    void refreshMe();
-  }, []);
-  return current;
-}
->>>>>>> refs/heads/main
 
 /** Where a signed-in person lands: a customer's account, the team's area. */
 export const homeFor = (me: Me): string => (me.role === "customer" ? "/account" : "/admin");
 
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
 // ── signing up, in and out ────────────────────────────────────────────────────────────
 
 export async function customerSignUp(input: { name: string; email: string; phone: string; password: string }): Promise<Outcome<Me>> {
   const out = await ask(() => api.post<unknown>("account/sign-up", input), isMe);
   if (out.kind === "ok") await refreshSession();
-=======
-// ── signing up, in and out ───────────────────────────────────────────────────
-
-export async function customerSignUp(input: { name: string; email: string; phone: string; password: string }): Promise<Outcome<Me>> {
-  const out = await ask<Me>(() => shop.signUp(input));
-  if (out.kind === "ok") await refreshMe();
->>>>>>> refs/heads/main
   return out;
 }
 
 export async function customerSignIn(email: string, password: string): Promise<Outcome<Me>> {
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
   const out = await ask(() => api.post<unknown>("auth/sign-in", { email, password }), isMe);
   if (out.kind === "ok") await refreshSession();
-=======
-  const out = await ask<Me>(() => shop.signIn(email, password));
-  if (out.kind === "ok") await refreshMe();
->>>>>>> refs/heads/main
   return out;
 }
 
 /** Ends the session, then asks who is signed in: the shop's answer decides, not this page. */
 export async function customerSignOut(): Promise<void> {
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-be
   await signOut();
   await refreshSession();
 }
@@ -263,18 +154,6 @@ export async function saveAccount(details: Details): Promise<Outcome<Account>> {
 
 export const listOrders = (page: number) => ask(() => api.get<unknown>("account/orders", { page, limit: PAGE_SIZE }), isPage);
 export const addOrder = (number: string, phone: string) => ask(() => api.post<unknown>("account/orders", { number, phone }), isRow);
-=======
-  await ask<null>(() => shop.signOut());
-  await refreshMe();
-}
-
-// ── the account's own data ───────────────────────────────────────────────────
-
-export const getAccount = () => ask<Account>(() => shop.getAccount());
-export const saveAccount = (details: Details) => ask<Account>(() => shop.putAccount(details));
-export const listOrders = (page: number) => ask<OrdersPage>(() => shop.listOrders(page, PAGE_SIZE));
-export const addOrder = (number: string, phone: string) => ask<OrderRow>(() => shop.addOrder(number, phone));
->>>>>>> refs/heads/main
 
 /** The saved details of the signed-in customer; null for anyone else and until they arrive. */
 export function useSavedDetails(): Account | null {
