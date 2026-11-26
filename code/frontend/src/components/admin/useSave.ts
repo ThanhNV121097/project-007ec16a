@@ -37,10 +37,15 @@ export function useAction() {
     }
   }, []);
 
-  /** Refusals found before anything was sent. */
+  /**
+   * Refusals found before anything was sent. They are added to what the shop
+   * has already said about fields that have not changed since: a sentence
+   * leaves only when its own field is edited (`clear`), so a blank name found
+   * here does not wipe "Price cannot be below 0" from a price left as it was.
+   */
   const refuse = useCallback((found: Record<string, string>) => {
     setFailure(null);
-    setErrors(found);
+    setErrors((cur) => ({ ...cur, ...found }));
   }, []);
 
   /** The person changed a field: its refusal (and its sizes' counts', for `pairs`) is out of date. */
