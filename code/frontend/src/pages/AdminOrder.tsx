@@ -35,7 +35,7 @@ export default function AdminOrder() {
   const heading = order ? titleOf({ ...order }) : "";
   return (
     <DashboardLayout title={area} nav={nav}>
-      <Breadcrumb trail={[{ label: area, to: BACK }, { label: heading }]} />
+      <Breadcrumb trail={heading === "" ? [{ label: area, to: BACK }] : [{ label: area, to: BACK }, { label: heading }]} />
       {load.state !== "ready" && <OrderState state={load.state} onRetry={retry} onBack={() => navigate(BACK)} />}
       {order && (
         <OrderRecord order={order} title={heading} backTo={BACK} onSaved={replace}
