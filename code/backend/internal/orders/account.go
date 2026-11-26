@@ -72,7 +72,7 @@ func ListFor(ctx context.Context, db DB, accountID string, page, limit int) ([]A
 
 // Link makes a guest order the account's (A8), once: only an order linked to no
 // one, and only to an active customer. linked is false when no row changed.
-func Link(ctx context.Context, q Querier, accountID, orderID string) (linked bool, err error) {
+func Link(ctx context.Context, q querier, accountID, orderID string) (linked bool, err error) {
 	if !auth.IsID(accountID) {
 		return false, nil
 	}
