@@ -110,7 +110,7 @@ func (s *service) payHandler(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", msgNoBody, fieldErrors{"body": msgNoBodyField})
 		return
 	}
-	url, err := s.payURL(r.Context(), ref, clientOf(r))
+	url, err := s.payURL(ctx, ref, clientOf(r))
 	if err != nil {
 		s.fail(w, r, id, err)
 		return
