@@ -124,24 +124,31 @@ async function get<T>(path: string, params?: Params): Promise<T> {
   });
 }
 
-async function sendPost(url: string, body: unknown, signal: AbortSignal): Promise<unknown> {
+type Write = "POST" | "PUT" | "DELETE";
+
+async function sendWrite(method: Write, url: string, body: unknown, signal: AbortSignal): Promise<unknown> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   let res: Response;
   try {
     res = await fetch(url, {
-      method: "POST", credentials: "include", signal, headers,
+      method, credentials: "include", signal, headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, "network", "The server cannot be reached.");
   }
-  // An answer with nothing to say (sign-out) is a success, not a failure.
+  // An answer with nothing to say (sign-out, a removal) is a success, not a failure.
   if (res.status === 204) return undefined;
   const parsed: unknown = await res.json().catch(() => undefined);
   if (!res.ok) throw failure(res.status, parsed);
   if (parsed === undefined) throw failure(res.status, undefined);
   return parsed;
+}
+
+async function write<T>(method: Write, path: string, body?: unknown): Promise<T> {
+  const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}`;
+  return (await timed((signal) => sendWrite(method, url, body, signal))) as T;
 }
 
 /**
@@ -150,8 +157,17 @@ async function sendPost(url: string, body: unknown, signal: AbortSignal): Promis
  * an ApiError, a refusal carrying the server's envelope.
  */
 async function post<T = void>(path: string, body?: unknown): Promise<T> {
-  const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}`;
-  return (await timed((signal) => sendPost(url, body, signal))) as T;
+  return write<T>("POST", path, body);
 }
 
-export const api = { get, post };
+/** PUT `${base}/v1/<path>` with a JSON body. Never tried again; failures as post. */
+async function put<T = void>(path: string, body?: unknown): Promise<T> {
+  return write<T>("PUT", path, body);
+}
+
+/** DELETE `${base}/v1/<path>`. A 204 resolves undefined; never tried again; failures as post. */
+async function del(path: string): Promise<void> {
+  return write<void>("DELETE", path);
+}
+
+export const api = { get, post, put, delete: del };

@@ -19,5 +19,6 @@
   { "path": "/admin/products/:id", "name": "Product", "example": "/admin/products/samba-og-w-core-black", "auth": true, "dashboard": true },
   { "path": "/admin/lines", "name": "Lines", "auth": true, "dashboard": true },
   { "path": "/admin/categories", "name": "Categories", "auth": true, "dashboard": true },
-  { "path": "/admin/reviews", "name": "Reviews", "auth": true, "dashboard": true }
+  { "path": "/admin/reviews", "name": "Reviews", "auth": true, "dashboard": true },
+  { "path": "/admin/staff", "name": "Staff", "auth": true, "dashboard": true, "roles": ["admin"] }
 ]
