@@ -98,65 +98,39 @@ describe("what an answer means", () => {
   });
 
   it("carries the payment address the shop gives", async () => {
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
     answer(201, placed("https://pay.example.test/x"));
-=======
-    send.mockResolvedValue({ status: 201, body: placed("https://pay.example.test/x") });
->>>>>>> refs/heads/main
     const r = await placeOrder(buildRequest([line], details), "tc-key-0002");
     expect(r.ok && r.placed.payment_url).toBe("https://pay.example.test/x");
   });
 
   it("409 stock_conflict names every pair, in the order of the bag", async () => {
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
     answer(409, { error: "stock_conflict", message: "x", errors: { "items.10": "B · EU 38 — sold out in your size.", "items.2": "A · EU 40 — only 2 left in your size." } });
-=======
-    send.mockResolvedValue({
-      status: 409,
-      body: { error: "stock_conflict", message: "x", errors: { "items.10": "B · EU 38 — sold out in your size.", "items.2": "A · EU 40 — only 2 left in your size." } },
-    });
->>>>>>> refs/heads/main
     const r = await placeOrder(buildRequest([line], details), "tc-key-0003");
     expect(r).toEqual({ ok: false, kind: "refused", problems: ["A · EU 40 — only 2 left in your size.", "B · EU 38 — sold out in your size."] });
   });
 
   it("422 is invalid, 503 payment_unavailable is unavailable", async () => {
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
     answer(422, { error: "invalid", message: "x", errors: { address: "Enter the street address." } });
     expect(await placeOrder(buildRequest([line], details), "tc-key-0004")).toEqual({ ok: false, kind: "invalid", problems: ["Enter the street address."] });
     answer(503, { error: "payment_unavailable", message: "x" });
-=======
-    send.mockResolvedValueOnce({ status: 422, body: { error: "invalid", message: "x", errors: { address: "Enter an address." } } });
-    expect(await placeOrder(buildRequest([line], details), "tc-key-0004")).toEqual({ ok: false, kind: "invalid", problems: ["Enter an address."] });
-    send.mockResolvedValueOnce({ status: 503, body: { error: "payment_unavailable", message: "x" } });
->>>>>>> refs/heads/main
     expect(await placeOrder(buildRequest([line], details), "tc-key-0004")).toEqual({ ok: false, kind: "unavailable", problems: [] });
   });
 
   it("500, another 409, an answer with no order and a network failure are all a failed send", async () => {
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
     answer(500, { error: "internal", message: "x" });
     answer(409, { error: "conflict", message: "x" });
     answer(201, {});
-=======
-    send.mockResolvedValueOnce({ status: 500, body: { error: "internal", message: "x" } });
-    send.mockResolvedValueOnce({ status: 409, body: { error: "conflict", message: "x" } });
-    send.mockResolvedValueOnce({ status: 201, body: {} });
->>>>>>> refs/heads/main
     send.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     for (let i = 0; i < 4; i++) {
       expect(await placeOrder(buildRequest([line], details), "tc-key-0005")).toEqual({ ok: false, kind: "failed", problems: [] });
     }
   });
 
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
   it("an answer that is not JSON is a failed send", async () => {
     send.mockResolvedValueOnce({ status: 502, json: () => Promise.reject(new SyntaxError("Unexpected token <")) });
     expect(await placeOrder(buildRequest([line], details), "tc-key-0005")).toEqual({ ok: false, kind: "failed", problems: [] });
   });
 
-=======
->>>>>>> refs/heads/main
   it("an offline browser says so and sends nothing", async () => {
     vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(false);
     expect(await placeOrder(buildRequest([line], details), "tc-key-0006")).toEqual({ ok: false, kind: "offline", problems: [] });
@@ -164,7 +138,6 @@ describe("what an answer means", () => {
   });
 });
 
-<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 describe("where the browser goes to pay", () => {
   it("follows an https address and nothing else", () => {
     expect(payAddress("https://pay.example.test/x")).toBe("https://pay.example.test/x");
@@ -174,8 +147,6 @@ describe("where the browser goes to pay", () => {
   });
 });
 
-=======
->>>>>>> refs/heads/main
 describe("the orders this browser has placed", () => {
   const one = (id: string): Placed => ({ order: { ...order, id, number: id.toUpperCase() }, token: `token-of-${id}-xxxxxxxx`, payment_url: "" });
 
