@@ -119,10 +119,14 @@ export function standInModules(payload: string): boolean[][] {
     return seed;
   };
   const far = SIZE - 7;
-  return Array.from({ length: SIZE }, (_, r) =>
-    Array.from({ length: SIZE }, (_c, c) => {
+  const rows: boolean[][] = [];
+  for (let r = 0; r < SIZE; r++) {
+    const row: boolean[] = [];
+    for (let c = 0; c < SIZE; c++) {
       const hit = [finderAt(r, c), finderAt(r, c - far), finderAt(r - far, c)].find((v) => v !== null);
-      return hit !== undefined ? hit : next() % 2 === 0;
-    }),
-  );
+      row.push(hit !== undefined ? hit : next() % 2 === 0);
+    }
+    rows.push(row);
+  }
+  return rows;
 }
