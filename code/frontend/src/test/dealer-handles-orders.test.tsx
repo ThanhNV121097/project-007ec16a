@@ -9,8 +9,7 @@ vi.hoisted(() => {
 
 import OrderRecord from "../components/OrderRecord";
 import {
-  changes, deleteOrder, isLocked, movesFrom, saveOrder, valuesOf,
-  type DealerOrder, type OrderPatch,
+  changes, deleteOrder, isLocked, movesFrom, saveOrder, valuesOf, type OrderPatch,
 } from "../lib/dealer-handles-orders-status-courier-payment";
 import { resetMock, transport } from "../lib/mock/dealer-handles-orders-status-courier-payment";
 
