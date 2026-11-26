@@ -468,7 +468,7 @@ Traces: SC-22 (ADMIN-016 item 4; failure behaviour)
 Check: interact_page
 
 **Scenario**: TC-57 — no other order has a "Mark as paid" button or any control that changes payment, and a MoMo order reads "MoMo transaction <number>"
-**Given**: P-ALL; ADMIN signed in a browser; unpaid VNPay order OV, unpaid MoMo order OM, a paid bank order PB (paid by `PUT`), a paid VNPay order PV; a MoMo success MNOTICE for a second MoMo order PM (transaction number `7000000001`) and, if TMN/SECRET are held, a VNPay success notice for PV with number `14123456`.
+**Given**: Any profile with VNPay's keys for the first half (orders arranged with FX-BANK / FX-MOMO); P-MOMO or P-ALL for the MoMo-transaction half; ADMIN signed in a browser; unpaid VNPay order OV, unpaid MoMo order OM, a paid bank order PB (paid by `PUT`), a paid VNPay order PV; a MoMo success MNOTICE for a second MoMo order PM (transaction number `7000000001`) and, if TMN/SECRET are held, a VNPay success notice for PV with number `14123456`.
 **When**: `/admin/orders/<id>` is opened for OV, OM, PB, PV and PM; the page's `button`, `select`, `input[type=checkbox]`, `[role=switch]` controls and `[data-testid='admin-mark-paid']` are listed; the dealer's read `GET /api/v1/orders/<PM>` is taken.
 **Then**: `[data-testid='admin-mark-paid']` does not exist on OV, OM, PB, PV or PM; no control on any of them is labelled or named for payment or `paid`. PB and PV read `Paid`, OV and OM read `Awaiting payment`. PM reads `MoMo transaction 7000000001` (and PV `VNPay transaction 14123456` when held); the dealer's read of PM carries `transaction_no` `7000000001`. Without MSK the PM half is UNVERIFIED (instrument lacked: MoMo's secret key).
 Traces: SC-22 (ADMIN-016 item 4, AC-9, AC-10; story §4 "dealer's reads")
