@@ -441,10 +441,15 @@
         "shipped": "Your order is on its way."
       },
       "items": "In this order",
+      "load_failed": "We could not load your order. Please try again.",
       "missing": "We can't find that order.",
       "missing_line": "Check the number in your confirmation message, then look it up with the phone you ordered with.",
       "number": "Order {number} · placed {date}",
       "paid": "paid",
+      "pay_failed": "We could not open the payment page. Please try again.",
+      "pay_now": "Pay now",
+      "paying": "Opening the payment page…",
+      "retry": "Try again",
       "spec": {
         "carrier": "Carrier",
         "delivery": "Delivery",
