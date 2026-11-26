@@ -1,10 +1,11 @@
 package payments
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -17,22 +18,26 @@ import (
 // These run the real migrations and SQL like payments_db_test.go: they need
 // TEST_DATABASE_URL and skip without it.
 
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
 // momoWorld is a database, a MoMo provider whose API is a stand-in, and the notice route.
 func momoWorld(t *testing.T, calls *atomic.Int32, resultCode int) (world, *MoMo) {
 	t.Helper()
 	w := newWorld(t)
-	api := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	m := NewMoMo(MoMoConfig{
+		PartnerCode: momoPartner, AccessKey: config.NewSecret(momoAccess), SecretKey: config.NewSecret(momoSecretKey),
+		APIURL: "https://test-payment.momo.vn", PublicBaseURL: "https://shop.example.test",
+	}, w.pool, quiet(), nil)
+	// MoMo's side is a transport that answers with a payment address and the given result code.
+	m.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		calls.Add(1)
 		var req map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&req)
-		rw.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(rw).Encode(map[string]any{"resultCode": resultCode, "message": "stand-in", "orderId": req["orderId"], "payUrl": "https://test-payment.momo.vn/pay/abc"})
-	}))
-	t.Cleanup(api.Close)
-	m := NewMoMo(MoMoConfig{
-		PartnerCode: momoPartner, AccessKey: config.NewSecret(momoAccess), SecretKey: config.NewSecret(momoSecretKey),
-		APIURL: api.URL, PublicBaseURL: "https://shop.example.test",
-	}, w.pool, quiet(), nil)
+		body, _ := json.Marshal(map[string]any{"resultCode": resultCode, "message": "stand-in", "orderId": req["orderId"], "payUrl": "https://test-payment.momo.vn/pay/abc"})
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(bytes.NewReader(body)), Request: r}, nil
+	})}
 	mux := http.NewServeMux()
 	Register(mux, w.v, m)
 	w.h = mux
