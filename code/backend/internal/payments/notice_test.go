@@ -97,7 +97,7 @@ func newNotice(f *fakeStore) (http.Handler, *VNPay) {
 	v := provider("")
 	v.store = f
 	mux := http.NewServeMux()
-	Register(mux, v)
+	Register(mux, v, nil)
 	return mux, v
 }
 
@@ -189,7 +189,7 @@ func TestWithoutKeysTheNoticeAnswers97ToEverything(t *testing.T) {
 	store := &fakeStore{attempt: unpaidAttempt(), wonRace: true}
 	v.store = store
 	mux := http.NewServeMux()
-	Register(mux, v)
+	Register(mux, v, nil)
 	for _, q := range []string{"", noticeQuery(secret, goodNotice()), noticeQuery("", goodNotice())} {
 		if got := codeOf(t, callNotice(mux, q)); got != "97" {
 			t.Errorf("RspCode %s", got)
@@ -206,7 +206,7 @@ func TestTheLogAndTheBodyHoldNoSecretNoSignatureAndNoQuery(t *testing.T) {
 	v := NewVNPay(VNPayConfig{TmnCode: "TMN123", HashSecret: config.NewSecret(secret)}, nil, slog.New(slog.NewTextHandler(&logged, nil)), nil)
 	v.store = &fakeStore{attempt: unpaidAttempt(), wonRace: true}
 	mux := http.NewServeMux()
-	Register(mux, v)
+	Register(mux, v, nil)
 	query := noticeQuery(secret, goodNotice())
 	hash := query[strings.LastIndex(query, "=")+1:]
 	bad := callNotice(mux, query[:len(query)-3]+"abc")
