@@ -50,9 +50,19 @@ export interface TableQuery {
 /** Parameters this hook owns; everything else in the URL is a filter. */
 const OWN = ["page", "size", "sort", "q"];
 
-export function useTableQuery(defaults: { size?: number; sort?: string } = {}): TableQuery {
+/**
+ * `sizeIsFilter` is the shop's opt-in: on /shop `size` is an EU size to
+ * filter by, not a page size. The hook then leaves it out of what it owns —
+ * `clear()` removes it and `filtering` counts it — and never reads it as the
+ * page size. A list that does not opt in (every dealer list) is unchanged:
+ * `size` is its page size, `clear()` keeps it and `filtering` ignores it.
+ * Every call on one page must pass the same value, so pass the page's own
+ * `TableQuery` down rather than calling the hook again with another one.
+ */
+export function useTableQuery(defaults: { size?: number; sort?: string; sizeIsFilter?: boolean } = {}): TableQuery {
   const [params, setParams] = useSearchParams();
-  const size = Number(params.get("size")) || defaults.size || 20;
+  const sizeIsFilter = defaults.sizeIsFilter === true;
+  const size = (sizeIsFilter ? 0 : Number(params.get("size"))) || defaults.size || 20;
   const page = Math.max(1, Number(params.get("page")) || 1);
   const sort = params.get("sort") ?? defaults.sort ?? "";
   const q = params.get("q") ?? "";
@@ -107,10 +117,10 @@ export function useTableQuery(defaults: { size?: number; sort?: string } = {}): 
       clear: () =>
         write((next) => {
           for (const key of [...next.keys()]) {
-            if (key !== "sort" && key !== "size") next.delete(key);
+            if (key !== "sort" && (sizeIsFilter || key !== "size")) next.delete(key);
           }
         }, false),
-      filtering: [...params.keys()].some((k) => !OWN.includes(k)) || q !== "",
+      filtering: [...params.keys()].some((k) => !OWN.includes(k) || (sizeIsFilter && k === "size")) || q !== "",
     };
-  }, [params, page, size, sort, q, put, write]);
+  }, [params, page, size, sort, q, sizeIsFilter, put, write]);
 }

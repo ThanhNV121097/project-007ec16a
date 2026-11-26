@@ -2625,6 +2625,391 @@ No `updated_at` and no trigger (a row is immutable, §3.20). `users` exists (mig
 | E6 | Index for `LIKE 'slug-%'` on ids | None | `text_pattern_ops` index: hundreds of rows; the scan is faster than the index's upkeep |
 
 
+<!-- story 11: Dealer dashboard figures and charts -->
+# ERD — Dealer dashboard figures and charts (plan item 11, "S10")
+
+Module `admin` · Requirements ADMIN-020, ADMIN-021, ADMIN-004 (overview rows) · Story `docs/admin/stories/dealer-dashboard-figures-and-charts.md` · UI PR #76 · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+## 1. Verdict: this story adds nothing to the schema
+
+**No table, column, constraint, index, trigger, view, function or migration is created, changed or dropped.** The story asked TL to decide whether an index helps the aggregates at 10,000 orders. It does not (§4). `erd/_base.md` §8 already said "S10 (dashboard: reads) needs no migration" and §5 pattern 12 already named the indexes this story reads; this design confirms both against the merged migrations (`20261125100100_collections`, `20261125120000_stock_per_size`).
+
+| What the overview needs to know | Where the schema already says it |
+|---|---|
+| Orders placed in a calendar month, and in each of 14 days, in Vietnam time | `orders.placed_at` (`timestamptz`, so the instant is stored and the zone is only ever applied when it is read), `idx_orders_placed_at (placed_at DESC)` |
+| An order that is cancelled is left out | `orders.status` (`ck_orders_status`), `idx_orders_status_placed_at (status, placed_at DESC)` |
+| Orders waiting to be packed | `orders.status IN ('placed','confirmed')`, the same index |
+| A sale's value | `orders.total` (`bigint`, VND, `>= 0`) — the shop's own sum; never recomputed from `order_items` here |
+| Pairs on the shelf, the number of shoes, the shoes running low and their last-pairs sizes | the view `product_stock` (`stock`, `sizes_low`; one row per shoe, drafts included, via `LEFT JOIN`) over `product_sizes`. **The one definition of stock** (D3): the overview adds no second copy of it |
+| Pairs sold by line | `order_items.qty` joined to `orders` (cancelled left out) and `products.line_id`, then to `lines`; `idx_order_items_product_id` |
+| The order's first pair (shoe and size) | `order_items` with `line_no = 1` (`uq_order_items_order_id_line_no`), then `products.name` |
+| Ties "in the shoes' own order", "in the lines' own order", "newest first" | `products.seq`, `lines.seq`, `orders.seq` — the unique, stable position every list of the project already uses (`erd/_base.md` §3.1) |
+
+## 2. Entities this story touches — none changed, none written
+
+The story is **read-only**: one `REPEATABLE READ, READ ONLY` transaction, five `SELECT`s. The database itself refuses a write inside it.
+
+| Entity (defined elsewhere) | Columns read | Never read |
+|---|---|---|
+| `orders` | `id`, `seq`, `number`, `placed_at`, `status`, `customer`, `total` | **`phone`, `email`, `address`, `city`, `note`**, `carrier`, `tracking`, `eta`, `paid`, `payment_method_id`, `delivery_*`, `account_id`, `idempotency_key`, `is_sample`, `source`, `invented`. The five columns a customer's privacy depends on are in no `SELECT` list of this story, so no struct, map or `SELECT *` can carry them into a body (a test reads the SQL text for them, services file §8) |
+| `order_items` | `order_id`, `line_no`, `product_id`, `size`, `qty` | `unit_price` (the order's `total` already is the sale), `id`, `created_at` |
+| `products` | `id`, `seq`, `name`, `category_id`, `line_id`, `image` | everything else (price, status, description, bookkeeping). **Drafts are read like live shoes** — the dealer sees the whole shelf |
+| `lines` | `id`, `seq`, `name` | `blurb`, `since`, `fit_note`, bookkeeping |
+| `product_stock` (view over `products` ⟕ `product_sizes`) | `product_id`, `stock`, `sizes_low` | `sizes`, `sizes_out` |
+| `users`, `sessions` | nothing here — the guard (`auth.Resolve`, `auth.Require`) reads them before the handler runs | — |
+
+Nothing is written, so there is no lifecycle, retention or deletion rule to state: the answer is computed on every request and kept nowhere (no cache, no summary table — decision O3).
+
+## 3. The shop's calendar
+
+Every instant is stored as `timestamptz`. The overview reads the shop's day in **one expression**, from **one instant** the caller passes in (the handler's clock; the real clock in the running server, a fixed instant in a test):
+
+```sql
+($1::timestamptz AT TIME ZONE 'Asia/Ho_Chi_Minh')::date          -- "today", the shop's calendar date
+```
+
+| Window | From (inclusive) | To (exclusive) |
+|---|---|---|
+| This month | `date_trunc('month', today::timestamp) AT TIME ZONE 'Asia/Ho_Chi_Minh'` | the same plus `interval '1 month'` |
+| The 14 days | `(today - 13)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'` | `(today + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'` |
+| One day of the 14 | `(placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date` equals that date | — |
+
+`timestamp AT TIME ZONE zone` reads a local time in that zone and gives the instant; `timestamptz AT TIME ZONE zone` gives the local time. Written this way, an order at exactly `00:00:00` Vietnam time on the first of a month is **in** the new month and one at `23:59:59` the day before is **in** the old one, **whatever zone its value was written in** (a `+07:00` literal, a UTC one, `-05:00`): the comparison is between instants, so no session setting (`TimeZone`) can change a figure. Vietnam has no daylight saving and `Asia/Ho_Chi_Minh` is a fixed UTC+7, which is why the answer's text offset can be the literal `+07:00` (the same convention as `orders/read.go` and `orders/list.go`).
+
+The upper bounds are **calendar boundaries, not "now"**: an order stamped later today than the clock still belongs to today and to this month. On the running shop this cannot happen (no order is in the future); in a test with a fixed clock it is the only reading that does not depend on the order's own time of day.
+
+The 14 days may begin in the month before: `month` counts the current month only, `sales_by_day` counts the 14 days wherever they fall, so the 14 amounts add up to `month.sales` only when no day of the window is in an earlier month (they do at the SRS clock, 25/11/2026; they do not on 3/12/2026, by design — SC-6 and SC-15 say which sum is compared with which window).
+
+## 4. Access patterns
+
+| # | Pattern | Frequency | Index used | Cost at 10,000 orders, 1,000 shoes |
+|---|---|---|---|---|
+| 1 | **The figures** (one row): `sum(total)` and `count(*)` of non-cancelled orders in the month's range; `count(*)` where `status IN ('placed','confirmed')`; `sum(stock)` and `count(*)` of `product_stock` | Once per page view of `/admin` (a few a day; "Try again") | `idx_orders_placed_at` range scan for the month (≈ 2,500 orders if the shop sold 10,000 in four months), then the heap for `status` and `total`; `idx_orders_status_placed_at` for the waiting count (leading column `status`); `product_sizes` primary key order for the view's aggregate | milliseconds: three small scans and one aggregate of ≈ 10,000 `product_sizes` rows |
+| 2 | **The 14 days**: group the window's non-cancelled orders by Vietnam date, joined to a 14-row series so a day with no sale is present as 0 | same | `idx_orders_placed_at` range scan (the window is ≤ 14 days) | milliseconds: the window holds a few hundred orders |
+| 3 | **Pairs by line**: `order_items` ⨝ non-cancelled `orders` ⨝ `products` grouped by `line_id`, then `lines` left-joined to it | same | `orders` primary key and `products` primary key probes for each item; **every non-cancelled order is read** (all time, not the month) | ≈ 15,000–30,000 item rows: a hash aggregate of a few tens of milliseconds at most. **The only statement whose cost grows with the whole history** |
+| 4 | **Running low**: `product_stock` ⨝ `products`, `cardinality(sizes_low) > 0 AND stock < 15`, fewest first, ties by `seq` | same | the view's aggregate (all shoes, because the filter is on aggregates); `products` primary key | milliseconds: ≈ 10,000 `product_sizes` rows aggregated, a handful of rows returned |
+| 5 | **The five latest**: `ORDER BY placed_at DESC, seq DESC LIMIT 5`, each with its first pair (`line_no = 1`) and the shoe's name | same | `idx_orders_placed_at` gives the order; `uq_order_items_order_id_line_no` and `products` primary key give the five lookups | milliseconds |
+
+**The five statements run in one transaction on one snapshot**, so the month's total, the waiting count, the 14 amounts, the line counts and the five latest are figures of the **same instant of the database**. With one statement per autocommit, an order placed between statement 1 and statement 2 would be in the chart and not in the month, and a test that adds them up would fail by exactly that order once in a while.
+
+## 5. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| O1 | Does the story need a table, column or migration? | **No.** Every figure is a sum, a count or a list over columns that exist (§1). Nothing is stored for the overview | A `daily_sales` summary table: written by every order and every cancel, read by one page a few times a day, and a second place that must be kept equal to `orders` (ADMIN-020 AC-19 says the figures **equal** the sums over the stored orders) |
+| O2 | Does an index help the aggregates at 10,000 orders and 1,000 shoes? | **No new index.** The month and the 14 days are range scans of `idx_orders_placed_at`; the waiting count is served by `idx_orders_status_placed_at`; the by-line sum reads each item once and probes by primary key; every other statement is over a few thousand rows. The p95 bound of 500 ms (SC-17) is two orders of magnitude above the cost in §4. **If SC-17 fails on the running shop, the failure is reported to TL and a follow-up design item adds the index, `CONCURRENTLY` in a file of its own (`erd/_base.md` §8 migrations 6, 9, 12 are the pattern); Dev does not add one on his own.** The first candidate, not built: `idx_orders_live_placed_at ON orders (placed_at DESC) INCLUDE (total) WHERE status <> 'cancelled'`, which makes the month and 14-day sums index-only | Building it now: every order placement and every status change would pay for it, for a read of a few milliseconds. An index that nobody has measured a need for is the cheapest thing to add later and the dearest to carry |
+| O3 | Cache the answer, or keep a materialised copy? | **No.** `Cache-Control: no-store` on the answer; no in-process cache. A dealer who presses "Try again" or returns to `/admin` must see the order that arrived a minute ago (story decision 5; ADMIN-020 AC-16, AC-17) | A 30-second in-process cache: a stale figure is the one defect this page cannot have, and the cost it would save is a few milliseconds |
+| O4 | One transaction or five? | **One `REPEATABLE READ, READ ONLY` transaction**, five statements, as the staff list does for its count and page (`staff_store.go`). It takes no lock and blocks no writer (MVCC), and it holds one pooled connection for the length of the request | One giant `SELECT … json_build_object(…)` statement: one snapshot as well, but a 60-line statement that nobody can test a part of; separate autocommit statements: no common snapshot (§4) |
+| O5 | Is "pairs sold by line" this month's, or all time? | **All time**, as `services/_base.md` §3.25 and ADMIN-020 AC-4 / AC-19 say ("the sums over the stored, non-cancelled orders' … pairs"). Statement 3 therefore reads every non-cancelled order's items. At the stated 10,000 orders this is the dearest statement and still tens of milliseconds; at 1,000,000 orders it would not be. That is not a promised volume. **If it ever is, the answer is a window (a month or a year) — a change of the requirement, decided by PM — not a cache** | A month window now: it would change the SRS's own literal (Samba 8 over the month) and the old page's behaviour, for a cost nobody has measured |
+| O6 | Where does the SQL live? | In `internal/admin/overview_store.go`, **read-only**, over `orders`, `order_items`, `products`, `lines` and the view `product_stock`. The ownership table of `services/_base.md` §1.1 names the only **writer** of each table; this file writes none of them, and its transaction is `READ ONLY`, so the database enforces it | A function in each owner (`orders.Totals`, `stock.Low`, `data.Lines`…): five exports used by one page, and the shared snapshot would still need one transaction passed through all of them |
+| O7 | How is a shoe's stock counted for the shelf figure? | From **`product_stock`**, both `pairs_on_shelf` (`sum(stock)`) and `shoes` (`count(*)`). The view is "the only source of a shoe's `stock`" (D3), so the shelf figure, the running-low `stock` and the stock on a product page cannot disagree | `sum(product_sizes.pairs)` and `count(*) FROM products`: the same numbers today, and a second definition of stock that has to be kept equal to the view |
+| O8 | What is "a shoe's own order", "a line's own order" and the order of equal orders? | `products.seq` for shoes, `lines.seq` for lines, `orders.seq` for orders. Ties in the five latest are broken by the **later** `seq` first (the order that was added last is the newer one). This is the order `GET /v1/products` and `GET /v1/lines` give with no `sort` (`services/_base.md` §2.4), which is how the test cases check it | An `ORDER BY name`: not the project's tie-break anywhere |
+| O9 | An order with no first pair, a shoe with no category | Cannot happen through the API (`order_items` line 1 is written with the order; `RESTRICT` stops a shoe being deleted while ordered), but a repaired database could have it. The statement uses `LEFT JOIN` and `coalesce(…, '')`, so an order is **never dropped from the five latest** and a NULL never reaches a `string`. A shoe with no category answers `category: ""` (the project's rule: `NULL` is `""` for text, `erd/_base.md` §2.2) | An `INNER JOIN`: one damaged row would silently remove an order from the dealer's list |
+| O10 | Is the running-low list capped? | **No** (story decision 6; `services/_base.md` §3.25 lists "every shoe running low"). Its bound is the number of shoes — at 1,000 shoes at most ≈ 150 KB. The page's "Running low" figure is the **length of the list**, so a cap would make the figure wrong unless the answer also carried a total, which is a contract change nobody has asked for | `LIMIT 10`: the figure would read 10 for a shop with 40 shoes running low |
+
+### Conflicts with merged decisions
+
+None. I read `erd/_base.md` §2, §3.2–§3.4, §3.9–§3.13, §5 pattern 12, §8, `erd/checkout-and-placing-an-order.md` (the view `product_stock`) and the merged migrations; `services/_base.md` §1.1, §2.2–§2.4, §3.25. Three statements are **refinements of silence**, not overrides: the upper bound of a window is a calendar boundary (§3), "a shoe's own order" is `seq` (O8), and the 14-day and month windows are compared as instants, not as session-zone text.
+
+## 6. Migration plan
+
+| Step | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| This story | **No migration file.** The next free timestamp is not consumed | Revert the backend PR; nothing in any database changes | Not applicable: no statement is added to any migration, no table, row or index is touched at deploy time. Deployable and revertable with the schema exactly as migrations 1–12 of `erd/_base.md` §8 left it |
+
+The story **depends on** `product_stock`, `idx_orders_placed_at`, `idx_orders_status_placed_at` and `idx_order_items_product_id` being as the merged migrations made them. The backend PR therefore ships one test, `TestOverviewSchemaAssumptions` (skips without `TEST_DATABASE_URL`), that reads the catalogue and fails loudly if any of these is not true: `orders.placed_at` is `timestamp with time zone`; the view `product_stock` exists and has the columns `product_id`, `sizes_low` (`text[]`) and `stock` (`integer`); the three indexes exist and are valid (`pg_index.indisvalid`); `orders`, `products` and `lines` each have the unique `seq` column. No merged migration is edited (convention `migrations`).
+
+## 7. Arranging and checking test data
+
+No statement below touches the schema. A database test makes its own schema with `dbtest.Migrated(t)` (the 14 sample orders, 12 shoes, 5 lines, the placeholder counts), so the SRS literals can be asserted at a **fixed clock of 25/11/2026 12:00 Vietnam time** (`time.Date(2026, 11, 25, 12, 0, 0, 0, time.FixedZone("ICT", 7*3600))`). On the running shop the clock is real and the page is compared with the endpoint and the endpoint with sums, never with a literal.
+
+```sql
+-- The oracle of SC-15: written independently of the handler's statements (a plain join and a filter, no CTE, no generate_series).
+-- This month (the month of the clock, Vietnam time):
+SELECT coalesce(sum(total), 0), count(*) FROM orders
+ WHERE status <> 'cancelled'
+   AND to_char(placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM') = $1;            -- $1 = '2026-11'
+-- One day:
+SELECT coalesce(sum(total), 0) FROM orders
+ WHERE status <> 'cancelled'
+   AND to_char(placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD') = $1;         -- $1 = '2026-11-25'
+-- One line's pairs:
+SELECT coalesce(sum(i.qty), 0) FROM order_items i
+  JOIN orders o ON o.id = i.order_id JOIN products p ON p.id = i.product_id
+ WHERE o.status <> 'cancelled' AND p.line_id = $1;                                    -- $1 = 'samba'
+-- Waiting:
+SELECT count(*) FROM orders WHERE status = 'placed' OR status = 'confirmed';
+
+-- SC-9 / SC-10: a database holding only the shoes a case names (a test's own schema, so it may empty the tables):
+DELETE FROM order_items; DELETE FROM orders; DELETE FROM products;                     -- product_sizes goes by CASCADE
+INSERT INTO products (id, name, price, status) VALUES ('t-a', 'A', 1, 'live'), ('t-b', 'B', 1, 'draft');
+INSERT INTO product_sizes (product_id, size, size_value, pairs) VALUES ('t-a', '40', 40, 2), ('t-a', '41', 41, 3), ('t-b', '42', 42, 10);
+
+-- SC-11: an order at the first instant of a month, written three ways; all three are in December (month starts 2026-11-30 17:00 UTC):
+INSERT INTO orders (id, number, placed_at, status, payment_method_id, delivery_option_id, customer, phone, address, city, total)
+VALUES ('t-1', 'DOI-90001', '2026-12-01T00:00:00+07:00', 'delivered', 'vnpay', 'standard', 'T', '0900000001', 'A', 'C', 1000000),
+       ('t-2', 'DOI-90002', '2026-11-30T17:00:00+00:00', 'delivered', 'vnpay', 'standard', 'T', '0900000002', 'A', 'C', 2000000),
+       ('t-3', 'DOI-90003', '2026-11-30T12:00:00-05:00', 'delivered', 'vnpay', 'standard', 'T', '0900000003', 'A', 'C', 4000000);
+-- and one second earlier, in November, whatever its zone:
+--   '2026-11-30T23:59:59+07:00'  '2026-11-30T16:59:59+00:00'  '2026-11-30T11:59:59-05:00'
+
+-- SC-14 (cancel half, no cancel route on main until item 17): the status set by SQL
+UPDATE orders SET status = 'cancelled' WHERE id = 'doi-24816';
+
+-- SC-16 / SC-17: the big set (generated; every status, 1-3 pairs, the sentinels)
+INSERT INTO orders (id, number, placed_at, status, payment_method_id, delivery_option_id, customer, phone, email, address, city, note, total)
+SELECT 'tc-ov-big-' || g, 'DOI-' || (100000 + g), now() - (random() * interval '120 days'),
+       (ARRAY['placed','confirmed','packed','shipped','delivered','cancelled'])[1 + g % 6],
+       'vnpay', 'standard', 'Big ' || g, '0999000TCOV', 'tcov@example.invalid', 'TCOV ADDRESS', 'C', 'TCOV NOTE', 1000000 + (g % 7) * 100000
+FROM generate_series(1, 10000) g;
+-- (and one to three order_items rows each, line_no 1..n, from any ten of the shoes; then 1,000 shoes with 5-12 sizes of 3-9 pairs)
+ANALYZE orders; ANALYZE order_items; ANALYZE product_sizes;                              -- before timing SC-17
+```
+
+## 8. Hand-over
+
+| Who | What they must know from this design |
+|---|---|
+| Dev, backend step | **No migration.** Two files in `internal/admin` (`overview.go`, `overview_store.go`), the five statements of the services file §5 written as given, one `Register` line in `server.go`, the swap of the services file §9. Every identifier of the two files starts with `overview` so that "Manage shoes…" (also adding files to `internal/admin`, in parallel) collides with nothing |
+| Test lead | The statements of §7 are the fixture and the oracle. The SRS literals (47.660.000 ₫, 13 orders, the 14 amounts, the line counts, the five latest) hold at the **fixed clock** in a backend test over the migrated sample set; on the running shop compare sums, as the story's §8 says. SC-14's cancel half is a SQL `UPDATE` until item 17 lands |
+| "Manage shoes, lines, categories, reviews and orders" (item 10) and "Dealer handles orders" (item 17) | They write the rows this story reads (pairs, shoes, lines, order status). A shoe's pairs change through `internal/stock` and an order's status through `internal/orders`; this story takes no lock, so neither waits for it and it waits for neither |
+
+
+<!-- story 12: More ways to pay: VietQR transfer and MoMo -->
+# ERD — More ways to pay: VietQR transfer and MoMo (plan item 12, "S11")
+
+Module `payments` · Requirements PAY-020, PAY-021, PAY-022 (PAY-022 stores nothing) · Story `docs/payments/stories/more-ways-to-pay-vietqr-transfer-and-momo.md` · UI PR #91 · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+This file defines **the two schema changes this story makes and what it writes into tables that already exist, and nothing else.** There is **no new table, no new column and no new index**: the VNPay story's `payment_attempts`, `payment_notices` and `idx_orders_unpaid_open` (`erd/online-payment-with-vnpay.md`) were built for exactly this ("`provider = 'momo'` is already allowed", "the 24-hour rule reads the same set"), and a bank transfer needs no row of its own (it has no attempt: its QR is drawn from the order, and the dealer's "paid" is the one column `orders.paid`). `orders`, `order_items`, `order_tokens`, `product_sizes`, `counters`, `users`, `sessions` are other stories' and are **not changed**. Do not restate them; read them in their own files.
+
+Project decisions this story builds on, unchanged: **D1** (`uuid` ids outside the ten collections), **D3** (a shoe's lists and "pairs in stock" are the view `product_stock`, never stored, so returning pairs needs no statement of its own), **D4** (an order's pairs live in `order_items`). The conventions of the checkout ERD §2 apply: `NOT NULL` by default, named constraints `fk_` / `uq_` / `ck_` / `idx_`, explicit `ON DELETE`, no extensions, no `pg enum`, append-only tables have no `updated_at`.
+
+## 1. What this story changes
+
+| # | Migration (file-name part) | Changes |
+|---|---|---|
+| 1 | `payment_notices_momo_success` | Replaces the check `ck_payment_notices_success_is_00` (written in VNPay's `00`/`00` only) by `ck_payment_notices_success_codes`, which also accepts MoMo's success (§2.1). No row is touched |
+| 2 | `payment_methods_momo_note` | One conditional `UPDATE` of the `momo` record's `note` (SITE-016 item 5, SC-37) (§2.3) |
+
+Each is its own file, in that order (§8). Neither creates, drops or rewrites a table.
+
+```mermaid
+erDiagram
+    orders ||--o{ payment_attempts : "paid on, once per attempt (vnpay or momo)"
+    payment_attempts ||--o{ payment_notices : "answered by"
+    payment_methods ||--o{ orders : "way to pay (bank has no attempt)"
+
+    payment_attempts {
+        uuid id PK
+        text order_id FK
+        text provider "vnpay or momo"
+        text reference UK
+    }
+    payment_notices {
+        uuid id PK
+        uuid attempt_id FK
+        text response_code "check generalised"
+        boolean is_success
+    }
+```
+
+## 2. Entities this story touches
+
+### 2.1 `payment_notices` — one check replaced
+
+**Why.** The table's only success rule is `CHECK ck_payment_notices_success_is_00`: `NOT is_success OR (response_code = '00' AND transaction_status = '00')`. A MoMo success has no `'00'` anywhere: its result code is the integer `0` and it has no transaction status. Without a change the database would refuse the first MoMo payment (`23514`) and the notice would answer a server error for ever.
+
+**The check after this story**
+
+```sql
+CONSTRAINT ck_payment_notices_success_codes CHECK (
+    NOT is_success
+    OR (response_code = '00' AND transaction_status = '00')   -- VNPay: vnp_ResponseCode and vnp_TransactionStatus
+    OR (response_code = '0'  AND transaction_status = '')     -- MoMo: resultCode 0, which has no status
+)
+```
+
+The two arms are **disjoint by construction**: VNPay's response codes are always two digits (`00`…`99`) and MoMo's `resultCode` is written as a plain integer (`0`), so a VNPay row can never satisfy the MoMo arm nor the reverse. The database still refuses "a success the codes do not support" for each provider without knowing which provider the row belongs to (a `CHECK` cannot read `payment_attempts`). The application decides `is_success` per provider (VNPay: both `00`; MoMo: `resultCode == 0`); the check is the backstop.
+
+**How a MoMo notice is stored** — the same columns, nothing added; every `NOT NULL` and default of the VNPay story's table stands:
+
+| Column | MoMo field | Rule |
+|---|---|---|
+| `attempt_id` | — | The attempt whose `reference` equals the notice's `orderId` (`provider = 'momo'`) |
+| `transaction_no` | `transId` | The integer as text, as sent. A failed payment may carry `0`; never `''` because `transId` is a required field of the notice (services §3.22) |
+| `bank_code` | `payType` | The scheme the customer paid with (`webApp`, `app`, `qr`, `miniapp`), `''` when absent |
+| `amount` | `amount` | Whole VND, as sent, **no ÷ 100** (VNPay's unit is the only one with ×100). Only a notice whose amount equals the attempt's is stored |
+| `response_code` | `resultCode` | The integer as text, as sent: `'0'` is success, anything else is a failure. Never zero-padded |
+| `transaction_status` | — | `''`: MoMo has none |
+| `is_success` | `resultCode == 0` | Decided once by the handler |
+| `paid_time` | `responseTime` | Epoch **milliseconds** → `timestamptz`; NULL when absent, not an integer or outside 2000–2100: a payment is never refused for a time |
+| `received_at` | — | Default `now()`, as before |
+
+The two partial unique indexes of the VNPay story serve MoMo unchanged: `uq_payment_notices_attempt_id_success` keeps one success per attempt (two copies at the same moment keep one row), and `uq_payment_notices_attempt_id_failure` collapses an identical failure notice into one row — MoMo sends the same notice again when it gets no `204`, so this is not theoretical. No card number or wallet identifier is received and none is stored: `extraData`, `orderInfo`, `message` and `signature` are **not** kept.
+
+### 2.2 `payment_attempts` — written with `provider = 'momo'`, no schema change
+
+`ck_payment_attempts_provider` already allows `'momo'`. A MoMo attempt is the same row as a VNPay one: `reference` `<order number>-<n>` (`DOI-24818-1`), `amount` the locked order's `total` in whole VND, `expires_at` `placed_at + 30 minutes`. Two facts specific to MoMo:
+
+- **The reference is also MoMo's `orderId` and its `requestId`.** MoMo limits `orderId` to 50 characters; the table's check allows 100 (VNPay's own limit). An order number is `DOI-` plus at most 15 digits and `n` is at most 2 digits, so the reference is at most 22 characters and the application refuses to build one over 50 as a defect (500) rather than send MoMo a value it would refuse. No column changes.
+- **A bank transfer has no attempt, ever.** Placing or showing a bank order writes nothing to this table (SC-5), and `provider` never gains `'bank'`.
+
+An attempt row is written **before** MoMo is asked for its address (§7, E3), so an attempt may exist for which MoMo never gave an address; it holds no money and counts toward the 50-attempt bound of the VNPay story (ERD E9).
+
+### 2.3 `payment_methods` — one note reworded
+
+The `momo` record's note says "Confirm the payment in the MoMo app; the order is marked paid at once." Only a verified MoMo notice marks an order paid, so the clause is untrue (SITE-016 item 5, PAY-021). A new migration — never an edit to the merged seed — changes the note to `Confirm the payment in the MoMo app.`, **only while it still has its first text** (the owner may have reworded it in the Studio: a changed note is left alone), and a second run changes nothing more. The `bank` record is unchanged, all four rows stay (`cod` is still referenced by the sample orders, FK `RESTRICT`), and no other column is named. **Which ways are offered is not stored**: it is code plus the owner's settings (project ERD §3.7, order-page ERD E2).
+
+### 2.4 `orders` — nothing added; one index serves a second rule
+
+- **No column.** "Paid by the dealer" is `orders.paid` set through `orders.MarkPaid`, the same function a verified notice calls; `status` moves `placed → confirmed` in the same statement (`markPaidSQL`). Who pressed the button and when are **not** stored (§5, E7).
+- **`idx_orders_unpaid_open`** (`(placed_at) WHERE NOT paid AND NOT is_sample AND status IN ('placed','confirmed','packed')`) is reused **as it is**: a bank order and a MoMo order are in its set exactly as a VNPay order is. The VNPay story's ERD already said so ("the later 24-hour bank-transfer rule reads the same set … without a new migration for the index"). The candidate query of §6 repeats the predicate literally so PostgreSQL uses it.
+
+## 3. Access patterns
+
+| # | Pattern | Frequency | Index used |
+|---|---|---|---|
+| 1 | **Reserve a MoMo attempt**: lock the order's row; judge its state; `count(*)` of its attempts; insert one; commit — **then** call MoMo with no transaction open (§6) | Low (a placing with MoMo, "Pay now", "Try again") | `orders` PK; `idx_payment_attempts_order_id` |
+| 2 | **Find the attempt of a MoMo notice**: `SELECT a.id, a.order_id, a.amount, o.number, o.paid FROM payment_attempts a JOIN orders o ON o.id = a.order_id WHERE a.reference = $1 AND a.provider = 'momo'` | Low (one or two per payment; a few more while MoMo retries). p95 ≤ 2 s over 100 sequential notices (SC-38) | `uq_payment_attempts_reference`; `orders` PK |
+| 3 | **Record a MoMo success**: `orders.MarkPaid`, then insert the notice `ON CONFLICT (attempt_id) WHERE is_success DO NOTHING`, one transaction | Low | `orders` PK; `uq_payment_notices_attempt_id_success` |
+| 4 | **Record a MoMo failure**: insert `ON CONFLICT … WHERE NOT is_success DO NOTHING` | Low | `uq_payment_notices_attempt_id_failure` |
+| 5 | **Give up the orders whose time ran out** — the 30-minute rule (VNPay and MoMo) and the 24-hour rule (bank transfer): one candidate query, then one cancel transaction per candidate | Every 30 s, forever; an empty result almost always | `idx_orders_unpaid_open`; then `orders` PK, `uq_order_items_order_id_line_no`, `product_sizes` PK |
+| 6 | **The dealer marks a bank order paid**: `orders.LockOrder`, then the state rules, then `orders.MarkPaid`, then the dealer view read in the same transaction | Low (one press per bank order) | `orders` PK |
+| 7 | **Read an order's transfer details**: the access statement alone (`accessSQL`: the order by id and by the hash of its token); the bank account comes from the settings, the amount and note from that row | Low (once per page view of an unpaid bank order) | `orders` PK; `uq_order_tokens_token_hash` |
+| 8 | **An order's transaction number** (the dealer's reads, access pattern 6 of the VNPay ERD): `… JOIN payment_attempts a … WHERE a.order_id = $1 AND n.is_success` | Medium (every dealer read of one order) | `idx_payment_attempts_order_id`, then `uq_payment_notices_attempt_id_success` |
+
+Pattern 8 is **provider-agnostic as written** and must stay so: the dealer's `transaction_no` carries MoMo's `transId` with no change (SC-22). The backend step greps the fragment for a `provider = 'vnpay'` filter and removes it if one slipped in.
+
+Nothing else needs an index: every statement is by primary key, a unique key or the partial index.
+
+## 4. What this story does not change
+
+| Entity | Read by this story | Written by this story |
+|---|---|---|
+| `orders` | `id`, `number`, `placed_at`, `total`, `status`, `paid`, `payment_method_id`, `is_sample` | `paid` and `status`, **only** through `orders.MarkPaid` (a verified VNPay or MoMo notice, or the dealer on a bank-transfer order) and `orders.Cancel` (the two time rules; the dealer's cancel). No column is added |
+| `order_items`, `product_sizes` | The pairs of a cancelled order | `product_sizes.pairs` `+ qty` only through `stock.Return` inside `orders.Cancel`, once per cancelled order |
+| `payment_attempts` | — | Rows with `provider = 'momo'`, by `payments` only (the only writer, as before) |
+| `payment_notices` | — | MoMo rows, by `payments` only; the check of §2.1 is the only structural change |
+| `payment_methods` | The rows `vnpay`, `bank`, `momo` for `GET /v1/payment-options` | The `momo` note, once, by the migration |
+| `order_tokens`, `counters`, `users`, `sessions`, `rate_limits` | `order_tokens` through the access statement | Nothing |
+
+## 5. Left out of the schema, on purpose
+
+- **No table of bank accounts, no column for the shop's account anywhere.** The account (bank, BIN, number, holder) is four settings (`VIETQR_*`). Story decision 7: it is served only by the order's own transfer-details call, so it must never be in a table that a collection or the generic list reader could serve (`GET /v1/payments` serves `payment_methods` and would serve a column added to it).
+- **No stored QR, no stored payload.** The payload is a pure function of the settings, the order's `total` and its `number`; storing it would be a second copy that goes stale the day the owner changes the account.
+- **No refund and no refund status**, as the VNPay story: a MoMo payment after the order was given up, or a bank transfer after 24 hours, is `paid = true` with `status = 'cancelled'`, which the dealer sees and refunds by hand.
+- **No record of who marked a bank order paid, or when** (E7).
+- **No MoMo request log, no MoMo response log.** The create-payment answer carries an address and codes, nothing the shop needs afterwards.
+- **No `payment_attempts.provider = 'bank'`**, no `pay_url` column, no attempt state.
+
+## 6. Locks and write shapes
+
+Every transaction of this story takes the order's row first and never takes an order row after a `product_sizes` row (the VNPay ERD §6 rule, unchanged). Every one sets `SET LOCAL lock_timeout`: `2s` for an attempt, `3s` elsewhere.
+
+| Transaction | Locks, in order |
+|---|---|
+| Reserve a MoMo attempt | `orders` row `FOR UPDATE` → insert into `payment_attempts` → **commit** → *then* MoMo is called, with no transaction and no lock held |
+| MoMo success notice | `orders` row (by `UPDATE … WHERE NOT paid`) → insert into `payment_notices` |
+| MoMo failure notice | the insert alone; no order lock |
+| The dealer marks a bank order paid | `orders` row `FOR UPDATE` (`LockOrder`) → the status move and fields, if the body has any → `MarkPaid` → the dealer view read in the same transaction |
+| Cancel (the 30-minute rule, the 24-hour rule, the dealer's) | `orders` row (by `UPDATE … SET status = 'cancelled' WHERE …`) → `product_sizes` rows in `(product_id, size)` order |
+
+```sql
+-- reserve a MoMo attempt (one transaction, committed before MoMo is called)
+SELECT id, number, status, paid, total, placed_at, payment_method_id FROM orders WHERE id = $1 FOR UPDATE;   -- orders.LockOrder; CheckPayable under the lock
+SELECT count(*) FROM payment_attempts WHERE order_id = $1;                                                    -- k; k = 50 is a refusal
+INSERT INTO payment_attempts (order_id, provider, reference, amount, expires_at)
+VALUES ($1, 'momo', $2 /* 'DOI-24818-' || k+1 */, $3 /* the locked row's total, whole VND */, $4 /* placed_at + 30 min */);
+
+-- a MoMo success notice (one transaction; either 0-row result rolls it back and the answer is still 204)
+UPDATE orders SET paid = true, status = CASE WHEN status = 'placed' THEN 'confirmed' ELSE status END
+WHERE id = $1 AND NOT paid;
+INSERT INTO payment_notices (attempt_id, transaction_no, bank_code, amount, response_code, transaction_status, is_success, paid_time)
+VALUES ($1::uuid, $2 /* transId */, $3 /* payType */, $4 /* amount */, $5 /* '0' */, '', true, $6 /* responseTime */)
+ON CONFLICT (attempt_id) WHERE is_success DO NOTHING;
+
+-- a MoMo failure notice
+INSERT INTO payment_notices (…, is_success, …) VALUES (…, false, …)
+ON CONFLICT (attempt_id, transaction_no, response_code, transaction_status) WHERE NOT is_success DO NOTHING;
+
+-- the dealer marks a bank order paid: orders.LockOrder, then the same statement as a notice's
+UPDATE orders SET paid = true, status = CASE WHEN status = 'placed' THEN 'confirmed' ELSE status END
+WHERE id = $1 AND NOT paid;                       -- zero rows = already paid: a 200 that changes nothing
+
+-- the candidates of both time rules (one query; the rule for each row is chosen by its way to pay)
+SELECT id, payment_method_id FROM orders
+WHERE NOT paid AND NOT is_sample AND status IN ('placed', 'confirmed', 'packed')
+  AND placed_at <= $1                                     -- now - 30 minutes: the shortest window bounds every rule, so the index range is tight
+  AND (payment_method_id = ANY($2)                        -- {vnpay, momo}: due at 30 minutes
+       OR (payment_method_id = ANY($3) AND placed_at <= $4))   -- {bank}: due at 24 hours (now - 24 h)
+ORDER BY placed_at LIMIT 100;
+```
+
+**Two things that race, and how each ends.**
+
+- **The dealer's "paid" against the 24-hour cancel** (SC-21). Both serialise on the order's row. If the mark wins, the order is paid and the cancel's own `AND NOT paid` changes zero rows: nothing is returned. If the cancel wins, the order is `cancelled` with its pairs returned once, and the mark then sets `paid` and leaves the status (`markPaidSQL`'s `CASE` only moves `placed`): `cancelled` and `paid`, which the dealer refunds by hand. Never pairs returned twice, never taken again.
+- **Two marks at the same moment.** The second waits on the row, finds `paid` and changes zero rows; the answer is still `200` (the dealer asked for a state the order is already in).
+
+## 7. Decisions, and where this departs from the merged design
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| E1 | How does `payment_notices` accept MoMo's success when its check is written in VNPay's `00`/`00`? | **Two disjoint arms** in one check (§2.1): VNPay `('00','00')`, MoMo `('0','')`. No new column. The application sets `is_success` per provider; the check is the backstop | A `provider` column on `payment_notices`: a copy of `payment_attempts.provider`, written on every insert, only to let a `CHECK` see it. Writing MoMo's `0` as `'00'` with status `'00'`: the table would say MoMo sent codes it did not, and a refund query against MoMo's portal would read the wrong code. Dropping the check: the database would stop refusing an impossible "success" |
+| E2 | Does a bank transfer get an attempt row? | **No.** There is no provider page, no reference to send and no notice to find it by; an attempt row would have nothing to answer it | A row per QR shown: unbounded writes on a token-only read route for a record nothing reads |
+| E3 | When is a MoMo attempt written, relative to MoMo's create-payment call? | **Before**, in its own transaction, **committed before** the call, which runs with no transaction and no lock held | *After the call*: if MoMo gives an address and the insert then fails, the customer can pay a reference the shop does not know, MoMo's notice is refused (unknown reference) and the money is taken while the order stays unpaid. *Inside the transaction*: the order's row lock and a pooled connection would be held across up to 3 seconds of network I/O on every press, and up to 50 presses are allowed; a slow MoMo would pin the pool. Cost accepted: a call that fails leaves an attempt that no address ever referred to (it counts toward the 50 bound; no notice can come for an address MoMo never gave) |
+| E4 | Where does the 24-hour rule live? | **In the same candidate query and the same loop** as the 30-minute rule (§6): one scan of the partial index per tick, the rule per row chosen by its way. `idx_orders_unpaid_open` is reused unchanged | A second index or a second loop for bank orders: the set is a handful of rows; a second scan every 30 seconds buys nothing and doubles the 25-second budget logic |
+| E5 | Which orders do the two rules skip? | The 14 sample orders (`is_sample`, in the index predicate **and** in `cancelExpirySQL`), orders already paid, cancelled, shipped or delivered. A rule applies **by the order's way, not by today's settings**: an unpaid MoMo or bank order is still given up after the owner removes its keys, so its pairs never stay held for ever | Applying a rule only while the way is configured: an owner who removes the MoMo keys would freeze every open MoMo order's pairs on the shelf |
+| E6 | Where does the shop's bank account live? | **Settings only** (`VIETQR_*`); §5 | A row in `payment_methods` or a new table: it would be served by the generic collections and break story decision 7 |
+| E7 | Store who marked a bank order paid, and when? | **No column.** `orders.updated_at` already records the moment; the backend logs one `info` line (the order's number and the dealer's user id, no values of the account) | `orders.paid_by`, `orders.paid_at`: no criterion of the SRS or the story reads them, and the dealer sees "Paid" either way. If the owner later wants an audit trail it is its own item (a table of dealer actions across every edit, not a column for one) |
+| E8 | The `momo` note | A **conditional** `UPDATE` in a new file (§2.3), never an edit to `20261125100200_seed_collections` | Editing the merged seed: every database already migrated keeps the old text, and the README forbids it |
+| E9 | Down migrations | Written, **for local resets only**, with the reason in each file (§8) | None: every `.up.sql` has a `.down.sql` |
+| E10 | Does a bank transfer's marked-paid order need a "transaction number"? | **No.** The dealer's `transaction_no` is `''` for it (no success notice exists) and the admin page draws the line only when the string is non-empty, as it does for the sample orders | A free-text reference column the dealer types into: not asked for |
+
+**Conflicts with merged decisions, stated and resolved**
+
+1. **`erd/online-payment-with-vnpay.md` §2.2, constraint `ck_payment_notices_success_is_00`** is **superseded** by `ck_payment_notices_success_codes` (E1). Every VNPay row satisfies the first arm unchanged; nothing of the VNPay story's behaviour changes.
+2. **`orders.MarkPaid`'s comment** ("the only statement in the project that sets `orders.paid` for an online order, and only a verified notice from the provider calls it") is now true for **VNPay and MoMo orders**; the one other caller is the dealer's mark on a **bank-transfer** order (services §3.15). The backend step rewrites the comment and keeps the rule "no caller but these three".
+3. **`erd/online-payment-with-vnpay.md` §4**, "`payment_methods`: not read by the payment code": still true of the payment code. `GET /v1/payment-options` reads the rows of the offered ways, as before.
+4. **VNPay ERD E3** (identical failure notices are one row) now covers MoMo too: its retries are the same hazard.
+
+No other. I read `erd/_base.md` §3.7 (`payment_methods`), §3.12 (`orders`), §3.16, §3.17; `erd/online-payment-with-vnpay.md` (all); `erd/order-page-and-pay-now.md` E2; `erd/dealer-handles-orders-status-courier-payment.md` §6; the migrations `20261125100100_collections`, `20261125100200_seed_collections`, `20261126100000` to `20261126100200`, and the migrations README.
+
+## 8. Migration plan
+
+Two files, in this order, stamped after item 8's `20261126100200_orders_unpaid_open_index` and item 10's `20261126110000_uploads` (the next free stamps; if another merged story took them, take the next free ones — the two only need to sort in this order). Neither contains `CONCURRENTLY`, so both run inside the runner's transaction with their `schema_migrations` row.
+
+| Step | File | Forward | Backward | Safe on a populated table |
+|---|---|---|---|---|
+| 1 | `20261126120000_payment_notices_momo_success` | `ALTER TABLE payment_notices DROP CONSTRAINT IF EXISTS ck_payment_notices_success_is_00;` `ALTER TABLE payment_notices DROP CONSTRAINT IF EXISTS ck_payment_notices_success_codes;` `ALTER TABLE payment_notices ADD CONSTRAINT ck_payment_notices_success_codes CHECK (NOT is_success OR (response_code = '00' AND transaction_status = '00') OR (response_code = '0' AND transaction_status = ''));` | The reverse: drop the new check, add the old one. **It fails (`23514`) if a MoMo success row exists** — intended, and written in the file: those rows are the only record of what MoMo took, so the file never deletes them and a local reset drops the database instead | The table holds at most one success per paid order. Adding a check scans it once (milliseconds) under an `ACCESS EXCLUSIVE` lock held to the end of the file's transaction; **every existing row satisfies the first arm**, so the scan cannot fail and no row is rewritten. Nothing reads the table in a request path except the dealer's order read and the notice, both short. Safe to run twice (the `IF EXISTS` drops) |
+| 2 | `20261126120100_payment_methods_momo_note` | `UPDATE payment_methods SET note = 'Confirm the payment in the MoMo app.' WHERE id = 'momo' AND note = 'Confirm the payment in the MoMo app; the order is marked paid at once.';` | `UPDATE payment_methods SET note = 'Confirm the payment in the MoMo app; the order is marked paid at once.' WHERE id = 'momo' AND note = 'Confirm the payment in the MoMo app.';` — reversible with no loss | Four rows, at most one touched; a note the owner already changed is left alone; a second run matches nothing. No lock beyond the one row |
+
+**Schema test the backend PR ships** (`migrations_test.go`, against PostgreSQL): the two files apply in order on a database that already holds item 8's tables; with `is_success = true` the rows `('00','00')` and `('0','')` are stored and the rows `('0','00')`, `('00','')`, `('0','0')`, `('1','')`, `('','')` are refused with `23514`; with `is_success = false` any codes are stored; step 2 applied twice, and over a note the owner changed, leaves the changed note.
+
+## 9. Arranging state for a test (no schema change)
+
+The dealer's screens, MoMo's servers and the clock do not exist in a `.localhost` run, so the cases arrange state with SQL; each is undone by the case that ran it (`DELETE FROM orders WHERE id = $1` cascades to attempts and notices; put pairs back with `UPDATE product_sizes SET pairs = pairs + $q`).
+
+```sql
+UPDATE orders SET placed_at = now() - interval '25 hours' WHERE id = $1;   -- or '24 hours', '23 hours', '31 minutes', '29 minutes', '2 hours'
+UPDATE orders SET status = 'packed' WHERE id = $1;                          -- or 'confirmed', 'shipped', 'delivered', 'cancelled'
+UPDATE orders SET is_sample = true WHERE id = $1;                           -- only to prove both rules skip samples
+UPDATE orders SET payment_method_id = 'momo' WHERE id = $1;                 -- an order of a way whose settings the run lacks (the FK allows it)
+SELECT a.reference, n.transaction_no, n.bank_code, n.amount, n.response_code, n.transaction_status, n.is_success, n.paid_time
+FROM payment_attempts a LEFT JOIN payment_notices n ON n.attempt_id = a.id WHERE a.order_id = $1 ORDER BY a.created_at, n.received_at;
+```
+
+A MoMo notice is signed by the test itself with the run's secret key (services §3.22, §6); the shop cannot be asked for one. Setting `paid` by hand is **not** how a case proves payment: a case sends a signed notice, or the dealer's `PUT`.
+
+## 10. Who must know
+
+| Who | What they must know from this design |
+|---|---|
+| Dev, backend step | Two migrations (§8) and **no new table, column or index**. `payments` stays the only writer of `payment_attempts` and `payment_notices`; it writes `provider = 'momo'` rows and MoMo notices through the same store as VNPay's. The attempt is committed **before** MoMo is called (E3). A bank order writes no attempt |
+| Test lead | State is arranged with §9. A MoMo notice is signed by the case; the bank order's "paid" is the dealer's `PUT`. The check refuses `('0','00')`: a MoMo success written with VNPay's codes is a bug, not a pass |
+| Items 10 and 17 | Item 17's `transaction_no` fragment must stay provider-agnostic (§3 pattern 8). Item 17's `DELETE` sentence for a paid, cancelled order names VNPay's portal; services §3.15 makes it follow the order's way to pay |
+| The owner | Supplies the seven settings and registers MoMo's notice address; no data is entered anywhere |
+
+
 <!-- story 13: Product page waits for the shoe before saying it is missing -->
 # ERD — Product page waits for the shoe before saying it is missing (plan item 13)
 
@@ -3015,4 +3400,204 @@ No migration is added and none is edited (a merged migration is never edited).
 ## 6. Revision after the catch-up of PR #40 (UI fix 2)
 
 Checked again against `main` after plan item 4's backend (PR #49) merged and #40 was caught up with it: the pull request's twelve files are all under `code/frontend/src/`; none is a migration, a Go file or a SQL statement, and the tables and statements of plan item 4 that this story reads (§1, §2) are unchanged. **Still no schema consequence, still no migration, and still nothing for the Story BE step to build.** The frontend ruling of the same revision is `docs/architecture/services/shop-phone-filters-clear-all-loading-and-errors.md` §3.2.
+
+
+<!-- story 17: Dealer handles orders: status, courier, payment -->
+# ERD — Dealer handles orders: status, courier, payment (plan item 17, "S16")
+
+Module `admin` · Requirements ADMIN-016, ADMIN-004 (AC-6, AC-9), ADMIN-011 (AC-12, AC-14, AC-15, AC-20), ADMIN-014 (AC-7, AC-8) · Story `docs/admin/stories/dealer-handles-orders-status-courier-payment.md` · UI PR #77 · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+## 1. Verdict: this story adds nothing to the schema
+
+**No table, column, constraint, index, trigger, view, function or migration is created, changed or dropped.** Everything the story writes already has a column: `orders.status`, `carrier`, `tracking`, `eta`, `customer`, `phone`, `email`, `address`, `city`, `note`, and `product_sizes.pairs`; everything it reads already has a table. `erd/_base.md` §3.12 (`orders`) already said the allowed steps of `status` are "enforced by the API with `UPDATE … WHERE status = $from`, not by the database", and already holds every index this story's reads and deletes use (§5 below). What this file adds is what the schema alone cannot say: the state machine, the exact statements, the lock order that keeps a cancel from deadlocking with anything, the rule for the 14 sample orders, and what a delete removes.
+
+The story asked TL to decide four things the schema leaves open; each is decided below and none needs DDL:
+
+| Question | Decision | Where |
+|---|---|---|
+| How does a cancel, a placement, a shoe save and a second cancel never deadlock? | One canonical order: `orders` row → `product_sizes` rows in `(product_id, size)` order, taken by `stock.Lock`. Nobody takes an order row while holding a count | §4 |
+| Does cancelling one of the 14 sample orders put pairs back? | **No.** Their pairs were never taken from the shelf | §3, E1 |
+| Where does the dealer's `transaction_no` come from? | A read-only scalar subquery over `payment_attempts` and `payment_notices`, inside `orders`' own SQL — no Go import of `payments`, no column on `orders` | §6, E3 |
+| What is the dealer list's default order? | `placed_at DESC, seq DESC` for this list only; the contract's `seq ASC` stays for every other collection | §5, E4 |
+
+## 2. Entities this story touches — none changed
+
+| Entity (defined elsewhere) | Read | Written | Never read or written |
+|---|---|---|---|
+| `orders` | every column of the dealer view (`id`, `number`, `placed_at`, `status`, `payment_method_id`, `paid`, `delivery_option_id`, `delivery_fee`, `carrier`, `tracking`, `eta`, `customer`, `phone`, `email`, `address`, `city`, `note`, `total`) and `is_sample` (by `Cancel`, never returned) | `status`, `carrier`, `tracking`, `eta`, `customer`, `phone`, `email`, `address`, `city`, `note` (`updated_at` by `trg_orders_updated_at`); the row itself on `DELETE` | `number`, `placed_at`, `payment_method_id`, `delivery_option_id`, `delivery_fee`, `total`, `paid` (only item 8's `MarkPaid` writes it), `is_sample`, `account_id`, `idempotency_key`, `source`, `invented`. A body that names one of the first seven is refused by name (services §3.3); the rest are not fields of an order |
+| `order_items` | `order_id`, `line_no`, `product_id`, `size`, `qty`, `unit_price` | deleted with the order (`ON DELETE CASCADE`) | never inserted or updated here: "changing the pairs of a placed order" is not built (SRS open question 4) |
+| `product_sizes` | `product_id`, `size`, `pairs` of the cancelled order's pairs (locked) | `pairs = pairs + qty` by `stock.Return`, **once per cancelled non-sample order** | no size is added or removed here; a size the dealer took off a shoe since the order was placed has no row to return to, which is correct (checkout ERD §2.1 lifecycle) |
+| `product_stock` (view) | by every shop read | — | The shoe's sizes, last-pairs list, sold-out list and total follow a return with no statement of their own (D3) |
+| `order_tokens` | the dealer's read ignores them | deleted with the order (`CASCADE`) | |
+| `payment_attempts`, `payment_notices` | `transaction_no` of the order's one success notice (§6) | deleted with the order (`CASCADE`); a **paid** order is never deleted | never written by this story: `payments` is their only writer |
+| `products` | `name`, `colourway`, `image` of each pair (live, draft or not), `name` of the first pair's shoe | — | `FOR SHARE`/`FOR UPDATE` is never taken on a shoe here |
+| `users`, `sessions` | nothing here: `auth.Require` reads them before a handler runs | — | |
+
+## 3. The status machine, and what a cancel does
+
+`orders.status` has the six values of `ck_orders_status`. The API alone decides a move (`UPDATE … WHERE status = $from`); the database only refuses a seventh word.
+
+```mermaid
+stateDiagram-v2
+    [*] --> placed
+    placed --> confirmed
+    confirmed --> packed
+    packed --> shipped
+    shipped --> delivered
+    placed --> cancelled
+    confirmed --> cancelled
+    packed --> cancelled
+    delivered --> [*]
+    cancelled --> [*]
+```
+
+| From | Allowed moves | Courier and customer fields (`carrier`, `tracking`, `eta`, `customer`, `phone`, `email`, `address`, `city`) | `note` |
+|---|---|---|---|
+| `placed` | `confirmed`, `cancelled` | writable | writable |
+| `confirmed` | `packed`, `cancelled` | writable | writable |
+| `packed` | `shipped`, `cancelled` | writable | writable |
+| `shipped` | `delivered` (no `cancelled`) | writable | writable |
+| `delivered` | none — no `status` at all, even the current one | refused | writable |
+| `cancelled` | none | refused | writable |
+
+The rule is judged on the status the order has **when the transaction holds its row lock**, before the move in the same body: one `PUT` may move a `shipped` order to `delivered` and set its `eta`.
+
+**What a cancel changes — in one transaction, once:**
+
+1. `orders.status` becomes `cancelled`, by a statement whose own `WHERE` repeats the allowed states (`status IN ('placed','confirmed','packed')`), so two cancels, a cancel and the 30-minute expiry, or a cancel and a late notice cannot both succeed.
+2. **If that statement changed a row and the order is not a sample**, every pair goes back: the order's `(product_id, size, sum(qty))` lines are read, their counts are locked with `stock.Lock` (the canonical order, §4), and `stock.Return` adds `qty` to each. A line whose size no longer exists changes zero rows and is not an error.
+3. `paid` is **not** touched. A paid order may be cancelled; it stays `paid = true`, and it can then never be deleted until the owner has refunded it in VNPay's portal by hand and the shop is told some other way (§7).
+
+**The 14 sample orders (`is_sample`) return no pairs (E1).** Migration 4's backfill wrote every count as 0, 1 or 3 from the shoe's seeded lists, independent of the sample orders (checkout ERD §4): their pairs were never taken from `product_sizes`. A dealer's cancel of `DOI-24816` therefore moves the status and nothing on the shelf; returning the pair would put a pair on sale that was never there. Orders placed through checkout (`is_sample = false`) always return their pairs. The 30-minute expiry already skips samples (item 8, `NOT is_sample`), so only the dealer's cancel can reach one.
+
+## 4. Locks: one order, no deadlock
+
+Every transaction of this story sets `SET LOCAL lock_timeout = '3s'` and runs under the request's 5-second context, as placement does: a stuck lock is a retryable `500 internal`, never a hang.
+
+| Transaction | Locks, in the order it takes them |
+|---|---|
+| `PUT` without a cancel; `DELETE` | the order's row `FOR UPDATE` (`orders.LockOrder`, item 8's one function that locks an order) — nothing else |
+| `PUT` that cancels; the 30-minute expiry (item 8) | the order's row → the order's counts `FOR UPDATE` in `(product_id, size)` order (`stock.Lock`) → `Return`'s updates, on rows already held |
+| `POST /v1/orders` (checkout, merged) | advisory key → shoes `FOR SHARE` by id → counts `FOR UPDATE` by `(product_id, size)` → `counters` → inserts of a **new** order, its pairs and token |
+| A late VNPay notice (item 8) | the order's row (`UPDATE … WHERE NOT paid`) → the attempt's key share |
+| A shoe save (item 10) | advisory `admin:records` → the shoe's row `FOR NO KEY UPDATE` → that shoe's counts by size |
+| One size's count (item 10) | that one count's row |
+
+**Why no cycle.** Edges only run *order row → counts*, *shoe row → counts* and *advisory → shoe → counts*. No transaction waits for an order row while holding a count or a shoe row: placement inserts a *new* order row nobody can yet refer to, and deleting an order's `order_items` takes no lock on the shoe they reference. Every transaction that holds several counts took them through `stock.Lock`'s `ORDER BY product_id, size`, so two of them meet in the same order.
+
+**One refinement of item 8's `Cancel` (E2).** Item 8 specified `stock.Return` called directly, "lines are sorted". Go sorts the strings by byte; PostgreSQL's `ORDER BY` uses the database's collation, and `Lock`, `LockShoe` and checkout use PostgreSQL's. For the sizes the shop sells the two agree, but two different sorters is a deadlock waiting for the first size written as `36 2/3` and `36.5`. `Cancel` therefore calls `stock.Lock` on the order's keys first (the very call `Place` makes) and `Return` second: `Return`'s own statements then touch only rows this transaction holds, and its Go-side sort cannot make anything wait.
+
+## 5. Statements, written out
+
+The values bound are always placeholders. The only text spliced into SQL is a column name from the allow-lists in the code, never from a request.
+
+```sql
+-- 1  lock the order (item 8's LockOrder; the row every writer of an order takes first)
+SELECT id, number, status, paid, total, placed_at, payment_method_id FROM orders WHERE id = $1 FOR UPDATE;
+
+-- 2a  a move that is not a cancel, together with whatever fields were sent (columns from the allow-list)
+UPDATE orders SET status = $2, carrier = $3, tracking = $4, eta = NULLIF($5, '')::date,
+                  customer = $6, phone = $7, email = $8, address = $9, city = $10, note = $11
+WHERE id = $1 AND status = $12;                      -- $12 = the status read under the lock; 0 rows = bug, 500
+-- only the columns the body named appear in SET; a body that names nothing issues no UPDATE at all,
+-- so {} changes nothing, not even updated_at
+
+-- 2b  a cancel (orders.Cancel; the same statement the expiry runs, plus the 30-minute rule's four terms there)
+UPDATE orders SET status = 'cancelled'
+WHERE id = $1 AND status IN ('placed','confirmed','packed')
+RETURNING is_sample;                                  -- 0 rows: changed = false, nothing else is touched
+SELECT product_id, size, sum(qty)::integer FROM order_items
+WHERE order_id = $1 GROUP BY product_id, size ORDER BY product_id, size;   -- skipped when is_sample
+-- stock.Lock(keys)   : SELECT product_id, size, pairs FROM product_sizes
+--                      WHERE (product_id, size) IN (SELECT * FROM unnest($1::text[], $2::text[]))
+--                      ORDER BY product_id, size FOR UPDATE
+-- stock.Return(lines): UPDATE product_sizes SET pairs = pairs + $3 WHERE product_id = $1 AND size = $2
+
+-- 3  delete (after the two refusals of services §3.4)
+DELETE FROM orders WHERE id = $1;   -- CASCADE: order_items, order_tokens, payment_attempts → payment_notices
+```
+
+`counters` is never touched, so deleting the newest order cannot make a number come back (D7): the next order is still one higher than any number ever issued.
+
+The dealer's reads are the one-statement `SELECT json_build_object(…)` of services §3.1 and the generic list of §3.2; they take no lock.
+
+**Access patterns this story adds**
+
+| # | Pattern | Frequency | Index used |
+|---|---|---|---|
+| 1 | Lock one order by id | Low (a dealer's save) | `orders` PK |
+| 2 | The order's pairs for a cancel | Low | `uq_order_items_order_id_line_no` (leading `order_id`) |
+| 3 | Lock and return the counts of those pairs | Low | `product_sizes` PK `(product_id, size)` |
+| 4 | Delete an order and its pairs, tokens and attempts | Rare | `orders` PK; the cascades use `uq_order_items_order_id_line_no`, `idx_order_tokens_order_id`, `idx_payment_attempts_order_id`, and `payment_notices`' `idx_payment_notices_attempt_id` |
+| 5 | **The dealer's list, newest first**, 20 to 100 rows, with the first pair and its shoe's name | Medium (every open of `/admin/orders`) | `idx_orders_placed_at (placed_at DESC)`, then `uq_order_items_order_id_line_no` and `products` PK per row. The tie-break `seq DESC` needs no index of its own: equal `placed_at` is rare and an incremental sort finishes it |
+| 6 | The list filtered by status or way to pay | Medium | `idx_orders_status_placed_at`, `idx_orders_payment_method_id_placed_at` |
+| 7 | The menu's count `status IN ('placed','confirmed')`, `limit 1` | High (every admin page) | `idx_orders_status_placed_at`; the count reads the index only |
+| 8 | A dealer's search by number or customer | Medium | none: `strpos` over folded text scans the orders the filters leave, a few milliseconds at 10,000 (project D6) |
+| 9 | One order's `transaction_no` (per row of a list, once for a single read) | Medium | `idx_payment_attempts_order_id`, then `uq_payment_notices_attempt_id_success` |
+
+Nothing here needs a new index: every statement of a write is by primary or unique key, and the reads are the ones the project ERD already indexed for the dealer's list (§3.12: "the dealer's list 'newest first'", "the dealer's Status filter", "the dealer's Payment filter").
+
+## 6. The transaction number: read, never stored on the order
+
+`transaction_no` is VNPay's `vnp_TransactionNo` of the order's one success notice, `""` when the order has none. It is **derived**, never a column of `orders` (a second copy of what `payment_notices` holds would drift from it, E3):
+
+```sql
+coalesce((SELECT n.transaction_no
+          FROM payment_notices n JOIN payment_attempts a ON a.id = n.attempt_id
+          WHERE a.order_id = <the order's id> AND n.is_success
+          ORDER BY n.received_at LIMIT 1), '')
+```
+
+At most one notice per order can be a success: `orders.MarkPaid` runs `UPDATE … WHERE NOT paid`, so once an order is paid every later notice is answered `02` and writes nothing (item 8 ERD §6), and `uq_payment_notices_attempt_id_success` backs it per attempt. The `ORDER BY … LIMIT 1` is there so that a future second provider can never make the subquery return two rows.
+
+The fragment is **written once** (`internal/orders`, one constant with the order's id alias as its only blank) and used by the two dealer statements: the single read (alias `o`) and the list's `transaction_no` column (alias `t`). It reads tables `payments` owns; that is a read, and the ownership rule of project §1.1 is about writers. It imports nothing from `payments`, so the import graph keeps item 8's rule that `payments → orders` and never the reverse. (`_base.md` §1.1's phrase "through `payments.TransactionNo`" is superseded by this: a Go function in `payments` would make `orders` import it, a cycle.)
+
+**Before item 8's tables exist** (the story's soft dependency) the constant is `''::text` and every `transaction_no` is `""`; the day item 8 is on `main` the constant is replaced by the fragment above, in one place. A backend PR cut after item 8 merges starts with the fragment.
+
+## 7. Delete: what goes, what stays
+
+`DELETE /v1/orders/{id}` removes only a **cancelled, unpaid** order, and everything that hangs off it:
+
+| Goes with it | By |
+|---|---|
+| `order_items` (its pairs) | `fk_order_items_order_id … ON DELETE CASCADE` |
+| `order_tokens` (the customer's access) | `ON DELETE CASCADE` |
+| `payment_attempts`, then their `payment_notices` | `ON DELETE CASCADE` (item 8). A cancelled, unpaid order can have attempts and *failed* notices; a *success* notice means `paid`, which refuses the delete |
+
+| Stays | Why |
+|---|---|
+| `product_sizes` counts | The pairs came back at the cancel; deleting the order moves nothing |
+| `counters.order_number` | Never decremented: the next order is numbered above every number ever issued |
+| The shoes the order named | `order_items.product_id` is `RESTRICT` from the other side: the shoe could not be deleted while the order held it, and now can (ADMIN-014) |
+
+A **delivered** order can never be deleted: only `cancelled` qualifies and a delivered order cannot be cancelled (story decision 5). A **paid** cancelled order is refused ("refund it in VNPay's portal first") because the notice's money is in the portal, not in the shop, and the order is the shop's only record that a customer paid.
+
+## 8. Decisions, and where this departs from earlier designs
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| E1 | Does cancelling a sample order return pairs? (item 8's design left it to this story) | **No** — `Cancel` reads `is_sample` from its own `UPDATE … RETURNING` and moves the status only | Always return: the 14 sample orders took nothing from `product_sizes`, so every cancel would add pairs that were never on the shelf and the "pairs in stock" figure would drift upward for ever. Refusing to cancel a sample: the dealer must be able to clear placeholders (the cancelled sample `DOI-24811` is already deletable) |
+| E2 | How does `Cancel` meet the lock order of checkout and item 10? | `stock.Lock` on the order's keys, then `stock.Return` | Item 8's `Return` alone with a Go-side sort: two sorters (bytes in Go, collation in PostgreSQL) for one lock order |
+| E3 | Where does `transaction_no` come from? | A read-only subquery in `orders`' dealer statements (§6) | `payments.TransactionNo(ctx, tx, id)` as `_base.md` §1.1 says: `payments` imports `orders`, so the call would be a cycle. A `transaction_no` column on `orders` copied by `MarkPaid`: a second place the number lives, and a change to item 8's merged `MarkPaid` |
+| E4 | The dealer list's default order | `placed_at DESC, seq DESC` (this list only) | The contract's `seq ASC` (`_base.md` §2.4): it shows the 14 oldest samples first and a new order on the last page, against ADMIN-011 AC-12 ("newest first"). `ListPage` has no default sort and cannot be edited by this story, so the server's default is the only place the order can be set |
+| E5 | May a paid order be cancelled? | Yes (story decision 6): `paid` stays true | Refusing: the dealer could not stop a parcel for an order that VNPay has paid; the refund is VNPay's portal's, not the shop's |
+| E6 | Does the delete wait for the 30 minutes VNPay's page stays open? | No (SC-21 deletes a just-cancelled order at once) | A hold on young cancelled orders: it would answer SC-21 with a 409. The cost is Q1 below |
+| E7 | Is a `PUT`'s lock `FOR UPDATE` or `FOR NO KEY UPDATE`? | `FOR UPDATE` through `LockOrder`, the one function every order writer calls | `FOR NO KEY UPDATE` (would let a replayed checkout's token insert proceed): a second locking statement for a wait of a few milliseconds |
+
+**Open questions** (none blocks the backend; each has its default)
+
+| # | Question | Owner | Default |
+|---|---|---|---|
+| Q1 | A customer who still has VNPay's page open pays after the dealer has cancelled **and deleted** the order. The notice finds no attempt (`01 Order not found`): the money is in VNPay's portal and the shop has no record. Should a cancelled order wait 30 minutes (VNPay's page expiry) before it can be deleted? | PM / owner | As designed: delete at once (SC-21). The window is at most 30 minutes and the order is cancelled, so the pairs are already back; the dealer sees the payment in VNPay's portal |
+| Q2 | The list's Edit dialog offers all six status labels (UI review should-fix); the server judges the move and the dialog shows its sentence | PM | As built: the dialog stays item 10's plumbing |
+
+## 9. Migration plan
+
+| | Plan |
+|---|---|
+| **Forward** | **None.** No DDL, no data change, no seed, no setting, no secret. The code is deployed; the server applies the migrations it already has before it listens |
+| **Backward** | None to run. Rolling the code back is safe: `PUT` and `DELETE /v1/orders/{id}` fall to the catch-all `404`, `GET /v1/orders/{id}` answers a dealer the public rules again (a token or `404`), and the list returns to the public columns and `seq` order. Nothing the story wrote needs undoing: the orders it changed hold ordinary values in existing columns |
+| **Safe on a populated table** | Yes. No statement locks more than one `orders` row and the counts of that order's pairs, for milliseconds; no `ALTER`, no index build, no table rewrite. A cancel returns pairs once, however many times it is sent, so replaying a deploy or a request is harmless |
+| **Data that exists only after it runs** | Cancelled orders whose pairs are back on the shelf; courier details and corrected customer details on existing columns; deleted orders (gone for good, with no record of who deleted them — SRS: no history). A deleted order cannot be restored; the pairs it held are already back |
+| **Sequencing** | Item 8's `orders.Cancel`, `orders.LockOrder` and `stock.Return` (services file of item 8 §5) are used here. Whichever of item 8's backend (PR #83) and this story's backend merges first creates them as that file writes them **plus** E1 and E2; the second adopts them. Item 10's changes to `data` and `stock` are additive to this story's, and the second to merge adapts (services §8) |
 

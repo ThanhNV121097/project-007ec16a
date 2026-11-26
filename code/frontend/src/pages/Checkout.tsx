@@ -4,6 +4,7 @@ import { T, useContent } from "../editable";
 import { usePageMeta } from "../seo";
 import { useCollection, useRecord } from "../data";
 import { clearCart, useCart, type CartLine } from "../lib/cart";
+import { useSavedDetailsFill } from "../lib/customer-accounts-sign-up-sign-in-my-orders";
 import { useDemo } from "../lib/demo";
 import {
   buildRequest, detailProblems, keyKeeper, payAddress, placeOrder, rememberOrder, useCurrentPrices, usePaymentOptions,
@@ -59,6 +60,7 @@ export default function Checkout() {
     headAlt: useContent("pages.checkout.head_alt"),
   };
   const [form, setForm] = useState<Details>({ name: "", phone: "", address: "", city: "", note: "" });
+  useSavedDetailsFill(setForm);
   const [problems, setProblems] = useState<string[]>([]);
   const [placing, setPlacing] = useState(false);
   const [closed, setClosed] = useState(false);
