@@ -2462,6 +2462,398 @@ The backend review blocks on any of these.
 4. **For Verify (not for building):** the Order page story's backend and UI (PR #65, plan item 6) — SC-13, SC-22, SC-24, SC-25 and SC-30 open `/orders/<id>` with the token this route returns.
 
 
+<!-- story 8: Online payment with VNPay -->
+# Service contracts — Online payment with VNPay (plan item 8, "S7")
+
+Module `payments` (and the changes it makes in `orders`, `stock`, `config` and `server`) · Requirements PAY-001 to PAY-005, the payment half of ORD-006 (items 4–6, AC-7, AC-8, AC-10, AC-11) and ORD-007 item 9 · Story `docs/payments/stories/online-payment-with-vnpay.md` · UI PR #75 · Tables: `docs/architecture/erd/online-payment-with-vnpay.md`.
+
+This file defines **the one new route (VNPay's notice), what changes in the three routes that already exist, the address and its signature, the three functions `orders` and `stock` export so that `payments` never writes another package's table, the 30-minute expiry, the settings, and the frontend's swap from its mock** — and nothing else. It extends project `services/_base.md` §3.5, §3.10, §3.11, §3.13, §3.17 and §2.8, S5's seam (`services/checkout-and-placing-an-order.md` §4) and S6's route (`services/order-page-and-pay-now.md` §3–§5, §12). It reuses the error envelope, the closed error catalog, the no-body rule and the `Idempotency-Key` table of `_base.md`, and adds **no error code** and no second list or error shape. The one exception to the envelope is the notice, and it is the project's own (`_base.md` §3.17). Every path is written the way the Go backend mounts it — **no `/api` prefix**: the browser's `/api/v1/payments/vnpay/ipn` reaches Go as `/v1/payments/vnpay/ipn`.
+
+## 1. Endpoints
+
+| # | Method and path | Auth | What this story does |
+|---|---|---|---|
+| 3.17 | `GET /v1/payments/vnpay/ipn` | VNPay's signature | **New** (§3.4): the only thing that marks an order paid |
+| 3.13 | `POST /v1/orders/{id}/payment` | the order's `X-Order-Token` | Its last answer changes from `409` "not available yet" to `200 {"payment_url"}` or `503`; one refusal is added (the 30 minutes ran out) and one bound (50 attempts); each success writes one `payment_attempts` row (§3.1) |
+| 3.10 | `POST /v1/orders` | none | `503 payment_unavailable` between the field checks and the transaction; `payment_url` is a real address (§3.2) |
+| 3.5 | `GET /v1/payment-options` | none | `is_available` becomes the key check; no change of contract (§3.3) |
+| 3.11 | `GET /v1/orders/{id}` | token, dealer, linked customer | **No change.** The result page polls it (§2) |
+| — | The 30-minute expiry | none (a goroutine in the API process) | New (§6) |
+
+**Mounting.** `payments.Register(mux, …)` mounts the one new route, the **literal** pattern `GET /v1/payments/vnpay/ipn`, and `server.New` gains that one line beside the provider registration (§7). Any other method on that path falls to the catch-all and answers `404 not_found` in the project envelope (it is not VNPay calling). The path has **three** segments after `/v1`, so it can never be shadowed by the `payments` collection's `GET /v1/payments/{id}` (two); a route-table test pins both (`GET /v1/payments/vnpay` is still the record of the way to pay, `GET /v1/payments/vnpay/ipn` is the notice).
+
+## 2. The mock, read and judged
+
+The UI PR (#75) adds `src/lib/mock/online-payment-with-vnpay.ts`, imported only by `src/lib/online-payment-with-vnpay.ts` (two places: `transport`, and the `demoHeld` line of `heldFor`). It is unreviewed input: its shape is compared with the contract, and **where `_base.md` §2.8 / §3.11 / §3.13 and S6 already decided a shape, they win.**
+
+| Mock | Contract | Judgment | Frontend change at the swap |
+|---|---|---|---|
+| `read(id, token)` answers `{status, body}` with `body = {id, number, status, paid}` | The public view of §2.8 (`GET /v1/orders/{id}`, §3.11) holds those four and more (`placed_at`, `items`, `total`, …) | **Sound.** The page reads only these four; names, types (`paid` is a boolean, `status` one of the six) and meaning match field for field | None |
+| Every answer is `{status, body}`, a failure to connect is status `0` | `src/lib/api.ts` resolves a 2xx with the parsed body and **throws `ApiError`** (`status`, `code`, `message`; a failure to connect is status 0, code `network`) | **The mock's shape is not the real client's.** It is hidden inside one file | `lib/online-payment-with-vnpay.ts` only: `transport.read/pay` become `api.get/post` calls, an `ApiError` is mapped to `{status, body: {error: code}}`, a network failure to status 0 (§8) |
+| **Any** `404` on a read is "no match" | A 404 is `not_found` only when it is the API's own body. A 404 that is not the envelope (a gateway's own page, a mis-routed `/api`) reaches `api.ts` as `ApiError` 404 with code `internal` (S3 §5.1; S6 decision P10) | **Too loose, and the one departure that matters.** With "any 404", a broken proxy rule would tell every customer "We can't match this payment to an order on this browser", and SC-33 (never the can't-match view when the shop cannot be asked) would fail in production while passing against the mock | `readOrder` returns `no-match` **only** for status 404 **and** `error === "not_found"`; every other failure is `check-failed`. A test with a 404 that has another code |
+| `pay(id, token)` answers 200 `{payment_url}`, 409, 503 and 404 | §3.1: 200, 404, 400, 409 (six sentences), 503, 500 | **Sound** for what the page reads: only the status and `payment_url`; the page draws one line for 503 and for every other failure and re-reads the order after a 409. The 409 sentences are never read. The page follows an address only when `payAddress()` accepts it (`https:`) | None. **Note for Test:** a run whose `VNPAY_PAYMENT_URL` is `http:` builds the address but no browser page follows it; use the default (https) or an https stand-in |
+| The 400 ms delay, `paidAfterMs`, `readFails`, the eight demo orders and `demoHeld` | — | Mock-only controls. **No delay, fault, sleep or "pay now" route, header or query parameter is added to the backend**: the 6-second and 30-second cases are made by the Test lead with a signed notice sent at the right moment, the 500 by an unreachable database | Go with the mock; delete `demoHeld` and the `[…storedOrders(), ...demoHeld]` line |
+| In `no-match` after a **404 for a held token** the hook still returns `order = {id, number}`, so `Actions` draws "View your order" | The page's own rule (SC-32, story §5): one same view, "Track an order" pill, nothing about any order | TL's UI review, should-fix 1 | `usePaymentReturn` returns `order: null` whenever the phase is `no-match`; a test with a held token and a `not_found` 404 |
+| `Wire` is declared again beside `lib/orders.ts`'s `Wire` with a different `body` type | — | Nit (UI review 2) | Keep one name in each file or, at the swap, name this one `Answer`; not required |
+| Reference pattern `^(DOI-\d{1,15})-\d{1,9}$` | The shop's reference is `<order number>-<n>`, `n` from 1 to 50 | **Sound.** The number is read **only** to choose which stored token to ask with; it is never sent anywhere else | None |
+| Content keys `pages.payment_return.*` added to `content.json` in the UI PR | The file is frozen for stories | Accepted by the UI review as the same one-time lift the orders and staff stories received: **new keys only**, additive | None. The backend PR does not touch `content.json` |
+
+## 3. Contracts
+
+### 3.1 `POST /v1/orders/{id}/payment` (project §3.13) — what changes
+
+**Purpose, auth, request** — as S6 §3: "Pay now" and the result page's "Try again"; the order's `X-Order-Token` (the linked customer's session joins through `authorize`, S6 §12.4); no body. **Headers on every answer** — `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`.
+
+**Order of checks** — S6 §3.1 steps 1 and 2 are unchanged (access `404`, a body `400`). Steps 3 to 5 become:
+
+| # | Check | Refusal | Notes |
+|---|---|---|---|
+| 3 | **State**, in this order: cancelled → paid → a way to pay the shop does not complete online → **its 30 minutes have run out** | `409 conflict`, one of four **different** sentences (below) | `decide(ref, providers, now)`: the clock is `Options.Now`, passed in. The state rules live in **one** function (§5.3) that the route calls with the row `authorize` returned and the provider calls again with the row it has locked, so the sentences cannot drift. "Run out" is `now ≥ placed_at + 30 minutes` |
+| 4 | **Availability**: the `vnpay` provider is **always registered** in a running shop; `Available()` is false while either key is missing | `503 payment_unavailable`, "Online payment is not available right now. Please try again later." | After state, as the story says: a stranger still gets `404`, a paid order still `409`, an order whose time ran out `409`. With **no** provider registered the sentence "Online payment is not available yet." is still what `decide` says — a shop built with `orders.Options{}` (tests) — but **no running shop gives it** (SC-6) |
+| 5 | **The address**: the provider's `PaymentURL`, inside the route's 5-second deadline and the provider's own 3-second child (S6 §12.2, Q2) | `200 {"payment_url": "<address>"}`; an error, a timeout or an empty address is `500 internal` — except a `*orders.Refusal`, which is the `409` it names | Inside it the order's row is locked and the state is judged **again** (a notice or a cancel may have landed since step 3); a refusal there is the same `409` with the same sentence |
+
+**Success** `200` `{"payment_url":"https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_Amount=314000000&vnp_Command=pay&…&vnp_SecureHash=<hex>"}` — built by the backend with **no call to VNPay** (§4.2). **Each success inserts exactly one `payment_attempts` row and changes nothing else**; every refusal inserts none.
+
+| Code | HTTP | Trigger | Body message |
+|---|---|---|---|
+| `not_found` | 404 | Step 1, byte for byte S6 §3.3 (a dealer session without the token is a `404` too) | "Not found." |
+| `bad_request` | 400 | Step 2: a body was sent | "This call takes no body." |
+| `conflict` | 409 | Cancelled (paid or not) | "This order was cancelled, so it cannot be paid." |
+| `conflict` | 409 | Already paid (and not cancelled) | "This order is already paid." |
+| `conflict` | 409 | Unpaid, not cancelled, a way to pay that is not VNPay (`cod`, `bank`, `momo`, any other id): the 14 sample orders | "This order cannot be paid online." |
+| `conflict` | 409 | Unpaid, not cancelled, **its 30 minutes have run out** — a sample VNPay order, or a placed order the check has not reached yet (within 30 seconds of the deadline). **New** | "The time to pay this order has run out." |
+| `conflict` | 409 | The order already has **50** attempts. **New** (ERD E9) | "This order has had too many payment attempts. Please place a new order." |
+| `payment_unavailable` | 503 | `VNPAY_TMN_CODE` or `VNPAY_HASH_SECRET` is not set | "Online payment is not available right now. Please try again later." |
+| `internal` | 500 | The access statement or the attempt transaction fails or times out; the address cannot be built (§4.2: an origin that is not `http(s)://host[:port]`, an amount that overflows `×100`); an empty address. Generic body; the cause is logged beside the order id and request id, **never the token, the secret or the address** | "Something went wrong. Please try again." |
+
+The 409 bodies carry **no** `errors` key. The page branches on none of the sentences; a person reads the message. Every earlier reference still leads to its order, so a customer who opened a second page and paid on the first is found (PAY-001 item 5).
+
+**Not idempotent, by design.** Each success is a new attempt with a new reference (`_base.md` §2.6); two presses at the same moment get two different references (§4.2: the order's row lock). **No rate limit beyond the 50-attempt bound.**
+
+### 3.2 `POST /v1/orders` (project §3.10) — what changes
+
+Order of checks, with the new step in bold: body (415, 413, 400) → `Idempotency-Key` (400) → every field at once (422, including `payment` not offered: `cod`, `bank`, `momo` and unknown ids are `422` naming `payment`, SC-10) → **the keys (503)** → the transaction (409, 201, 200).
+
+| Change | Rule |
+|---|---|
+| **The 503 gate** | After the field checks and before `place`: if the provider registered for `req.Payment` is not `Available()`, answer `503 payment_unavailable` with "Online payment is not available right now. Please try again later." **No order, no counter move, no pair taken, no token, no attempt** — nothing has been written or locked yet (SC-8). The gate also answers a replay of a used `Idempotency-Key` while the keys are missing; the first send's order stays, and the customer finds it by number and phone (`/track`). Accepted: a replay is rare and the keys are an owner setting |
+| **`payment_url`** | After the commit, outside the transaction, `PaymentURL` is asked (S5 §4) with a 3-second limit. It makes its own transaction (§4.2): the order's row is locked and one attempt is stored. **An error, a timeout or an empty address leaves `payment_url` `""`** with a log line; the order stays saved, unpaid, `placed`, its pairs taken (SC-7), and the browser lands on the order page, which offers "Pay now". A replay builds a **new** attempt when the order is still payable (§2.6) |
+| `Place` | **Unchanged.** A line of `create.go`, not of the transaction |
+
+### 3.3 `GET /v1/payment-options` (project §3.5) — what changes
+
+Nothing in the contract. `is_available` is `provider.Available()`: `true` only when **both** `VNPAY_TMN_CODE` and `VNPAY_HASH_SECRET` are set (non-blank after trimming). With a key missing the row is **still listed** with `is_available: false`, so Checkout draws the VNPay row, the alert and a disabled "Place order" (SC-9). The rule S5 added for the time before this story — "a way to pay with no provider registered is reported available" — stays in the code for a shop built without providers (tests); no running shop reaches it, because `server.New` always registers `vnpay` (§7).
+
+### 3.4 `GET /v1/payments/vnpay/ipn` (project §3.17)
+
+**Purpose** — VNPay's server-to-server notice of a payment's result, and **the only thing that marks an order paid**. **Traces to** — PAY-002, PAY-003 item 9, PAY-005. **Auth** — none: the signature is the proof. The browser never calls it, the result page never marks anything, and a session is neither read nor needed. **Request** — a query string only; a body is ignored. **Method** — `GET` only.
+
+**Two exceptions to the project's contract, both VNPay's** (project §3.17, restated because they decide the code): every `vnp_*` parameter is accepted — no undefined-field `400`, the signature is the validation, and an extra `vnp_` field is simply signed with the rest — and **every** answer is `HTTP 200` with `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store` and a body of **exactly** `RspCode` and `Message`, never the error envelope:
+
+| `RspCode` | `Message` | Meaning |
+|---|---|---|
+| `00` | `Confirm Success` | The notice was received (a success was recorded, or a failure was) |
+| `01` | `Order not found` | The reference is none of ours |
+| `02` | `Order already confirmed` | The order is already paid, or a twin notice won the race |
+| `04` | `Invalid amount` | The amount is not the attempt's |
+| `97` | `Invalid signature` | Not VNPay's, not ours, not parseable, or the keys are not set |
+| `99` | `Unknown error` | The database failed; **nothing is half-written**, and VNPay sends it again |
+
+**Query parameters** — what VNPay sends: `vnp_TmnCode`, `vnp_Amount`, `vnp_BankCode`, `vnp_BankTranNo`, `vnp_CardType`, `vnp_PayDate`, `vnp_OrderInfo`, `vnp_TransactionNo`, `vnp_ResponseCode`, `vnp_TransactionStatus`, `vnp_TxnRef`, `vnp_SecureHashType`, `vnp_SecureHash`, and any other `vnp_` field. A parameter that does not start with `vnp_` is ignored and is not signed. The return address VNPay gives the customer's browser carries **the same signed fields**; a customer who replays their own return address here delivers VNPay's true word, which is no exception to "only VNPay's signature marks an order paid" — and a replayed failure is one row (ERD E3).
+
+**Processing, in this order.** The first rule that fails answers and changes nothing; every check before the first write is arithmetic or cryptography, so a stranger costs no database work.
+
+| # | Check | Answer | Writes |
+|---|---|---|---|
+| 0 | The keys are set; the raw query is at most **8 KiB**; it parses (`url.ParseQuery`; a malformed escape or a `;` is a failure); **no `vnp_` name appears twice** | else `97` | nothing |
+| 1 | `vnp_SecureHash` is present, 128 hex characters, and equals the HMAC-SHA512 of the received `vnp_` parameters (§4.3), compared in constant time and without regard to case; **and** `vnp_TmnCode` is the shop's. An empty query fails here | else `97` | nothing |
+| 2 | `vnp_TxnRef` is the `reference` of a `payment_attempts` row of provider `vnpay` — any earlier reference of an order qualifies | else `01` | nothing |
+| 3 | `vnp_Amount` is 1 to 18 ASCII digits, is divisible by 100, and `÷ 100` equals the attempt's `amount` (which is the order's `total`, and cannot change) | else `04` (a non-numeric amount too) | nothing |
+| 4 | The order is not already `paid` | else `02` | nothing |
+| 5 | **A failure notice** — `vnp_ResponseCode` is not `00` **or** `vnp_TransactionStatus` is not `00` (a cancelled payment, code `24`, included; an absent status too): insert a `payment_notices` row with `is_success = false`, `ON CONFLICT … DO NOTHING` (§6 of the ERD) | `00` | one row, or none for an identical twin; the order is untouched, stays unpaid, its status unchanged |
+| 6 | **A success notice** — both are `00`: one transaction: `orders.MarkPaid` (`UPDATE … WHERE id = $1 AND NOT paid`; **0 rows → `02`**, rolled back), then insert the notice (`ON CONFLICT (attempt_id) WHERE is_success DO NOTHING`; **0 rows → `02`**, rolled back), commit | `00` | `orders.paid = true`; `status` `placed → confirmed`, every other status unchanged; one success row |
+| — | A database error at any statement, a deadline, a lock timeout | `99` | the transaction is rolled back: the order unpaid, no notice kept |
+
+**What a success does to the order** — `paid` is set and a `placed` order becomes `confirmed`; `confirmed`, `packed`, `shipped` and `delivered` keep their status. **An order already `cancelled` is marked paid and stays `cancelled`** (PAY-002 item 9, SC-16): the dealer sees it paid and refunds it in VNPay's portal. **No pair moves**: the pairs were taken at placing and returned at the cancel; a late payment neither takes them again nor returns them again.
+
+**What is kept** (ERD §2.2) — `vnp_TransactionNo`, `vnp_BankCode`, `vnp_Amount ÷ 100`, `vnp_ResponseCode`, `vnp_TransactionStatus`, `is_success` (both `00`), `vnp_PayDate` read as Vietnam time into `paid_time` (NULL when absent or unparseable — a payment is never refused for a date). A missing text field is `''`. **No card number is received, and none is stored.**
+
+**Two identical notices at the same moment** — both pass checks 0–4 (the order is unpaid when each reads it); both run `MarkPaid`; the second waits on the order's row, finds `paid` true when it resumes and gets `02`. Exactly one `00`, one row. Twenty at once: one `00`, nineteen `02` (SC-12).
+
+**Notes** — p95 ≤ 2 s over 100 sequential notices (about four statements). The handler runs under a 5-second deadline and `SET LOCAL lock_timeout = '3s'`. **The log line** holds the code answered and, once the reference is known, the order's number and the request id — never the query, the signature, a transaction number or the hash secret; the access log records the route and never the query (project §2.1). With the keys unset the endpoint answers `97` to everything. VNPay cannot reach a `.localhost` run: the cases send **the same request VNPay sends, signed with the sandbox secret** (§4.4). **No IP allow-list and no rate limit**: the proxy chain hides VNPay's address and VNPay's retries would be refused by a limit; the signature, checked before any database work, is the guard (§10, S12).
+
+## 4. The address, the signature, the settings
+
+### 4.1 Settings and `Available()`
+
+| Key | Kind | Rule |
+|---|---|---|
+| `VNPAY_TMN_CODE` | owner's setting (requested in the console), read only from the environment | Trimmed. Blank = not set. Sent in the address as `vnp_TmnCode`; never secret from VNPay, never sent to a browser except inside an address |
+| `VNPAY_HASH_SECRET` | **secret**, requested in the console, read only from the environment | Trimmed. Blank = not set. Held in a type that prints as `[redacted]` under `%v`, `%+v`, `%#v` and `slog`, so it cannot reach a log line or an error by accident. Never in a variable that begins with `VITE_`, an address, a response or a log |
+| `VNPAY_PAYMENT_URL` | optional | VNPay's payment page. **Default** `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html`. Must be an absolute `http://` or `https://` address with a host and **no query and no fragment**; anything else stops the server at start-up with a message that names the key and **not its value**. Going live changes this value, never code (PAY-005 item 3) |
+| `PUBLIC_BASE_URL` | optional | The shop's own origin, `https://shop.example.com` (an `http://` one for a local run): scheme and host with an optional port, **no path, query or fragment**; a trailing `/` is removed; anything else stops the server at start-up. When set it **is** the origin of `vnp_ReturnUrl`; when empty the origin is read from the request (§4.2) |
+
+`Available()` is **both** of the first two non-blank. **A missing key never stops the server** (SC-8): it starts, `/healthz` answers 200, the options list says `is_available: false`, the route and the placing answer `503`, and the notice answers `97` to everything. `.env.example` names all four keys with **no value** (SC-39).
+
+### 4.2 The address — `PaymentURL`
+
+`PaymentURL(ctx, o orders.Payable, c orders.Client) (string, error)` is S5's seam. **Only `o.ID` is trusted**: the provider re-reads the order itself, so an amount, a number or a time passed in from anywhere is never used (SC-1). Inside one transaction:
+
+1. `SET LOCAL lock_timeout = '2s'`; `orders.LockOrder(ctx, tx, o.ID)` — the order's row `FOR UPDATE` (§5.2). A missing order is an error (`500`).
+2. The state is judged again under the lock by the one function of §5.3 (cancelled, paid, not online, 30 minutes run out) and a refusal is returned **as the `*orders.Refusal`** — the route answers it `409`, `create` logs it and leaves `payment_url` `""`.
+3. `SELECT count(*) FROM payment_attempts WHERE order_id = $1` — `k`. **`k = 50` is a refusal** ("This order has had too many payment attempts. Please place a new order."). The reference is `<order number>-<k+1>` (`DOI-24818-1`, `DOI-24818-2`, …): at most 100 characters, different for every attempt, holding the order number. Two asks at the same moment cannot read the same `k`: the second waited on step 1.
+4. `INSERT INTO payment_attempts (order_id, provider, reference, amount, expires_at)` with the locked row's `total` and `placed_at + 30 minutes`.
+5. The parameters are built (below), signed (§4.3) and joined into the address. **A failure here rolls the transaction back** — no attempt row without an address. Then commit.
+
+| Parameter | Value | Source |
+|---|---|---|
+| `vnp_Version` | `2.1.0` | constant |
+| `vnp_Command` | `pay` | constant |
+| `vnp_TmnCode` | the terminal code | `VNPAY_TMN_CODE` |
+| `vnp_Amount` | `total × 100`, decimal digits (314000000 for 3.140.000 ₫) | the **locked row**; computed with an overflow check — an overflow is an error, which no real order reaches |
+| `vnp_CurrCode` | `VND` | constant |
+| `vnp_TxnRef` | the reference | step 3 |
+| `vnp_OrderInfo` | `Thanh toan don hang DOI-24818` (ASCII, no diacritics, at most 255) | the locked row's number |
+| `vnp_OrderType` | `other` | constant |
+| `vnp_Locale` | `en` | constant (the shop's pages are English) |
+| `vnp_ReturnUrl` | `<origin>/payment/return` | `PUBLIC_BASE_URL` when set; else `X-Forwarded-Proto` and `X-Forwarded-Host` of the request, else its scheme and `Host` (the `Origin` of `orders.Client`). **The origin is validated either way**: scheme `http` or `https`, a host of letters, digits, `.` and `-` with an optional `:port`, nothing else — a request that forges a host that fails this makes the call an error (`500`), not an address that sends a customer somewhere unintended |
+| `vnp_IpAddr` | the right-most `X-Forwarded-For` entry (`orders.Client.IP`), else the connection's address; `127.0.0.1` when neither parses as an IP | the request |
+| `vnp_CreateDate` | now, `yyyyMMddHHmmss`, Vietnam time (fixed `+07:00`, no tzdata — S9) | the clock |
+| `vnp_ExpireDate` | `placed_at + 30 minutes`, same format and zone — **the order's deadline, not now + 30** (SC-4: an order placed 10 minutes ago expires in 20) | the locked row |
+| `vnp_SecureHash` | §4.3, **last** | |
+
+If `vnp_ExpireDate` is not later than `vnp_CreateDate` once formatted (less than one second left), the address is **not built**: the refusal is "The time to pay this order has run out." An order with 30 seconds left is built, expiring at the same deadline (SC-4, PAY-001 boundary row). `vnp_BankCode` is not sent: the customer chooses on VNPay's page.
+
+The address is `VNPAY_PAYMENT_URL` + `?` + the signed query string of §4.3 — the very string that was signed, so it cannot differ from it. **The secret is never in it**: the terminal code and the signature are (SC-38).
+
+### 4.3 Signing and verifying (pure functions, one file)
+
+- **The string that is signed** is made from **every `vnp_` parameter except `vnp_SecureHash` and `vnp_SecureHashType`**; parameters whose value is **empty are left out** (VNPay's own reference code does so, and the shop's address has none); names are sorted bytewise; each is `QueryEscape(name) + "=" + QueryEscape(value)` — Go's `url.QueryEscape` is `application/x-www-form-urlencoded`, a space is `+`; joined by `&`.
+- **The signature** is the lower-case hex HMAC-SHA512 of that string, keyed with `VNPAY_HASH_SECRET`.
+- **To verify**, the same string is built from what was received and compared with the received hash: it is hex-decoded (a wrong length or a non-hex character fails at once), then `hmac.Equal` — constant time, so case does not matter.
+- **Known limit, written so nobody rediscovers it.** The sign string uses Go's escaping. VNPay's reference code (Java's `URLEncoder`) does not escape `*` and escapes `~`; the values the shop sends (digits, letters, spaces, `-`, a URL) and the values VNPay sends back (digits, letters, codes, the order info the shop wrote) contain none of the characters where they differ. If a real sandbox notice ever fails to verify, this function and the empty-value rule are the two places to look, and they are one file.
+- **Test vectors.** Dev computes at least two signatures with an **independent** tool (`openssl dgst -sha512 -hmac "<secret>"` over a typed-out string) and writes them as literals in the test, so the algorithm cannot change without a test failing: one with a space, a `:` and a `/` in values (the return address), one with an empty value that must be left out.
+
+### 4.4 How a case makes VNPay's notice (for Test)
+
+A case that needs VNPay's call builds the parameters VNPay would send for an attempt (`vnp_TmnCode` = the run's terminal code, `vnp_Amount` = the order's total × 100, `vnp_BankCode`, `vnp_BankTranNo`, `vnp_CardType`, `vnp_OrderInfo`, `vnp_PayDate`, `vnp_ResponseCode`, `vnp_TransactionNo`, `vnp_TransactionStatus`, `vnp_TxnRef` = the attempt's reference), signs them by §4.3 with the sandbox secret the run holds, and sends `GET /api/v1/payments/vnpay/ipn?<the same string>&vnp_SecureHash=<hex>` with no session and no token. **A case that needs VNPay's real page is marked as such**, and is only fully observed with a public address registered in VNPay's portal. Without the keys every case that needs a built address or a verified notice is UNVERIFIED (the instrument it lacked: `VNPAY_TMN_CODE` and `VNPAY_HASH_SECRET`); only SC-8 and SC-9 are observed.
+
+## 5. Packages, and the changes to code that already exists
+
+### 5.1 Who changes what
+
+| Package | Change |
+|---|---|
+| `internal/payments` (new) | The **only writer** of `payment_attempts` and `payment_notices`. Files (names are Dev's; each stays well under 300 lines): the provider (`Available`, `PaymentURL`), the address builder and the signature (pure, no I/O), the attempt transaction, the notice handler and its processing, the expiry loop, `Register`. It imports `orders` (the seam's types, `LockOrder`, `MarkPaid`, `Cancel`, `CheckPayable`, `Refusal`) and `httpx`; it never writes `orders`, `order_items` or `product_sizes` itself, and it imports no other package's store |
+| `internal/orders` | **Imports nothing from `payments`** (the project's S2 rule: `payments` imports `orders`, so the reverse would be a cycle). New `settle.go` holds `PayWindow`, `LockOrder`, `MarkPaid`, `Cancel` and `CheckPayable` (§5.2, §5.3). `pay.go`: `decide` takes the clock and calls `CheckPayable`; one new sentence. `create.go`: the 503 gate (§3.2). Nothing in `Place` changes. The package still holds no HTTP client |
+| `internal/stock` | One new function, `Return` (§5.4), called only by `orders.Cancel` |
+| `internal/config` | Four settings and the `Secret` type (§7) |
+| `internal/server` | `orders.Register` is given the provider; one `payments.Register` line (§7) |
+| `cmd/api` | `go payments.RunExpiry(ctx, pool, log, time.Now)` beside `go auth.RunPurge` |
+| `data`, `auth`, `admin`, `catalogue`, `ratelimit`, every migration already merged | **No change** |
+
+### 5.2 Three functions `orders` exports, each inside the caller's transaction
+
+```go
+// PayWindow is how long an unpaid order may wait, counted from placed_at. The route's refusal,
+// payment_attempts.expires_at, VNPay's vnp_ExpireDate and the expiry all use this one value.
+const PayWindow = 30 * time.Minute
+
+// LockOrder reads one order's row FOR UPDATE; ErrNotFound when there is none.
+func LockOrder(ctx context.Context, tx pgx.Tx, id string) (Locked, error)
+//   SELECT id, number, status, paid, total, placed_at, payment_method_id FROM orders WHERE id = $1 FOR UPDATE
+
+// MarkPaid sets paid, and moves a "placed" order to "confirmed", once: changed=false means it was
+// already paid. It is the only statement in the project that sets orders.paid for an online order.
+func MarkPaid(ctx context.Context, tx pgx.Tx, id string) (changed bool, err error)
+//   UPDATE orders SET paid = true, status = CASE WHEN status = 'placed' THEN 'confirmed' ELSE status END
+//   WHERE id = $1 AND NOT paid
+
+// Cancel moves one order to "cancelled" and puts its pairs back on the shelf, ONCE. changed=false
+// means the order was not in a state this cancel may act on, and nothing was returned.
+func Cancel(ctx context.Context, tx pgx.Tx, id string, rule CancelRule) (changed bool, err error)
+```
+
+**`Cancel` is the one single-cancel rule**, written here because this story's expiry is its first caller and the dealer's cancel (items 10 and 17) must be the same statement, so that **a pair is never returned twice**:
+
+```sql
+UPDATE orders SET status = 'cancelled'
+WHERE id = $1 AND status IN ('placed','confirmed','packed')
+  -- the 30-minute rule adds these four, and only it:
+  AND NOT paid AND NOT is_sample AND payment_method_id = ANY($2) AND placed_at <= $3
+RETURNING id
+```
+
+Zero rows: return `changed=false`, touch nothing (the order was already cancelled, paid, shipped, a sample, too young, or another run won). One row: read the pairs — `SELECT product_id, size, sum(qty)::integer FROM order_items WHERE order_id = $1 GROUP BY product_id, size ORDER BY product_id, size` — and call `stock.Return` with them **in the same transaction**. `CancelRule` is the zero value for a dealer's cancel and an expiry value (`PlacedBefore = now − PayWindow`, `Ways = thirtyMinuteWays`) for the 30-minute rule. Because the status test is in the `UPDATE`'s own `WHERE`, two cancels of one order at the same moment serialise on the row: the second re-reads it after the first commits, finds it `cancelled`, changes zero rows and returns nothing (SC-23). A shoe's sold-out list, last-pairs list and "pairs in stock" are the view `product_stock`, so they are right the moment the counts are (ERD §3).
+
+### 5.3 One function holds the state rules
+
+```go
+// PayState is what the rules read of an order; Ref (the route's row) and Locked (the provider's) both give one.
+type PayState struct{ Status, Payment string; Paid bool; PlacedAt time.Time }
+
+// CheckPayable returns nil, or the *Refusal of the FIRST rule that fails, in this order:
+//   cancelled → paid → a way to pay that is not offered → now >= PlacedAt + PayWindow
+func CheckPayable(s PayState, now time.Time) *Refusal
+```
+
+`decide(ref, providers, now)` is `CheckPayable` followed by "no provider registered" and "not `Available()`" (the project's S6 table, one case added, as S6 §12.4 said S7 would). The provider's step 2 (§4.2) calls the same function with the locked row, so a refusal found under the lock has the **same sentence** the route would have given. The two sentences this story adds are constants beside S6's four: "The time to pay this order has run out." (`CheckPayable`) and, owned by `payments` because only it counts attempts, "This order has had too many payment attempts. Please place a new order."
+
+### 5.4 `stock.Return`
+
+```go
+// Return puts pairs back, one statement per line in (product, size) order, in the caller's transaction.
+func Return(ctx context.Context, tx Tx, lines []Line) error
+//   UPDATE product_sizes SET pairs = pairs + $3 WHERE product_id = $1 AND size = $2
+```
+
+Unlike `Take`, **zero rows is not an error**: a size the dealer took off the shoe since the order was placed has no count to return to (checkout ERD §2.1 lifecycle — that is correct, the size no longer exists). Lines are sorted, so two cancels never lock the same two counts in opposite orders. `stock_test.go` gains: two lines of one shoe, a line for a size that no longer exists, a sort check.
+
+## 6. The expiry — an unpaid order is given up after 30 minutes (PAY-003)
+
+`payments.RunExpiry(ctx, db, log, now func() time.Time)` runs in the API process, started by `main` after the migrations.
+
+| Aspect | Rule |
+|---|---|
+| Cadence | **Once at start-up, then every 30 seconds** until `ctx` is cancelled. So an order is cancelled within 31 minutes of being placed (30:00 plus at most one tick), and an order that fell due while the server was down is cancelled at boot. An order exactly 30 minutes old is cancelled by the next run (`placed_at <= now − PayWindow`) |
+| Candidates | `SELECT id FROM orders WHERE NOT paid AND NOT is_sample AND status IN ('placed','confirmed','packed') AND payment_method_id = ANY($1) AND placed_at <= $2 ORDER BY placed_at LIMIT 100` — the partial index's predicate, repeated literally, so `idx_orders_unpaid_open` serves it. `$1` is `thirtyMinuteWays = {"vnpay"}` — a constant in code, as "offered" is (order-page ERD E2): MoMo joins it with PAY-021, and a bank transfer is never in it (its 24-hour rule is PAY-020's). `$2 = now − PayWindow`, the **application's clock** (ERD E6) |
+| Per candidate | **One transaction each**: `SET LOCAL lock_timeout = '3s'`, `orders.Cancel(ctx, tx, id, expiry rule)`, commit. The candidate list is read outside any lock, so the conditions are **judged again under the row lock** by the `UPDATE`'s own `WHERE` (§5.2): an order paid, cancelled by the dealer, shipped or moved by anyone since the list was read is left exactly as it is, and its pairs are not touched |
+| Left alone | An order that is paid; already cancelled (by the dealer at minute 5, say — its pairs were returned then, and are **not** returned again at minute 31); `shipped` or `delivered` while unpaid (the dealer cannot cancel a shipped order, so the rule does not either: it stays as it is, unpaid); one of the 14 samples `DOI-24804` to `DOI-24817` (`is_sample`, so the dashboard's figures hold; an order placed through checkout is never made one); one younger than 30 minutes. A `confirmed` or `packed` unpaid order **is** cancelled (SC-22) |
+| A batch | At most 100 per query; the run repeats while a query is full, and **stops after 25 seconds** whatever is left (the rest is the next tick's). One order failing (a lock timeout, a database error) is logged with its id and the run goes on to the next |
+| A panic | Recovered per run and logged; the loop keeps ticking |
+| Two runs at once | Cannot happen in one process (one loop); in two processes the row lock and the `UPDATE`'s own `WHERE` make the second change nothing (SC-23). No advisory lock is needed |
+| A notice at the same moment | Both serialise on the order's row. **If the cancel wins**, the order is `cancelled` with its pairs returned once, and the notice then finds it unpaid and marks it `paid` while it stays `cancelled` (SC-16): the dealer refunds it. **If the notice wins**, the order is paid and the cancel's `WHERE NOT paid` changes zero rows: nothing is returned. In neither case are pairs returned twice or taken again |
+| Logging | One `Info` line per order given up (the order's id and number — not secret); an `Error` per failure; **nothing** when nothing is due, so a quiet shop's log has no tick lines |
+| Shutdown | `ctx` is cancelled; an in-flight transaction is rolled back and the next boot finds it still due |
+
+The result page and the order page need nothing from the expiry but its effect: the order reads `cancelled`, "Pay now" answers `409` (SC-25), and the cancelled view is the one the order page already draws.
+
+## 7. Wiring and settings
+
+```go
+// config.Config gains (§4.1):
+VNPayTmnCode, VNPayPaymentURL, PublicBaseURL string
+VNPayHashSecret Secret                    // prints as [redacted]; read only inside payments' signing function
+
+// server.New — the provider is registered even with no keys, so the answer is 503, never "not available yet":
+vn := payments.NewVNPay(payments.VNPayConfig{TmnCode: cfg.VNPayTmnCode, HashSecret: cfg.VNPayHashSecret,
+        PaymentURL: cfg.VNPayPaymentURL, PublicBaseURL: cfg.PublicBaseURL}, pool, log, nil /* time.Now */)
+orders.Register(mux, pool, log, orders.Options{Providers: map[string]orders.Provider{"vnpay": vn}})
+payments.Register(mux, vn, log)           // GET /v1/payments/vnpay/ipn
+```
+
+- **`config.Load`**: `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAYMENT_URL`, `PUBLIC_BASE_URL` are read once, trimmed. A **malformed** `VNPAY_PAYMENT_URL` or `PUBLIC_BASE_URL` (§4.1) is an error that stops the start-up and names the key, never the value; a **missing** key never does. `config_test.go` gains the cases; no error text or `%+v` of the config holds the secret.
+- **`.env.example`** (`code/backend/`): the two existing lines stay, and two are added with **no value**: `VNPAY_PAYMENT_URL=` ("empty means VNPay's sandbox page; going live changes this value, not the code") and `PUBLIC_BASE_URL=` ("the shop's public origin, no path; leave empty when the edge proxy forwards `X-Forwarded-Proto` and `X-Forwarded-Host`"). Nothing else in `.env.example`, compose or the deploy files changes: the owner's values reach the backend through the console (`run_project`) and `.env.deploy` as the two keys already do.
+- **The owner's side** (already requested in the console: `request_secret` ×2, `request_setup` ×1): register `<public origin>/api/v1/payments/vnpay/ipn` in VNPay's merchant portal. Until that is done on a publicly reachable deployment VNPay cannot confirm a payment, and a real sandbox payment stays "confirming" on the result page — the shop is not at fault and no code works around it.
+- **At start-up** a key that is missing is logged once at `warn`, by **name only** (`VNPAY_TMN_CODE is not set; online payment is unavailable`), never a value — the project's observability rule (`_base.md` §7) — and the server goes on. Every `99` answered to VNPay is logged at `error` beside the order's number when it is known, and a failed expiry at `error` with the order's id.
+- **Deadlocks.** The project's rule applies (`_base.md` §5.1): a deadlock (`40P01`) is retried once, in the attempt, the success notice and the cancel. None is expected — every transaction here takes the order's row first (ERD §6) — so the retry is a guard, not a design.
+- **Never in a log**: the access log records the route and not the query; the notice's own log line is §3.4's. A test pays, sends a bad-signature notice and a 503, with a distinctive secret, and asserts the secret is in **no** captured log line, response body or header (SC-38).
+
+## 8. The frontend at the swap (the backend PR's frontend half)
+
+All of it is in `src/lib/online-payment-with-vnpay.ts`, its test, and the deletion of the mock. `PaymentReturn.tsx` and `PaymentResult.tsx` change by one expression (row 3).
+
+| # | Change | Why |
+|---|---|---|
+| 1 | `transport.read(id, token)` becomes `api.get("orders/" + encodeURIComponent(id), undefined, { "X-Order-Token": token })` and `transport.pay(id, token)` becomes `api.post("orders/" + encodeURIComponent(id) + "/payment", undefined, { "X-Order-Token": token })` — **no body, sent once, never retried** (`api.ts` retries a failed GET once and a POST never; if `api.post` would serialise something for an undefined body, use the same lower-level call that #65's `requestPayment` uses — S6 §7 row 4: any byte is a `400`). An `ApiError` becomes `{status: e.status, body: {error: e.code}}`; a network failure (`status` 0, code `network`) and anything else thrown becomes `{status: 0, body: undefined}`. The token goes **only** in that header, never in an address, a query or a log, and only the token of the order the reference names is ever sent | §2 row 2; S6 §7 rows 1, 2, 4 |
+| 2 | `readOrder`: **`no-match` only for status 404 and `error === "not_found"`**; a resolved body that is not an order, and every other failure (any other 404, 401, 5xx, network), is `failed`, drawn as the "could not check" state | §2 row 3 (the one departure from the mock) |
+| 3 | `usePaymentReturn` returns `order: null` whenever the phase is `no-match`, so a held token the shop answers `not_found` for draws the one cannot-match view with the "Track an order" pill and nothing about any order | TL's UI review, should-fix 1 |
+| 4 | Delete `src/lib/mock/online-payment-with-vnpay.ts` and the `[…storedOrders(), ...demoHeld]` line of `heldFor` (it reads `storedOrders()` of `src/lib/orders.ts` only — the token store's own reader; no second store, no new storage key) | The mock is deleted with the story that replaces it; the CI wiring warning for a mock still imported goes quiet |
+| 5 | `src/test/payment-return.test.tsx`: the spies on `transport` become `vi.mock("../lib/api")` keeping the **real `ApiError`**. Keep the 14 cases' assertions; add: the header is sent with the held token of exactly the reference's order and never in the address; **no token held → no request at all**; a held token and a `not_found` 404 → no-match with no "View your order"; a 404 with another code → "could not check"; a network failure → "could not check"; the `POST` has no body and is sent once; a 409 re-reads the order | SC-30, SC-32, SC-33 |
+| 6 | `api.ts` is **not edited here**: the call uses the one optional trailing `headers` parameter that "Order page and Pay now" adds (`decision.api_client_headers`, PR #65). No second fetch wrapper | §11 gate |
+
+**Not edited by this story** (SC-37): `Checkout.tsx`, `Order.tsx`, `PayNow.tsx`, `src/lib/orders.ts`, `src/lib/order-page-and-pay-now.ts`, `theme.css`, `index.css`, `App.tsx` (its import and route line are already in PR #75), `content.json` (the `pages.payment_return.*` keys are already in PR #75), `design/pages.json` (its line too), `package.json`. **No mock module is added**; there is none for this story after the swap.
+
+## 9. What Dev's backend PR carries as tests
+
+Database cases run in CI (Postgres via `TEST_DATABASE_URL`) and **skip without it**: their first real run is CI, and Verify must confirm they ran and did not skip. The pure ones run everywhere.
+
+| Test | Proves |
+|---|---|
+| **Signature**: the two independent vectors of §4.3; names sorted; an empty value left out; a repeated `vnp_` name; a hash one character off, with another secret, absent, 127 or 129 characters, non-hex, upper-case (accepted); a foreign `vnp_TmnCode` | SC-3, SC-13 |
+| **Address**: every parameter of §4.2 exact for a 3.140.000 ₫ order (`vnp_Amount=314000000`, `DOI-24818-1` then `-2`); the amount comes from the locked row, not from `Payable` and not from `?amount=`; `vnp_ExpireDate` = `placed_at + 30 minutes` in `+07:00` for an order 10 minutes old (20 minutes from now) and for one 29 minutes 30 seconds old; one with under a second left is the "run out" refusal; `PUBLIC_BASE_URL` over the forwarded host over `Host`; a forged host that fails the origin rule is an error; `VNPAY_PAYMENT_URL` is the base of every address; the secret is in no address; the reference is at most 100 characters; a total whose `×100` overflows is an error | SC-1, SC-3, SC-4, SC-39 |
+| **`CheckPayable` and `decide`** over every status × paid × way to pay × provider (none, closed, available) × clock (29:59, 30:00, 31:00): the order of the rules, the six sentences, the provider never asked for a refused order | SC-4, SC-6 |
+| **Attempts, against PostgreSQL**: two asks → `-1`, `-2`, two rows; **20 simultaneous asks → 20 distinct references `-1`…`-20`**; the 51st ask → `409` and no row; an order 31 minutes old → `409`, no row; a cancelled, a paid and a `cod` sample order → `409`, no row; a success notice for the **first** reference still pays the order | SC-2, SC-4, SC-6 |
+| **Keys missing** (a provider built with no keys): `Available()` false; `GET /v1/payment-options` lists `vnpay` with `is_available` false; `POST /v1/orders` with a valid body → `503` **after** a 422 and before any write (no order, `counters` unchanged, no pair taken, a counting fake of `DB` sees no write); "Pay now" → `503` after `404` and `409`; the notice → `97` to everything; `/healthz` 200 | SC-8, SC-9 |
+| **Placing with keys**: `201` with a non-empty `payment_url` whose `vnp_Amount` is the order's `total × 100`; a `payment` of `cod`, `bank` or `momo` → `422` naming `payment`, no order; an attempt that cannot be stored (a `DB` that fails on the insert) → `201`, `payment_url` `""`, the order saved, unpaid, `placed`, its pairs taken | SC-5, SC-7, SC-10 |
+| **The notice's table test** over a fake `DB`: every row of §3.4 — `00`, `01`, `02`, `04`, `97`, `99` — as HTTP 200 with a body of exactly `RspCode` and `Message`, never the envelope; the order of the checks (a notice wrong in two ways gets the first code); an extra `vnp_` field signed with the rest is accepted; no query, an 8 KiB-plus query and a malformed escape are `97`; a notice with the keys unset is `97`; a failing store → `99`, **nothing written**, and the same notice sent again is processed normally | SC-13, SC-14, SC-17 |
+| **The notice against PostgreSQL**: a success pays the order, `placed → confirmed` (and `packed` stays `packed`), keeps the transaction number, bank, `amount ÷ 100`, codes and pay time; the same notice again → `02`; **two at once and, in a second run, twenty** → exactly one `00`, the rest `02`, one success row; a failure (`24`, or status not `00`) → `00`, order unpaid, one failure row, a **second identical failure → still `00`, still one row**; a success for the next attempt afterwards pays; a success for a **cancelled** order → `00`, `paid` true, status `cancelled`, **the shelf unchanged**; a wrong amount `04`, an unknown reference `01`; 100 runs of "bad signature / unknown reference / wrong amount" change no order and write no row; 100 runs of two identical notices pay once | SC-11 to SC-16, SC-19 |
+| **`orders.Cancel` and `stock.Return`**: a 2-pair order of size `38` returns 2 and the view's lists and total agree; an order of two shoes returns both; a size taken off the shoe meanwhile is skipped without an error; **two `Cancel`s at once return the pairs once**; the dealer's rule (no expiry conditions) and the expiry's rule differ exactly by the four extra conditions | SC-20, SC-23 |
+| **The expiry**: a loop test with a fake clock (runs at start-up, then every 30 s; stops on `ctx`; a panic in one run does not stop the next); against PostgreSQL: a 31-minute `vnpay` order `placed` is cancelled and its pairs returned; an order at **exactly** 30 minutes is cancelled by the next run; **left unchanged**: 29 minutes, paid at 2 hours, `shipped` and `delivered` unpaid at 2 hours (status, paid, pairs), a **sample** unpaid and 2 hours old (and the pairs of the 14), an order the dealer cancelled at minute 5 (its pairs are not returned again at minute 31); **cancelled**: `confirmed` and `packed` unpaid at 2 hours; **a notice and a run at the same moment**, repeated: always exactly one of "paid and untouched, pairs still taken" or "cancelled once, pairs returned once, then paid with status `cancelled`" | SC-20 to SC-25 |
+| **Settings and secrecy**: `config.Load` reads the four keys trimmed, defaults the payment page, refuses a malformed `VNPAY_PAYMENT_URL` or `PUBLIC_BASE_URL` naming the key and not the value, starts with a key missing; `%v` and `%+v` of the config and every error hold no secret; **a distinctive secret is in no captured log line, response body or header** after a payment, a bad-signature notice and a 503; `.env.example` names the four keys with no value | SC-38, SC-39 |
+| **Route table**: `GET /v1/payments/vnpay` is still the way-to-pay record, `GET /v1/payments/vnpay/ipn` is the notice, a `POST` to it is the `404` envelope, and the notice's route pattern is the only new one | §1 |
+| **Schema** (ERD §8): the three files apply in order; each constraint refuses what it is for | ERD §2 |
+
+## 10. Decisions, and conflicts with merged ones
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| S1 | Is the provider registered when the keys are missing? | **Always.** `Available()` is the key check. A shop with no keys answers `503 payment_unavailable` (SC-8); a shop with no provider would answer `409 "not available yet"` and `is_available: true`, which is the pre-story behaviour the owner's decision ends | Registering only with both keys: the route would answer a 409 for a missing key, Checkout would not draw its alert, and `GET /v1/payment-options` would say `true` |
+| S2 | Where is the 503 for placing? | In `create`, after the field checks, before `place` (§3.2); it also answers a replay while the keys are missing | Inside `Place`: a transaction opened and a counter touched to say something a setting already says. After the transaction: an order with pairs taken that can never be paid |
+| S3 | Which clock decides "30 minutes"? | **The application's**, passed in everywhere (ERD E6); `PayWindow` is one constant | `now()` in SQL: skew between two hosts, and untestable without sleeping |
+| S4 | What does the route say when the 30 minutes have run out but the check has not yet cancelled the order? | `409 conflict`, "The time to pay this order has run out." — a new sentence under the existing code. The same for a sample VNPay order, which the check never cancels (VNPay would refuse an expired address) | A new code `expired` or HTTP `410`: the catalog is closed and `conflict` already means "a state rule"; the page branches on no sentence |
+| S5 | Bound on attempts | 50 per order, a `409` (ERD E9) | A rate limit; no bound |
+| S6 | A failure notice for an order already paid | `02`, nothing written — the order of the checks is the contract (SC-14: "…then already paid") | Recording it with `00`: the order's story is closed; a stale failure adds nothing |
+| S7 | Statement order of a success notice | `MarkPaid` first, then the notice (ERD E4) | Notice first (project text) |
+| S8 | What exactly is verified | §3.4 rows 0–1: keys set, ≤ 8 KiB, parses, no repeated `vnp_` name, 128 hex, constant time, our `vnp_TmnCode`. A repeated name is refused because "the first value" and "the last value" are two different truths and the signature covers neither | Accepting the first of a repeated name, as `getParameter` would: two readers could disagree about which one was signed |
+| S9 | Who may write which table, with `payments` on top of `orders` | `payments` writes only its two tables and calls `orders.LockOrder`, `MarkPaid`, `Cancel`; `Cancel` calls `stock.Return`; **`orders` never imports `payments`** (project S2) | `payments` writing `orders` directly: the order's `status` would have two writers and the single-cancel rule two copies |
+| S10 | The expiry's mechanism | One transaction **per order**, the candidate list read unlocked and judged again by the `UPDATE`'s own `WHERE`; every 30 seconds and at start-up (§6) | One batch under `FOR UPDATE SKIP LOCKED` every 60 s (project §4): a failing order would roll back up to 99 others, and 60 s plus processing can pass 31 minutes. Cost: with a second instance, one waits up to `lock_timeout` on an order the other is cancelling, then changes zero rows |
+| S11 | Does the browser's return get a server endpoint that verifies the return address's signature? | **No.** `GET /v1/orders/{id}` with the order's token is the truth the page needs; the page never believes the address about money or status | A `…/return` endpoint that verifies the signature and reports: a second place that could be made to say "paid", and the page would then be believing something other than the order |
+| S12 | IP allow-list or rate limit on the notice address | **Neither** (§3.4) | An allow-list of VNPay's addresses: the proxy chain hides them and a list goes stale. A limit: refuses VNPay's own retries |
+| S13 | How does the secret stay out of logs | A type that prints `[redacted]`, read as a string only inside the signing function, plus the captured-log test (§9) | Discipline: one `%+v` of a config in an error is enough to leak it |
+| S14 | A forged `Host` / `X-Forwarded-Host` | The origin is validated (§4.2); `PUBLIC_BASE_URL` is the way to pin it in a deployment | Trusting the header: a caller could have the return address point anywhere it likes (the answer goes only to the caller, but the rule costs one regexp) |
+| S15 | A replay of a used placing key | Builds a **new** attempt when the order is still payable (project §2.6); it counts toward the 50 | Returning the old address: it may be expired or its page already used |
+| S16 | The 404 of the result page | `no-match` only for the API's own `not_found` (§2) | The mock's "any 404" |
+| S17 | A malformed optional setting | Stops the start-up and names the key (a typo in `VNPAY_PAYMENT_URL` would otherwise send customers to the wrong page for ever); **a missing key never does** (SC-8) | Falling back to the sandbox silently in production |
+
+### Conflicts with merged decisions
+
+1. **Project §4 (asynchronous work) puts the expiry in the `orders` package, every 60 s, as one batch with `FOR UPDATE SKIP LOCKED`; the project's ownership table says `payments` calls `orders.Cancel`.** Both cannot hold. Resolved: `payments.RunExpiry` (PAY-003 is the payments module's, and its set of ways grows with PAY-021 and PAY-020) calls `orders.Cancel`, which `orders` owns; the cadence is 30 s and the mechanism is S10. The observable contract — within 31 minutes, once, idempotent under row locks — is the project's and the SRS's.
+2. **Project §3.17 step 6 and ERD §3.17** (statement order of the success path; failed notices "may repeat"): ERD E4 and E3. Answers and ownership unchanged.
+3. **S6 §3.1** "the route writes nothing, opens no transaction and takes no lock": true until a provider exists, and S6 §12.4 said this story would change it. On success it now opens one transaction, locks the order's row and writes one attempt. Every refusal still writes nothing.
+4. **S6 §5 `decide(ref, providers)`** gains the clock and one case, as S6 §12.4 said; it stays pure. S6 listed four 409 sentences (Q4); the route now has **six** (cancelled, already paid, cannot be paid online, run out, too many attempts, and — only in a shop with no provider — "not available yet").
+5. **S5 §4** "nothing in `Place` changes": true. The gate is in `create`.
+6. **Settings (`_base.md` §5.2)** — "none is a default in the source": the one exception is `VNPAY_PAYMENT_URL`'s sandbox default, which the same table already states. `PUBLIC_BASE_URL` and `VNPAY_PAYMENT_URL` are validated at start-up (S17), which the table does not say; it adds a refusal for a malformed value and none for a missing one.
+
+I read `services/_base.md` §2.1–2.8, §3.5, §3.10, §3.11, §3.13, §3.17, §4, §5.1, §5.2, §7; `services/checkout-and-placing-an-order.md` §3.1, §4, §5, §7; `services/order-page-and-pay-now.md` §3–§12; `docs/payments/SRS.md` (all five requirements); `docs/orders/SRS.md` ORD-006, ORD-007; and the code on `main` (`internal/orders/{orders,create,place,options,read}.go`, `internal/stock/stock.go`, `internal/config`, `cmd/api/main.go`, `internal/server/server.go`, the migrations) and the diff of PR #65.
+
+## 11. Ordering with the open stories, and hand-over
+
+| Matter | Rule |
+|---|---|
+| **Gate: PR #65 ("Order page and Pay now", backend) must be on `main` first** | This story's backend edits `decide` and `payURL` (it adds the clock and a case) and the frontend swap uses the `headers` parameter of `api.ts` that #65 adds. Nothing here can be cut earlier. PR #50 (checkout) is merged |
+| PR #69 ("Customer accounts", backend) | Edits `authorize` and `place`; this story does not touch either. Whichever of #65 and #69 merges second adapts (S6 §12.4); this story is cut after both |
+| UI PR #75 | Merges first with its mock (approved, zero Blocking). The backend PR is cut from `main` after it, swaps the client (§8) and deletes the mock. If #75 is still open when the backend PR is built, re-apply its own files without the mock, as #65 did for #41, and close #75 as superseded |
+| "Dealer handles orders" (item 17) and "Manage … orders" (item 10) | Read an order's VNPay transaction number by ERD access pattern 6; cancel through `orders.Cancel` (§5.2). **Open for item 17's design:** `Cancel` returns an order's pairs whatever the order is, and the 14 sample orders never took a pair from `product_sizes` (S5's backfill counts the shelf as it was seeded). A dealer cancelling a sample order would put a pair on the shelf that was never taken; the expiry never reaches a sample, so this story is unaffected, and the guard (return no pairs when `is_sample`) belongs to whichever story first lets a dealer cancel one |
+| "More ways to pay" (PAY-020 to PAY-022) | Adds MoMo to `thirtyMinuteWays`, a 24-hour way for bank transfers in the same loop, `provider = 'momo'` attempts and its own notice route, the QR block on the order page. **No migration for the index**, no change to the notice's checks |
+| The owner | Supplies `VNPAY_TMN_CODE` and `VNPAY_HASH_SECRET` (sandbox first, from a sandbox merchant at sandbox.vnpayment.vn) and registers `<public origin>/api/v1/payments/vnpay/ipn` in VNPay's merchant portal (declared in the console already). Until both are in, the shop cannot complete any order: checkout shows "Online payment is not available right now. Please try again later." and placing answers `503` |
+| Test lead | The keys are a precondition of the run (story §6); every criterion that needs an address or a verified notice is UNVERIFIED without them, and only SC-8 and SC-9 are observed. A notice is signed by the case itself (§4.4). Age an order with `UPDATE orders SET placed_at = …` and set a status directly (ERD §9); a 31-minute order is also unpayable (`409` before any attempt). The `vnpay` sample orders are unpaid or paid as seeded: a sample is never cancelled by the check and "Pay now" for an unpaid one is the `409` "run out". **No test-only route, header or knob exists**; the 6-second and 30-second cases of the result page are made by sending a signed notice at the right moment. DB-backed Go tests skip without `TEST_DATABASE_URL`: confirm they ran |
+| Real VNPay | The signature and the empty-value rule (§4.3) are proven offline against vectors made by an independent tool, **not** against VNPay's own servers. A first sandbox payment on a public address is the one observation that closes that risk; if a real notice fails to verify (`97`), `payments`' one signing file is where to look |
+| Dev, backend step | The three migrations (ERD §8); `payments` (new, §5.1); `orders/settle.go`, the 503 gate and the changes to `decide` (§3, §5); `stock.Return`; config, `server.New`, `main`, `.env.example` (§7); the swap (§8); the tests of §9. If anything in §3–§7 cannot be done as written, reply with the blocker rather than widening the contract |
+
+## 12. Migration plan
+
+**Three migrations, no data migration, no setting migration** — the plan, the order, the backward steps and the reason each is safe are in `docs/architecture/erd/online-payment-with-vnpay.md` §8. In short: two new empty tables (nothing to lock or rewrite) and one `CONCURRENTLY` index on `orders` (no write lock). **Forward**: the server applies them on boot, before listening, so the notice route and the expiry never run against a schema that is not there. **Backward**: revert the backend PR; the tables stay and the previous build neither reads nor writes them; the two `DROP TABLE` files exist for local resets only, because they delete the record a refund is made against. Deploying with the keys unset is safe: the shop starts, completes no order, and the notice answers `97`.
+
+## 13. Where each criterion is enforced
+
+| Criteria | Enforced by |
+|---|---|
+| SC-1, SC-2, SC-3, SC-4 | §4.2 (the locked row, the reference, the deadline), §4.3, §3.1 step 3 and `CheckPayable` |
+| SC-5, SC-7, SC-10 | §3.2 (`payment_url`, the field checks, `Place` unchanged); S5's `Checkout.tsx` follows the address |
+| SC-6 | §3.1 (the six sentences, the order of checks, S6's single 404); §8 row 1 (the page edits nothing) |
+| SC-8, SC-9 | §3.2 gate, §3.1 step 4, §3.3, §3.4 row 0, §4.1; Checkout's own alert (S5) |
+| SC-11 to SC-17 | §3.4 (rows 0–6), ERD §2.2 and §6, §5.2 `MarkPaid` |
+| SC-18 | §3.4's first paragraph, S11: nothing but the notice writes `paid`; `POST …/payment` writes an attempt only |
+| SC-19 | §3.4 (rows before the first write cost no database work; p95), §9 |
+| SC-20 to SC-25 | §5.2 `Cancel`, §6, ERD §2.3 and §6 |
+| SC-26 | §3.1 (a fresh reference on each press), §6 (the cancel), S6's page |
+| SC-27 to SC-35 | PR #75 (the page and its tests); §8 rows 2, 3 and 5 for the 404 rule and the cannot-match view |
+| SC-36 | The whole chain: §3.2, §3.4, §6 and the page |
+| SC-37 | §8 "Not edited by this story" |
+| SC-38, SC-39 | §4.1, §7 (`Secret`, `.env.example`), §9 "Settings and secrecy" |
+
+
 <!-- story 9: Dealer sign-in and protected admin area -->
 # Service contracts — Dealer sign-in and protected admin area (plan item 9, "S8")
 
@@ -2727,6 +3119,739 @@ New packages: `internal/auth`, `internal/ratelimit`. Go tests that need a databa
 ## 11. Deployment order
 
 Migration `users_and_sessions` applies before the listener (nothing reads it until `EnsureAdmin`, which runs right after). With neither setting supplied the shop runs and nobody can sign in as admin; supplying them and restarting makes the account. No data is migrated and no existing endpoint changes except `GET /v1/orders` (§6) and the access-log fields (§3.6). Rolling the code back leaves the two tables in place, which nothing older reads.
+
+
+<!-- story 10: Manage shoes, lines, categories, reviews and orders -->
+# Service contracts — Manage shoes, lines, categories, reviews and orders (plan item 10, "S9")
+
+Module `admin` · Requirements ADMIN-010, ADMIN-011, ADMIN-012, ADMIN-013, ADMIN-014, ADMIN-015, ADMIN-004 (write half) · Story `docs/admin/stories/manage-shoes-lines-categories-reviews-and-orders.md` · UI PR #79 · Tables: `docs/architecture/erd/manage-shoes-lines-categories-reviews-and-orders.md` (one new table, `uploads`).
+
+This file **extends** `services/_base.md` §2.4 (the two views), §3.2 / §3.3 (reads), §3.6 (serving a picture), §3.22 (writes), §3.23 (one size's count) and §3.24 (upload). Their routes, statuses, fields and error codes **stand**; this file adds the order in which a write is refused, every field rule and sentence, the guard that lets a whole-form save carry counts without overwriting an order's pairs, the rules `_base.md` leaves open, the functions each package must offer, and the frontend's swap from its mock. It adds **no error code** to the catalog (§2.3) and no second list or error shape. Every path is written as the Go backend mounts it — **no `/api` prefix**.
+
+The order half of the original item (an order's status, courier, cancel, delete) is plan item 17 and is not here. `PUT` / `DELETE /v1/orders/{id}` are **not** mounted by this story; until item 17's backend lands they answer `404` through the catch-all.
+
+## 1. Endpoints
+
+| # | Method and path | Auth | Status | Traces to |
+|---|---|---|---|---|
+| 3.22 | `POST /v1/products`, `/v1/lines`, `/v1/categories`, `/v1/reviews` | dealer | `201` + record | ADMIN-010, ADMIN-012 |
+| 3.22 | `PUT /v1/<collection>/{id}` (same four) | dealer | `200` + record | ADMIN-010, ADMIN-013, ADMIN-015 |
+| 3.22 | `DELETE /v1/<collection>/{id}` (same four) | dealer | `204` | ADMIN-014 |
+| 3.23 | `PATCH /v1/products/{id}/sizes` | dealer | `200` | ADMIN-015 item 4 |
+| 3.24 | `POST /v1/uploads` | dealer | `201` | ADMIN-012 |
+| 3.6 | `GET /v1/uploads/{name}` | public | `200` image | ADMIN-012 |
+| 3.2 / 3.3 | `GET /v1/products`, `/products/{id}`, `/reviews`, `/reviews/{id}` and the other seven collections' reads | public / dealer | unchanged routes, **new rule: two views** (§2) | ADMIN-013 |
+
+"Dealer" is `auth.Require(auth.Admin, auth.Staff)`: a customer session answers `403 forbidden`, no session `401 unauthenticated`, both before the body is read. A collection with no write route — `delivery`, `payments`, `shop`, `sizes`, `faqs` — has **no** pattern for `POST` / `PUT` / `DELETE`, so the server's catch-all answers `404 not_found` to every caller, visitor and dealer alike (SC-3). The same holds for `PUT` / `DELETE /v1/products` with no id and for any other method on these paths.
+
+**Mounting.** One function, `admin.RegisterRecords(mux, db, log)` (new files in `internal/admin`, §9), registers the twelve literal patterns, the `PATCH`, `POST /v1/uploads` and `GET /v1/uploads/{name}`. `server.New` gains one line after `admin.RegisterStaff`. No new setting, secret or `.env.example` line. On every answer of the write routes: `Content-Type: application/json; charset=utf-8` (not on `204`), `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`.
+
+## 2. Reading: the visitor's view and the dealer's view
+
+`_base.md` §2.4 already says what the two views are; on `main` only the visitor's exists and it serves **every** shoe and review. This story makes the split real.
+
+**Which view a request gets.** The one the **session** says: `auth.FromContext` with role `admin` or `staff` is the dealer view; no session, an unreadable cookie or a `customer` session is the visitor view. There is no query parameter, header or separate route that asks for a view (decision D2).
+
+| Collection | Visitor and customer | Dealer (admin, staff) |
+|---|---|---|
+| `products` | Only `status = 'live'`. Not `price_listed`, `_source`, `_invented`, `pairs` | Every shoe, drafts included, **plus** `price_listed`, `_source`, `_invented` and `pairs` |
+| `reviews` | Only `status = 'live'` **and** whose shoe is `live` (decision D3) | Every review, plus `_source`, `_invented` |
+| `lines`, `categories`, `delivery`, `payments`, `shop`, `sizes`, `faqs` | Every record, no bookkeeping | Every record, plus `_source`, `_invented` |
+| `orders` (`GET /v1/orders`, `internal/orders`) | not public | **Unchanged by this story** — it keeps serving exactly the columns it serves today; `ListHandler` ignores the view (story decision 7) |
+
+`pairs` is an object `size → whole number` whose keys are exactly the shoe's `sizes`: `{"38": 4, "39": 2, "40": 0}`; `{}` for a shoe with no sizes. It is read from `product_sizes`, never stored on the shoe.
+
+**What the visitor view changes, everywhere the shoe appears.** One condition, `t.status = 'live'`, is part of the one statement every read uses (`data.listSQL`, `data.recordSQL`), so it holds for the list and its `total`, `q` search, every filter and range, the `size` filter, sorting, and a shoe by id with no case to forget:
+
+- a draft shoe is absent from `GET /v1/products`, from a `q` search and from a `size=` match; `GET /v1/products/<id>` of a draft is `404 not_found` with **exactly** the body of an id that does not exist (`Not found.`); `GET /v1/products?status=draft` is `200` with `total: 0` (the condition and the filter are ANDed);
+- a hidden review is absent from `GET /v1/reviews` and `?product=<id>` and is `404` by id;
+- `GET /v1/product-filters` is **unchanged**: it already reads live shoes only, "even for a dealer" (§3.4).
+
+A `Bookkeeping` column or `pairs` is still **never filterable or sortable**, for any caller: `?pairs=…`, `?sort=pairs`, `?_source=…` answer `400 bad_request` naming the field (§2.4, "Private fields", which now lists `pairs`).
+
+**Cost to the frontend: none.** The shapes are those of §2.8 and the registry's names; the admin pages already call these routes, now with the dealer's cookie. A signed-in dealer's own browser therefore also sees the dealer view on the customer pages (`/shop`, a draft's `/shop/<id>`): a draft shows to them. That is by design (D2); the verifier checks SC-11 and SC-27's customer-side halves with **no session** (a private window, or `curl` without the cookie).
+
+**`limit`.** The admin pickers ask for `pageSize: 200`; `limit` above 100 is served as 100 (§2.4), so the review form's shoe picker lists the first 100 shoes in `seq` order. Accepted at launch (12 shoes); a search-as-you-type picker is a later chore, not this story.
+
+## 3. Writing: how a request is read and refused
+
+### 3.1 The order of checks, the same for the four collections
+
+| # | Check | Answer |
+|---|---|---|
+| 1 | The route exists | `404 not_found` (catch-all) |
+| 2 | A dealer session | `401 unauthenticated` / `403 forbidden` |
+| 3 | `Content-Type` is `application/json` (a `charset` is allowed) — `POST`, `PUT`, `PATCH` | `415 unsupported_media_type` |
+| 4 | The body is at most **256 KiB** (two long texts of 5,000 characters of 4-byte letters, plus a dozen short ones, are under 60 KiB) | `413 payload_too_large` |
+| 5 | The body is **one JSON object** (and nothing after it) | `400 bad_request`, `errors.body` "Send one JSON object." |
+| 6 | `PUT` / `DELETE`: `{id}` matches `^[a-z0-9][a-z0-9._-]*$` and is at most 100 characters | `404 not_found`, no query sent |
+| 7 | Every field is judged on its own (§3.3), **all faults collected**; nothing is read from the database except the existence of the record (next row) | — |
+| 8 | If step 7 found faults: `PUT` first checks the record exists (`SELECT EXISTS`, no lock) | `404` when it does not exist, else `422 invalid` with **every** fault of steps 7 and 9 that can be known without a lock |
+| 9 | In the transaction, under the lock (ERD §6): the record exists; every named line, category, shoe and uploaded picture exists | `404` / `422 invalid` (the faults of step 7 and these, together) |
+| 10 | The state rules: the counts of a shoe against `seen_pairs` (§5) | `409 conflict` |
+| 11 | Write, recalculate (§6), read the record back in the dealer view **inside the same transaction**, commit | `201` / `200` |
+
+A refusal at any step stores nothing: the transaction is rolled back, and a `422` never opens one when step 7 alone decides it (a `POST`). A failed statement is `500 internal` (`Something went wrong. Please try again.`) with the cause in the log beside the request id and never in the body. A `POST` is not idempotent: sending it twice makes two records (the UI disables the button while a save is in flight).
+
+### 3.2 Reading the body
+
+- A field that is not in the collection's table below, or is read-only, is **`422`** naming the key (the SRS-forced exception of §2.5): sentence `Not a field of this record.` for an unknown key, `The shop works this out; it cannot be set.` for a derived one, `The shop makes the id.` for `id` on a `POST`. `id` in the body of a `PUT` is read and discarded (the path's id is the one changed).
+- A value of the wrong JSON type (a string for a number, a number for text, an array for an object) is `422` naming the key, never `400`.
+- Whole numbers are JSON numbers written as digits (`-?[0-9]+`): `2.5`, `1e2`, `2.0` and `"3"` are not whole numbers.
+- Text is trimmed; leading and trailing white space never reaches the database. Length counts **characters** (runes), so a Vietnamese letter with marks counts once. A value that is not valid UTF-8 or holds U+0000 is refused: `<Label> holds a character that is not allowed.`
+- `PUT` changes **only the fields sent**; `{}` is a `200` that changes nothing. `null` **clears** an optional field (text → `""`, a line or category → unset, `since` or a review's stars → empty) and is `422` on a required one (`Name is needed.`) and on a field with no empty value (`status`, `featured`, `is_new`, `released`, `date`).
+- On a `POST` a field that is absent takes its default: shoe `status` `draft` (ERD Q6), `featured` and `is_new` `false`, `released` and a review's `date` today in Vietnam, a review's `status` `live`, every text `""`. The Add dialog always sends the status.
+
+### 3.3 Fields, rules and sentences
+
+Maximum lengths: **text 200**, **long text 5,000** characters. "Required" means present, not `null` and not empty after trimming. A sentence is a short English sentence that fits beside its field; the wording of those not quoted in the story may be improved, the **key and the status may not**.
+
+**`products`** — required `name`, `price`
+
+| Field | Rule | Sentences |
+|---|---|---|
+| `name` | text, required | `Name is needed.` · `Name can have at most 200 characters.` |
+| `model`, `code`, `colourway`, `swatch`, `upper`, `lining`, `sole`, `fit`, `price_listed` | text | `<Label> can have at most 200 characters.` · `<Label> must be text.` |
+| `description`, `care` | long text | `… at most 5,000 characters.` |
+| `line`, `category` | the id of an existing line / category; `""` or `null` unsets | `No such line.` · `No such category.` |
+| `price` | whole number 0 to 999,999,999,999 (VND); 0 is accepted | `Price is needed.` · `Price must be a whole number.` · `Price cannot be below 0` · `Price is too large (999,999,999,999 at most).` |
+| `status` | `live` or `draft`; default `draft` | `Status must be live or draft.` |
+| `featured`, `is_new` | true / false | `<Label> must be true or false.` |
+| `colour` | `""`, black, white, pink, purple, brown, yellow, blue, grey, green | `Choose one of the listed colours.` |
+| `released` | a real calendar date `YYYY-MM-DD`, 1900–2999 (ERD Q2) | `In the shop since must be a date written YYYY-MM-DD.` |
+| `image`, `image_back`, `image_detail` | `""`, or `/images/` followed by letters, digits, `.`, `_`, `-`, `/` (no `..`), or an address the shop made (`/api/v1/uploads/<32 hex>.<jpg\|png\|webp>`) that exists in `uploads`; never `data:` text, never another site's address | `Use a picture uploaded to the shop.` |
+| `sizes`, `pairs`, `seen_pairs` | §5 | §5 |
+| read-only | `sizes_low`, `sizes_out`, `stock`, `rating`, `review_count`, `_source`, `_invented` | `The shop works this out; it cannot be set.` |
+
+**`lines`** — required `name`: `name` text; `blurb`, `fit_note` long text; `since` a whole number 1 to 9999 or `null` (`First made must be a year from 1 to 9999.`).
+**`categories`** — required `name`: `name` text; `blurb` long text; `image` a picture as above.
+**`reviews`** — required `product`, `name`:
+
+| Field | Rule | Sentences |
+|---|---|---|
+| `product` | the id of an existing shoe, **required**; may be a draft shoe | `Shoe is needed.` · `No such shoe.` |
+| `name` | text, required (the customer) | `Customer is needed.` |
+| `rating` | whole number 1 to 5, or `null` / empty | `Stars must be a whole number from 1 to 5.` — so `6`, `0`, `-1`, `2.5` and `"x"` each name `rating` |
+| `date` | a real calendar date `YYYY-MM-DD`; default today (Vietnam) | `Date must be a date written YYYY-MM-DD.` |
+| `size_bought` | text | |
+| `fit` | `""`, `small`, `true`, `large` | `How it fit must be small, true or large.` |
+| `body` | long text | |
+| `status` | `live` or `hidden`; default `live` | `Status must be live or hidden.` |
+
+`Label` is the schema's own label for the field (`Name`, `Price`, `Customer`, `Stars`, `Main colour`). A name of exactly 200 characters is accepted, one of 201 is refused (SC-7).
+
+### 3.4 Errors of the write routes (the project catalog, nothing new)
+
+| Code | HTTP | Trigger |
+|---|---|---|
+| `bad_request` | 400 | The body is not one JSON object (§3.1 step 5) |
+| `unsupported_media_type` | 415 | Not JSON (upload: §10) |
+| `payload_too_large` | 413 | Body over 256 KiB (upload: 5 MiB + 64 KiB) |
+| `unauthenticated` / `forbidden` | 401 / 403 | No session / a customer |
+| `not_found` | 404 | `PUT` / `DELETE` / `PATCH` of an id that does not exist or does not match the id pattern; any write to a collection with no write route |
+| `invalid` | 422 | Any field rule; `errors` names every field at fault |
+| `conflict` | 409 | A delete rule (§7); a count that moved (§5, §8). **A `409` of `PUT /v1/products/{id}` carries `errors`** keyed `pairs.<size>` (the envelope rule of §2.3 gains this one case: `errors` is present on `bad_request`, `invalid`, `stock_conflict`, the sign-up `conflict` and this one) |
+| `internal` | 500 | A failed query, a timeout, a deadlock that survived its one retry |
+
+## 4. Ids
+
+| Collection | The shop makes |
+|---|---|
+| shoe, line, category | The slug of the name: Unicode-decompose (`norm.NFD`), drop the combining marks, `đ` and `Đ` become `d`, lower-case, every run of anything but `a–z` and `0–9` becomes one `-`, trim `-`, at most 80 characters, `item` if nothing is left. Then the **smallest free** of `slug`, `slug-2`, `slug-3` … (taken ids are read in one statement, ERD §5 #4). "Samba OG New Colour" is `samba-og-new-colour`; "Đôi giày" is `doi-giay`. `golang.org/x/text` is already in `go.sum` as an indirect dependency; the PR runs `run_go_mod_tidy` to make it direct |
+| review | `r-` and 8 lower-case hex characters from `crypto/rand` |
+
+A `23505` on the key (a second server instance won the race) picks the next suffix or a new hex string, up to 5 times, then `500`. The id never changes; it satisfies the schema's `ck_{table}_id_slug`.
+
+## 5. A shoe's sizes and pairs
+
+The counts live **only** in `product_sizes` (D3). A shoe's `sizes`, `sizes_low`, `sizes_out` and `stock` are read from `product_stock` on every read and are never accepted. Sentences quoted by the story are exact, punctuation included (`Enter the pairs in this size` has no final full stop).
+
+### 5.1 The three body fields
+
+| Field | Type | On |
+|---|---|---|
+| `pairs` | object `size → whole number` | `POST`, `PUT` |
+| `sizes` | array of text, at most 50 | `POST`, `PUT` — an API client's way to list sizes; the frontend never sends it |
+| `seen_pairs` | object `size → whole number`: **the counts the form last read** | `PUT` only, and only with `pairs`. **Additive: new in this design** |
+
+On a `POST` there is nothing to have seen: `seen_pairs` is tolerated only as `{}` and is otherwise `422` (`A new shoe has no counts to compare.`). `seen_pairs` without `pairs` is `422` (`Send seen_pairs together with pairs.`).
+
+### 5.2 Reading a size
+
+One pure function, `stock.ParseSize(text)`, is the only reader. White space (any Unicode space) is collapsed to one space and trimmed; the size is then **stored as written**, in one of:
+
+| Form | Examples | Value (hundredths, rounded half up) |
+|---|---|---|
+| whole | `38`, `40` | 38.00, 40.00 |
+| whole and fraction | `36 2/3`, `35 1/2` | 36.67, 35.50 |
+| decimal | `35.5`, `36.67` | 35.50, 36.67 |
+
+ASCII digits only; one to three digits before the point or space, a fraction with a denominator from 1 to 99 and a numerator smaller than it, at most two decimals; the value is above 0 and below 1,000; at most 20 characters. Anything else is unreadable. **Two sizes with the same value are duplicates** (`35 1/2` and `35.5`): the primary key is the text, but a shop that lists both would show two pills for one size. A shoe lists at most **50** sizes and a count is at most **1,000,000** (technical bounds that keep `sum(pairs)::integer` of the view safe; not a business ceiling).
+
+| Fault | Key | Sentence |
+|---|---|---|
+| Unreadable size | `pairs.<size as typed>` (or `sizes`) | `Write the size as a number, such as 38, 36 2/3 or 35.5.` |
+| Over 20 characters | same | `A size can have at most 20 characters.` |
+| A size twice (same value) | the later one, `pairs.<size>` (or `sizes`) | `This size is listed twice.` |
+| More than 50 sizes | `sizes` / `pairs` | `A shoe can list at most 50 sizes.` |
+| `sizes` and `pairs` list different sets | `sizes` | `Sizes and pairs must list the same sizes.` |
+| A size with no count (absent, `null`, `""`) | `pairs.<size>` | `Enter the pairs in this size` |
+| A count that is not a whole number (`2.5`, `"abc"`, `true`) | `pairs.<size>` | `Pairs must be a whole number.` |
+| A count below 0 | `pairs.<size>` | `Pairs cannot be below 0` |
+| A count above 1,000,000 | `pairs.<size>` | `Pairs can be at most 1,000,000.` |
+
+`sizes` without `pairs`: on a `POST` every size has no count (`422` for each, `Enter the pairs in this size`); on a `PUT` a size the shoe already holds keeps its count, a new size has none (`422`), and a stored size that is not listed is removed. Neither `sizes` nor `pairs` leaves every count and every list untouched, so a price-only `PUT` changes no count (SC-8, SC-24).
+
+### 5.3 What a save does with the counts
+
+The shoe row is locked first (`FOR NO KEY UPDATE`, which waits for any order in flight on the shoe), then every count of that shoe (`FOR UPDATE`, ERD §5 #5). Every size in the union of the stored sizes, `pairs` and `seen_pairs` is then decided by three values: **expected** (`seen_pairs`, absent = the form did not know it), **desired** (`pairs`, absent = take it off) and **actual** (stored, absent = no row).
+
+**With `seen_pairs`** (what the frontend sends when a count or a size was touched):
+
+| Condition | What happens |
+|---|---|
+| desired equals expected (both absent, or the same number) | **Untouched.** Nothing is written and nothing is compared, even if an order moved the stored count since: the form's old number is never written back. The stored count stands |
+| desired differs from expected, and actual equals expected | **Write desired**: insert, update, or delete (a size left out of `pairs`) |
+| desired differs from expected, both counts exist, and actual differs from expected | **Conflict**: the count moved since the person looked. `pairs.<size>`: `Pairs were just taken by an order. Check the number and save again.` |
+| desired differs from expected, and a row exists where none was expected, or none exists where one was | **Conflict**: `This size was changed by someone else. Reload the page and check the sizes.` |
+
+If **any** size conflicts, nothing from the save is stored — not the other sizes, not the price — and the answer is `409 conflict`, its `message` the sentence of the first conflicting size and its `errors` every conflicting size. Validation faults (`422`) win over conflicts, because a conflict needs the database.
+
+**Without `seen_pairs`** (an API client, a `POST`): `pairs` is authoritative — every listed size is inserted or set to its count and every stored size not listed is removed (`_base.md` §3.22, SC-20, SC-24). There is no guard because the caller said it did not read the counts.
+
+The writes go through `stock.Set` (one upsert statement) and `stock.Remove` (one delete); the handler issues no SQL on `product_sizes`.
+
+### 5.4 The other rules of a shoe save
+
+- **`featured: true`** first locks the shoe and the currently featured shoe in id order (ERD §5 #3), turns the other off, then sets this one, all in the one transaction. `featured: false` clears only this shoe. Nothing stops the shop having no featured shoe.
+- **A change of `status`** (the stored value differs from the one sent) recalculates the shop's two figures (ERD §4). A save that sends the same status, a create, and every other field change recalculate nothing. A shoe saved with `status: draft` leaves every visitor read at once and keeps its reviews, counts, orders and id.
+- A shoe's `rating` and `review_count` are never accepted and never recalculated by a shoe save (decision E2).
+- The answer is the shoe in the **dealer view**, read in the same transaction after the write, so it shows the derived lists as stored.
+
+## 6. Reviews, lines and categories
+
+**Reviews.** The events that recalculate a shoe's and the shop's figures are exactly those of ERD §4: a create, a change of `rating`, `status` or `product` to a different value, and a delete. A review moved to another shoe recalculates both shoes (in id order) and the shop. A `PUT` that changes only the customer's name or text recalculates nothing. A review of a draft shoe may be created, changed and deleted; it is simply outside the shop's figures while the shoe is a draft.
+
+**Lines and categories.** Plain records: no derived value. A rename changes what a shoe's `line` / `category` search finds at once, because the search reads the name live (`data` registry). A shoe's `line` after its line is deleted is not possible: the delete is refused while any shoe uses it (§7).
+
+## 7. Deleting
+
+Each delete runs in one transaction that takes the write lock, then the record `FOR UPDATE` (a missing record is `404`; a second `DELETE` of the same id is `404`).
+
+| Collection | Refused when (`409 conflict`, nothing deleted) | Otherwise |
+|---|---|---|
+| `products` | `SELECT EXISTS (SELECT 1 FROM order_items WHERE product_id = $1)` — `Orders refer to this shoe. Set it to draft instead.` The sample orders count: a placeholder shoe one of the 14 sample orders names is refused too (SC-14) | `DELETE` (its reviews and counts go by `CASCADE`); if the shoe was `live`, recalculate the shop's figures |
+| `lines` | `SELECT count(*) FROM products WHERE line_id = $1` is `n > 0` — `<n> shoes use this. Move them first.` | `DELETE` |
+| `categories` | the same count on `category_id` | `DELETE` |
+| `reviews` | never | `DELETE`, then recalculate its shoe and the shop (ERD §4) |
+
+`23503` on the `DELETE` (an order or a shoe arrived after the check; impossible under the lock for shoes, possible only through another instance) is answered with the same `409` and its sentence, the count being read again. The sentence keeps the contract's wording for `n = 1` ("1 shoes use this. Move them first."): the contract text is the one tests quote, and improving the grammar is a later wording change, not a reason to differ from `_base.md` §3.22 now.
+
+## 8. `PATCH /v1/products/{id}/sizes` — one size's count
+
+`_base.md` §3.23 stands. This section adds what it leaves open.
+
+**Request** `{"size": "36 2/3", "pairs": 6, "seen_pairs": 4}` — all three required. `pairs` and `seen_pairs`: whole numbers 0 to 1,000,000 (`422` naming the key: `Pairs must be a whole number.` / `Pairs cannot be below 0`). `size` must be text (`422` `size`, `Choose a size.` when absent or not text); white space is collapsed as in §5.2 and the result is matched **exactly** against the stored size. A size the shoe does not hold — including one that does not read as a number — is `404`.
+
+**Order of checks.** Session → content type → body → `{id}` pattern (`404`) → the three fields (`422`, every fault) → the statement.
+
+**The statement** (no write lock: one row, one atomic compare-and-set; ERD §6):
+
+```sql
+UPDATE product_sizes SET pairs = $3 WHERE product_id = $1 AND size = $2 AND pairs = $4
+```
+
+One row changed: `200`. No row: `SELECT pairs FROM product_sizes WHERE product_id = $1 AND size = $2` — no row means the shoe or the size does not exist (`404`), a row means the count moved (`409 conflict`, `Pairs were just taken by an order. Check the number and save again.`, nothing overwritten). `pairs` equal to `seen_pairs` changes nothing and is `200`. A `PATCH` never changes `rating`, status or any other table, and it recalculates nothing.
+
+**Success** `200` `{"size":"36 2/3","pairs":6,"sizes":[…],"sizes_low":[…],"sizes_out":[…],"stock":18}` — read from `product_stock` after the update; `size` is the stored size. The `409` carries no `errors` and no count: the client reads the shoe again (`GET /v1/products/{id}`, dealer view, `pairs`) and shows the stored number, as the UI already does.
+
+## 9. Packages: what each one gains
+
+Nothing is created outside these files, and no package imports another package's SQL (`_base.md` §1.1). The import graph stays acyclic: `admin → data, stock, auth, httpx`; `data → auth, httpx`; `stock → pgx` only.
+
+### 9.1 `internal/data` — the two views (reads)
+
+| Change | Detail |
+|---|---|
+| `type View` (`Public`, `Dealer`) and `ViewOf(ctx)` | `Dealer` when `auth.FromContext` holds role `admin` or `staff`, else `Public`. Read once per request by the registry's two handlers |
+| `Collection.Live string` | The condition that limits a `Public` caller to what is on sale or shown, written over the alias `t`: products `t.status = 'live'`; reviews `t.status = 'live' AND EXISTS (SELECT 1 FROM products lp WHERE lp.id = t.product_id AND lp.status = 'live')`; empty for every other collection |
+| `selectList(view)`, `where(…, view)`, `recordSQL(c, view)`, `listSQL` | `Public` serves `Access == Public` columns and ANDs `Live` into the one `WHERE` shared by the count and the page; `Dealer` serves `Public` and `Bookkeeping` columns, no `Live`. `Private` is served to neither (orders unchanged) |
+| New column of `products`: `pairs` | `Access: Bookkeeping`, new `Kind` `Object`, `Select: (SELECT coalesce(jsonb_object_agg(z.size, z.pairs), '{}'::jsonb) FROM product_sizes z WHERE z.product_id = t.id)`. Not filterable, sortable or searchable (`400` naming it) |
+| `ListHandler(db, log, c)` | **Behaviour unchanged**: it is built with the `Public` column set and no `Live`, whatever the session, so `GET /v1/orders` serves what item 9 left (story decision 7). Item 17's design decides the orders' dealer shape |
+| Exported `Read(ctx, q Querier, collection, id string, v View) (json.RawMessage, error)` and `ErrNotFound` | The one reader of a record's JSON, so a write's answer is built by the **same statement** as a `GET` and can never differ from it. `q` is a pool or the writer's transaction |
+| Tests | `collections_test.go` learns that `pairs` is a dealer-only extra of the registry that `schema.json` does not list (as it already knows the bookkeeping columns). Tests that served as admin only to read the public shape serve as a visitor now. New cases: the draft shoe in list / `q` / `size` / `status=draft` / by id (404 with the missing id's body); the hidden review; a review of a draft shoe; the dealer's `pairs`, `price_listed`, `_source`; a customer session reads as a visitor; `?pairs=1` and `?sort=pairs` are `400` |
+
+`internal/catalogue` is **not** changed (`product-filters` already reads live shoes only). `grep -rn "status = 'live'" internal/` finds only the registry's two `Live` strings and `catalogue`'s `filtersSQL`.
+
+### 9.2 `internal/stock` — the only writer of `product_sizes` (additive, one file)
+
+Item 17 adds `Return` to the same file; the two additions are independent and whichever PR merges second adopts the other's lines.
+
+```go
+// Size is a size as the shop reads it: Text is stored as written (white space collapsed), Value is its number with two decimals ("36.67").
+type Size struct{ Text, Value string }
+var ErrUnreadable, ErrTooLong error
+func ParseSize(raw string) (Size, error)                       // §5.2, pure
+
+type Count struct { Size Size; Pairs int }
+func LockShoe(ctx, tx Tx, product string) (map[string]int, error)       // SELECT size, pairs … WHERE product_id = $1 ORDER BY size FOR UPDATE
+func Set(ctx, tx Tx, product string, counts []Count) error              // one INSERT … ON CONFLICT (product_id, size) DO UPDATE SET pairs
+func Remove(ctx, tx Tx, product string, sizes []string) error            // one DELETE … size = ANY($2)
+func SetOne(ctx, tx Tx, product, size string, pairs, seen int) (bool, error) // UPDATE … WHERE pairs = $seen; true when one row changed
+func Pairs(ctx, tx Tx, product, size string) (pairs int, found bool, err error) // the 404-or-409 read after a failed SetOne
+func Lists(ctx, tx Tx, product string) (Derived, bool, error)           // sizes, sizes_low, sizes_out, stock from product_stock
+```
+
+`Lock`, `Take` and the lock order are unchanged. `LockShoe` orders by `size` in SQL exactly as `Lock` does, so `Place`, item 17's `Cancel` and a save agree.
+
+### 9.3 `internal/admin` — the writers (new files; `staff*.go` are not touched)
+
+| File | Holds |
+|---|---|
+| `records.go` | `RegisterRecords(mux, db Pool, log)`; the twelve routes, the `PATCH`; the pipeline of §3.1; reuses the package's `reply`, `refuse`, `notFound`, `invalid`, `Pool` from `staff*.go` rather than copying them |
+| `records_spec.go` | The four collections as Go tables: field, kind, label, required, clearable, length, closed set, column name — the **only** place a column name for an `INSERT` / `UPDATE` comes from. `records_spec_test.go` reads `../../../frontend/src/data/schema.json` (skipped when absent, as `collections_test.go` does) and fails when a schema field is neither in a table nor listed as derived |
+| `records_input.go` | Body reading and every judge of §3.2–§3.3 and §5.2; pure, table-tested |
+| `records_slug.go` | The slug and the free-id choice of §4 |
+| `records_write.go` | One function per collection and verb: the transaction of §3.1 steps 9–11, the retry of `40P01` / `40001` once and of `23505` as §4 says |
+| `records_figures.go` | `recomputeShoe`, `recomputeShop` (ERD §4) — nothing else writes `rating` or `review_count` |
+| `records_counts.go` | §5.3 over `stock` |
+| `uploads.go` | `POST` and `GET` of §10 |
+
+Each write logs **one line** at `info`: `catalogue write`, `collection`, `action` (`create`, `update`, `delete`, `count`, `upload`), `id`, and the request id the access log already carries; never a field value, a body or a file name.
+
+`server.New` adds `admin.RegisterRecords(mux, pool, log)`. `go.mod` makes `golang.org/x/text` a direct requirement (`run_go_mod_tidy`).
+
+## 10. Pictures: `POST /v1/uploads` and `GET /v1/uploads/{name}`
+
+`_base.md` §3.24 and §3.6 stand. Added here:
+
+**Order of checks** (so the answer for a file that breaks two rules is fixed): session (`401` / `403`) → `Content-Type` is `multipart/form-data` with a boundary (`400`) → the request is wrapped in `http.MaxBytesReader` at 5 MiB + 64 KiB (`413` when it bursts) → the first part is named `file` (`400`) → **an empty file is `422`** (`errors.file` `Choose a picture.`) → the content is judged from its first 512 bytes with `http.DetectContentType` and **only** `image/jpeg`, `image/png`, `image/webp` pass (`415`, `Choose a JPEG, PNG or WebP picture.` — the file's name, extension and declared type are never read) → the rest is read to 5 MiB + 1 byte and **a file over 5,242,880 bytes is `413`** (`That picture is too large (5 MB at most).`; exactly 5,242,880 is accepted) → any further part is `400` → store. So a 6 MB GIF is `415`, a 6 MB JPEG `413`, a renamed text file `415`, a real PNG called `x.txt` `201`.
+
+**Store.** The name is 16 bytes of `crypto/rand` as 32 lower-case hex characters plus `.jpg`, `.png` or `.webp` from the **detected** type; the sent file name is discarded, so `../../x.png` can name nothing and nothing is written anywhere but `uploads`. One `INSERT INTO uploads (name, content_type, size_bytes, data, uploaded_by)`; `uploaded_by` is the signed-in user's id; a `23505` on `uq_uploads_name` draws a new name (3 tries). `201`, `Location: /api/v1/uploads/<name>` and `{"url": "/api/v1/uploads/<name>"}` (the address is browser-facing; the route that serves it has no prefix).
+
+**Limits.** Deadline 30 s for this route (the project's one exception to the 10 s request deadline, `_base.md`, operations table, "Timeout, inbound"); the file is held in memory, at most 5 MiB + 1 byte per request, and the route is dealer-only. A refusal stores nothing and leaves nothing behind.
+
+**Serve.** `GET /v1/uploads/{name}` matches `^[a-f0-9]{32}\.(jpg|png|webp)$` before any query (`404` otherwise and for an unknown name), one `SELECT content_type, size_bytes, data FROM uploads WHERE name = $1`, `200` with the bytes, `Content-Type` as stored, `Content-Length`, `Cache-Control: public, max-age=31536000, immutable`, `X-Content-Type-Options: nosniff`. Public, no session read. Nothing deletes a picture, whether its shoe is deleted or its picture replaced (story §4).
+
+## 11. The frontend at the swap (the backend PR's frontend half)
+
+| Change | Where |
+|---|---|
+| `patch(path, body)` and `upload(path, file)` are added to `src/lib/api.ts`: `patch` is `put` with the verb changed; `upload` sends a `FormData` with one part `file`, **no** `Content-Type` header (the browser adds the boundary), the route's own 30 s abort, **no retry**. Nothing existing in the file changes; none of these writes is ever retried automatically | `src/lib/api.ts` and its test file |
+| `transport` points at `api`: `create` → `post` to the collection with the body; `update` → `put` to the collection and the id; `remove` → `delete` of the same address; `read` → `get` of the same address (the dealer view, because the cookie is sent); `setPairs` → `patch` to `products/<id>/sizes` with `{ size, pairs, seen_pairs }`; `upload` → `upload` to `uploads` with the file. An `ApiError` becomes `{ status, body }` with `body` the envelope; **no answer (network, the abort) is status 0**. A `204` has no body. 401 and 403 are "session ended" (a customer never reaches these screens) | `src/lib/manage-shoes-lines-categories-reviews-and-orders.ts` |
+| Delete the mock; repoint the `vi.mock` of `src/test/admin*.test.ts(x)` to `../lib/api` keeping the real `ApiError` | `src/lib/mock/…`, tests |
+| `payload.ts` sends `seen_pairs` (every size the form **read**, size → count) with `pairs` (every size the form holds) **only when a size or a count was touched**, on a `PUT`; on a `POST` it sends `pairs` and **no `seen_pairs`** (or `{}`); it never sends `id`, `sizes` or a derived field; a size that was never read and is left blank is **not sent** as `0` (the UI review's should-fix 3) | `components/admin/payload.ts` |
+| "Save changes" waits while a count row is saving (should-fix 2), and `Choice` / `RefControl` carry `aria-invalid` / `aria-describedby` (should-fix 1) — both carried over from the UI review | `RecordForm.tsx`, `StockCounts.tsx`, `Choice.tsx`, `Form.tsx` |
+| No new route, no `content.json`, `schema.json`, `theme.css` or `App.tsx` change. The words stay in the admin components | — |
+
+## 12. The mock, read and judged
+
+**Evidence read, stated plainly.** The UI PR's mock module and client are in its file list but their bodies are beyond what the PR's diff returns, and this task may not stand on the UI branch to open them. This design therefore judges the shapes the frontend **renders and sends**, from what the PR states and the UI review recorded (the `transport` methods and their `{status, body}` answers, the five assumptions of the PR, the table of mock answers) and from the merged components visible in the diff (`RecordForm`, `SaveNote`, `PictureControl`, `DeleteQuestion`, `ListTable`, `RecordDialog`). **Where the mock and this file differ, this file wins**, and the BE PR lists every difference it finds when it swaps the transport.
+
+| What the frontend assumes | Judgment | Frontend change |
+|---|---|---|
+| `seen_pairs` next to `pairs`, sent only when a size or count was touched; `pairs` then carries every size | **Accepted, with the server rule of §5.3** (an untouched size keeps its stored count; a touched one must match what was seen) | `POST` never sends a non-empty `seen_pairs`; a never-read blank is not sent (§11) |
+| A `409` that carries `errors` (`pairs.<size>`) is shown beside that size, a `409` with only a sentence as a sentence | **Sound.** The server sends exactly this (§3.4, §5.3) | None |
+| One size's `409`: the client reads the shoe again and takes `pairs[size]` from the dealer view | **Sound.** The dealer view carries `pairs` (§2); the `409` needs no extra field (§8) | None |
+| `PUT` sends changed fields only: `null` for a cleared number, `""` for cleared text, line, category or picture; `POST` sends what was filled in plus `status`; neither sends `id`, a derived field or `sizes` | **Sound** and exactly what §3.2 reads | None |
+| A save with nothing changed sends no request | **Sound**; the server would also answer `{}` with `200` | None |
+| `403` is "session ended" | **Acceptable**: the server answers `403` only to a customer session | None |
+| The answer of `PATCH` is read as `size`, `pairs`, `sizes_low`, `sizes_out`, `stock` | **Sound**; §8 also returns `sizes` | None |
+| Today's shoes carry no `pairs` | Right for today's API; the dealer view of §2 supplies it | The Stock tab shows real counts once the swap is made |
+| Uploads: `415` / `413` sentences, "We could not upload that picture. Please try again." when there is no answer | **Sound**; the sentences are the story's | None |
+| The record page draws nothing while a record loads or when the shop cannot be reached | A UI decision the UI review accepted | None |
+
+## 13. Decisions, and conflicts with merged ones
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| D1 | Where counts live | Only `product_sizes`, written by `stock`; every list derived from the view | A typed copy on `products`: it would drift from what an order takes (ADMIN-015 item 1) |
+| D2 | How the two views are chosen | By the **session's role** alone (`_base.md` §2.4, SC-11) | `?view=dealer` or `/v1/admin/products`: changes merged contract and the approved admin pages, which read `useCollection`. Cost accepted: a signed-in dealer's browser sees drafts on customer pages; checks of what a visitor sees are made with no session |
+| D3 | Does a visitor read a live review of a draft shoe | **No** (§2) | Review status alone: a draft shoe's id and what people said about it would be public, and the list would disagree with the shop's own figure, which already excludes them |
+| D4 | How a whole-form save avoids overwriting an order's pairs | `seen_pairs`, compare-and-set per touched size (§5.3) — the additive guard story §8 note 1 asked for | A `version` column on `products` with `If-Match`: a migration, and it would make every non-count field "last write wins" no longer true (SC-9); a `409` on any stale form would refuse a price edit because an order took a pair |
+| D5 | Ratings on a shoe save | Never (ERD E2) | Recalculate on every save: contradicts SC-8 and SC-13 |
+| D6 | A 409 body | `PUT /v1/products/{id}`'s `409` carries `errors` | A message only: the form could not put the sentence beside the size |
+| D7 | Empty / type / size order of an upload | empty → type → size (§10) | Size first: a 6 MB GIF would be read in full to be told it is too large rather than the wrong type |
+| D8 | Duplicate sizes | By numeric value | By text: `35 1/2` and `35.5` would both be sold as two sizes |
+| D9 | Technical bounds | count ≤ 1,000,000, ≤ 50 sizes, price ≤ 999,999,999,999 | None: without them a count of 2,000,000,000 makes `sum(pairs)::integer` of the view fail and the shoe unreadable |
+| D10 | Pictures on a record | Only `""`, `/images/…` or an upload that exists (§3.3) | Any string: `data:` text and dangling addresses (SC-35 forbids the first) |
+| D11 | Slug in Go, not in SQL | `norm.NFD` + marks dropped (§4) | `doi_fold`: it folds only Vietnamese letters, so `Müller` would become `m-ller` |
+| D12 | The write lock | One advisory lock (ERD E1) | Row locks only |
+| D13 | `ListHandler` | Pinned to the public column set (§9.1) | Letting it follow the session: orders' `_source` / `_invented` would appear in `GET /v1/orders`, which item 9 and the story say stays as it is |
+
+**Conflicts with merged decisions: none.** §3.22 stands (only additions: `seen_pairs`, the `409`'s `errors`, bounds, the sentences); §2.4 stands (the views are now real; D3 narrows reviews to what the shop's own figure already uses); §3.23 and §3.24 stand.
+
+## 14. Migration and rollout
+
+Forward: migration `uploads` (ERD §7), then the code; the server applies it before it listens, so no request sees a route without its table. Backward: `DROP TABLE uploads` for a local reset; rolling the **code** back to the previous build is safe because it simply has no write routes (the table and its pictures stay). Populated database: the table is new and empty; nothing else in the schema changes. No seed, no setting, no secret.
+
+## 15. Where each criterion is enforced, and notes for Dev and Test
+
+| Criteria | Enforced by |
+|---|---|
+| SC-1, SC-2, SC-3 | `auth.Require` on every pattern; no pattern for the five read-only collections (§1); the catch-all's `404` |
+| SC-4 | §4 (ids), `Location`, `data.Read` in the same transaction (§3.1 step 11) |
+| SC-5, SC-6, SC-7 | §3.2–§3.3 (all faults collected; unknown and derived keys; whole numbers; lengths in runes; `""` unsets) |
+| SC-8, SC-9, SC-10 | §3.2 (partial `PUT`, `id` discarded, `null`), §5.3 (no counts sent, none changed), §5.4, ERD §6 |
+| SC-11 | §2, §9.1 |
+| SC-12, SC-13 | ERD §4 (the two statements and the event table) |
+| SC-14, SC-15, SC-16 | §7 |
+| SC-17, SC-18, SC-19 | §10 |
+| SC-20, SC-22 | §5.1–§5.2 |
+| SC-21, SC-23 | §8 (the `PATCH`); §5.3 (the whole-form guard) |
+| SC-24 | §5.2 last paragraph, §5.3 |
+| SC-25 | §9.2 (`stock.Take` and the counts are the same rows) |
+| SC-26 to SC-38 | The UI PR, §11, §12 |
+| SC-39 | ERD §5 (about ten statements, all by key), ERD §6 |
+
+**Notes for the BE step.**
+
+1. Cut the BE branch from the UI branch (`feature/manage-shoes-lines-categories-reviews-and-orders-ui`), since it deletes the mock that branch adds; PR #79 merges first. Grep the head for `^<<<<<<<` and `^>>>>>>>` before merge.
+2. Order of work: `stock` functions and `ParseSize` → `data` views and their tests → `admin` input and slug (pure) → the transactions → uploads → `api.ts` and the frontend swap.
+3. Plan item 17 (PR #77) edits `stock.go`, `server.go` and `internal/orders` in parallel: each is an additive edit; the second to merge adopts the other's lines.
+4. Orders: the list's row menu goes through `store.ts`, which posts `PUT` / `DELETE` to `/v1/orders/{id}`. Those routes are item 17's; until they exist they answer `404`.
+5. Database tests (`TEST_DATABASE_URL`) first run in CI. The seeded shoes have at most 3 pairs per size; tests that need more set them with plain SQL.
+
+**Notes for Test.** SC-25 needs the checkout (`POST /v1/orders`) with a size holding 1 pair. SC-11, SC-26 and SC-27's customer-side halves are checked with **no session**. Sentences the story quotes are asserted exactly; the others are asserted by key, status and "short English".
+
+## 16. Open questions
+
+None blocks the BE step; each has its default.
+
+| # | Question | Owner | Default |
+|---|---|---|---|
+| Q1 | A signed-in dealer sees drafts on the customer pages of their own browser (D2). Does the owner want a "preview" that is not the default? | PM / owner | As designed; a preview toggle is a later item |
+| Q2 | "1 shoes use this. Move them first." reads badly for one shoe (§7) | PM | The contract's wording stands |
+| Q3 | The review form's shoe picker lists the first 100 shoes (§2) | PM | Accepted at launch |
+| Q4 | The first review event on a placeholder replaces its seeded rating (and, on the first status change, the shop's 4.8 from 181) with the true figure from the review rows the seed holds | PM | As ADMIN-013 item 4 says |
+
+
+<!-- story 11: Dealer dashboard figures and charts -->
+# Service contracts — Dealer dashboard figures and charts (plan item 11, "S10")
+
+Module `admin` · Requirements ADMIN-020, ADMIN-021, ADMIN-004 (overview rows) · Story `docs/admin/stories/dealer-dashboard-figures-and-charts.md` · UI PR #76 · Tables: `docs/architecture/erd/dealer-dashboard-figures-and-charts.md` (**none changed**).
+
+This file **extends** `services/_base.md` §3.25. The route, its auth, its field names, its definitions and its error codes **stand**. It adds the order in which a request is refused, the five statements that compute the answer (written out, because the figures are only as right as the SQL), the clock, the Go surface, the tests the backend PR ships, and the frontend's swap from its mock. It adds **no error code** to the catalog (§2.3), no second error or list shape, no table, no setting and no secret. Every path is written the way the Go backend mounts it — **no `/api` prefix**: the browser's `/api/v1/admin/overview` reaches Go as `/v1/admin/overview`.
+
+## 1. Endpoint
+
+| # | Method and path | Auth | Traces to |
+|---|---|---|---|
+| 3.25 | `GET /v1/admin/overview` | dealer: `auth.Require(auth.Admin, auth.Staff)` | ADMIN-020 items 1–4, ADMIN-021 item 3, ADMIN-004 |
+
+**Mounting.** One literal pattern, registered by one function in `internal/admin/overview.go`:
+
+```go
+// RegisterOverview mounts GET /v1/admin/overview. now is the clock: the real one in the running
+// server (server.New passes time.Now), a fixed instant in a test; nil means time.Now.
+func RegisterOverview(mux *http.ServeMux, db overviewDB, log *slog.Logger, now func() time.Time)
+```
+
+`server.New` gains **one line**, `admin.RegisterOverview(mux, pool, log, time.Now)`, after `admin.RegisterStaff`. ("Manage shoes…" also adds a line there, `admin.RegisterRecords`; whichever PR merges second keeps both lines.) Any other method or path falls to the server's catch-all and answers `404 not_found`; no handler is written for it. **No new setting, secret or `.env.example` line, and no environment variable or request parameter moves the clock.**
+
+**On every answer** (200 and every refusal the handler writes): `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`, and the `X-Request-Id` the middleware echoes. `no-store` is what makes "every visit asks again" true: without it a browser may serve the second visit from its cache, and `src/lib/api.ts` has no cache switch of its own.
+
+## 2. The mock, read and judged
+
+The UI PR (#76) adds `src/lib/mock/dealer-dashboard-figures-and-charts.ts`, imported only by `src/lib/overview.ts` through one `read` constant (checked at the UI review, which did not review the mock's contents). It is unreviewed input; its shape is compared here with `_base.md` §3.25, which decides it.
+
+| Mock / frontend type | Contract | Judgment | Frontend change at the swap |
+|---|---|---|---|
+| Top level `month {sales, orders}`, `waiting_orders`, `pairs_on_shelf`, `shoes`, `running_low`, `sales_by_day`, `pairs_by_line`, `latest_orders`; money and counts are numbers | §3.25: the same eight names; whole-number VND and counts | **Sound.** Field for field | None |
+| `LowShoe {id, name, category, image, stock, sizes_low}`; `category` is the category's id | §3.25: the same six; `category` is the category id | **Sound.** The mock types `category` as `string`; the API says `""` for a shoe with no category (the project's rule for unset text) — the page does not read it | None |
+| `DaySales {date, sales}`; `date` is `"2026-11-12"` text and the page takes the day of the month from the text, never through a `Date` | §3.25: `date` is the shop's own day, `YYYY-MM-DD`, cut at Vietnam midnight | **Sound, and it is the right thing to do**: the API gives the shop's days, the page must not re-cut them in the browser's zone | None |
+| `LinePairs {line, name, pairs}` in the answer's order | §3.25: the same; most pairs first | **Sound.** The page draws the order it is given and sorts nothing | None |
+| `LatestOrder {id, number, customer, product, product_name, size, status, placed_at, total}`; `placed_at` has `+07:00` | §3.25: the same nine; `placed_at` RFC 3339 with `+07:00` | **Sound.** The mock's `product` is the seed's id `handball-spezial-w-earth-strata`; the example in `_base.md` §3.25 (`handball-spezial-earth-strata`) is **wrong** and the seed's id is right — corrected in §4 below | None |
+| `isOverview` accepts an answer only if the five numbers are numbers and the four lists are **arrays**; anything else is the one error view | The answer holds the four lists as arrays **always**, `[]` when empty, never `null` (SC-12) | **A contract point this design makes explicit.** A Go `nil` slice encodes as `null`, and the page would then say "We could not load the overview." for a shop with no orders. The store therefore builds every list with `make(…, 0, n)` and a test reads the raw body for `[]` (§8) | None |
+| `isOverview` does not check the shape of each row (UI review nit) | The contract fixes every row | **Accepted.** A row the API cannot get wrong (it is written from a Go struct) need not be re-checked in the browser | None |
+| `readOverview()` resolves with the sample after 400 ms and never fails; the loading, failure and retry views are driven by the tests | `api.get` rejects with `ApiError` (`status` 0 for no connection or the 15 s timeout; 401, 403, 5xx as the shop answers) and tries a failed GET (no answer or 5xx, never a 4xx) once more | **Same idea, other type.** `useOverview` already treats any rejection, a 401 or 403 included, as the one error view (story decision 3), so no branch changes | None to the hook; the tests' `vi.mock` is repointed (below) |
+| The time on a latest-orders row is formatted by the browser (`formatDateTime`), the chart's day labels by the shop | The API gives the instant with `+07:00`; what zone a row is shown in is not the API's | **Not a backend matter.** UI review and test-case §5 point 5 already ask PM whether the row should be pinned to Vietnam time; the answer is the same either way | None here |
+
+**The frontend change at the swap is one line and one deletion**, nothing else (§9). No page, component, `content.json` key, `AdminBars` or `AdminLowStock` changes.
+
+## 3. Order of checks
+
+Each step runs only when the earlier ones passed; a request is answered by **the first step that refuses it**.
+
+| # | Check | Refusal |
+|---|---|---|
+| 1 | `auth.Resolve` has found a live session (re-read from `users` on this request, so a switched-off staff member is a `401`, not a `403`) | `401 unauthenticated` — a forged or expired cookie too |
+| 2 | The session's role is `admin` or `staff` | `403 forbidden` for `customer`. **Nothing of the request has been read yet** and no figure has been computed: the guard answers first (SC-1, SC-2) |
+| 3 | **The query string and the body are never read.** An unknown parameter is ignored and the answer is identical (decision V1); in particular `?now=…`, `?date=…`, `?month=…` move nothing | — |
+| 4 | The clock is read **once**, `now := h.now()`, and passed to the store; the request's context gets a 5-second deadline (`overviewTimeout`) | — |
+| 5 | One `REPEATABLE READ, READ ONLY` transaction (`BeginTx`); the five statements of §5 in that order; every list is built non-nil | `500 internal` on any failure of `BeginTx` or of a statement, including a deadline |
+| 6 | Success | `200` the answer of §4 |
+
+A request the browser abandoned (`context.Canceled` while `r.Context()` is itself done) is not an error: nothing is written and nothing is logged as one. A deadline that ran out is `500`.
+
+## 4. The answer
+
+`200 OK`, one JSON object of **exactly** these eight keys, written from a Go struct (§7), never from a row or a map:
+
+```json
+{
+  "month":  { "sales": 47660000, "orders": 13 },
+  "waiting_orders": 2,
+  "pairs_on_shelf": 73,
+  "shoes": 3,
+  "running_low": [
+    { "id": "gazelle-indoor-solar-gold", "name": "Gazelle Indoor Solar Gold", "category": "men",
+      "image": "/images/…", "stock": 5, "sizes_low": ["40", "41"] }
+  ],
+  "sales_by_day": [ { "date": "2026-11-12", "sales": 2790000 }, { "date": "2026-11-13", "sales": 3590000 } ],
+  "pairs_by_line": [ { "line": "samba", "name": "Samba", "pairs": 8 } ],
+  "latest_orders": [
+    { "id": "doi-24816", "number": "DOI-24816", "customer": "Trang", "product": "handball-spezial-w-earth-strata",
+      "product_name": "Handball Spezial Earth Strata", "size": "37 1/3", "status": "placed",
+      "placed_at": "2026-11-25T08:40:00+07:00", "total": 3290000 }
+  ]
+}
+```
+
+(The example is shortened: a real answer holds 14 days and up to five orders. `_base.md` §3.25 wrote `handball-spezial-earth-strata`; the seeded shoe is `handball-spezial-w-earth-strata`.)
+
+| Field | Type | Definition (the text of `_base.md` §3.25 stands; this column adds what it left open) |
+|---|---|---|
+| `month.sales` | integer | Σ `orders.total` of orders **not cancelled** whose `placed_at` is in the shop's current calendar month, `[00:00:00 on the 1st, 00:00:00 on the 1st of the next month)` in Vietnam time (ERD §3). `0` with none |
+| `month.orders` | integer | The count of those orders |
+| `waiting_orders` | integer | Orders with status `placed` or `confirmed`, **of any date** |
+| `pairs_on_shelf` | integer | Σ `product_stock.stock`, **drafts included** |
+| `shoes` | integer | The number of rows of `product_stock` — every shoe, drafts included |
+| `running_low[]` | array | Shoes with at least one size holding 1 or 2 pairs **and** `stock` < 15, drafts included. **Fewest `stock` first, ties by `products.seq`**; the list is not capped (ERD O10). Each: `id`, `name`, `category` (the category's id, `""` when none), `image` (the shoe's `image`, `""` when none), `stock` (integer, pairs in all), `sizes_low` (the sizes holding 1 or 2 pairs, growing order, as on the shoe) |
+| `sales_by_day[]` | array | **Exactly 14** entries: the shop's today and the 13 days before it, **oldest first**. `date` is `YYYY-MM-DD`; `sales` is Σ `total` of non-cancelled orders whose Vietnam date is that day, `0` when none |
+| `pairs_by_line[]` | array | **Every line**, `0` when nothing sold: `line` (its id), `name`, `pairs` = Σ `order_items.qty` over **all** non-cancelled orders (not only this month, ERD O5) of shoes of that line. **Most pairs first, ties by `lines.seq`.** A shoe with no line is in no row |
+| `latest_orders[]` | array | The **five** newest orders of **any** status (cancelled included, status `cancelled`), newest first, ties by the later `seq`. Each: `id`, `number`, `customer`, `product` and `product_name` and `size` (of the order's **first pair**, `line_no = 1`), `status`, `placed_at` (`YYYY-MM-DDTHH:MM:SS+07:00`), `total`. **No `phone`, `email`, `address`, `city`, `note`, token, payment or item list — and no other order** |
+
+Money and counts are JSON integers (never a string, never a fraction); every list is a JSON array — `[]`, never `null`. With no orders, no shoes and no lines the answer is `200` with every number `0`, `running_low` `[]`, 14 entries of `0`, `pairs_by_line` `[]` and `latest_orders` `[]` (SC-12). With lines and no orders every line is present with `0`.
+
+### 4.1 Errors
+
+| Code | HTTP | Trigger | `message` |
+|---|---|---|---|
+| `unauthenticated` | 401 | No session, a forged, expired or ended one, a switched-off account | the guard's (`auth.Require` / `auth.Resolve` — this story adds no wording) |
+| `forbidden` | 403 | A `customer` session | the guard's |
+| `internal` | 500 | The database cannot be reached, `BeginTx` or any statement fails, the 5-second deadline runs out | "Something went wrong. Please try again." — **nothing else**: no SQL, table, column, connection detail or id. The cause is logged through `auth.LogFailure` (a database error by SQLSTATE and constraint only, so a row can never reach the log) |
+
+These are `_base.md` §2.3's own codes and sentences. There is no `400` (no input is read), no `404` for this route (a different method or path is the catch-all's), no `429` and no `503`: `unavailable` is reserved for the process shutting down and `/healthz`; a database that cannot be reached is `internal` (`_base.md` §2.3). **With no database even `auth.Resolve` answers `500` first**, so the case that proves this handler's own `500` is a working session over a failed statement (SC-13).
+
+## 5. The five statements
+
+All five run inside the one read-only snapshot of §3 step 5, in this order. `$1` is `now`, a `time.Time` (pgx sends the instant; no zone is involved). Dev writes them as constants in `overview_store.go`; **a statement may be reformatted but not changed in meaning** — a change to what one computes is a change to this file in the same PR. None of them has a `SELECT *`, and none names `phone`, `email`, `address`, `city` or `note`.
+
+**5.1 The figures** — one row, scanned into five `int64`.
+
+```sql
+WITH shop AS (
+    SELECT ($1::timestamptz AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS today
+), span AS (
+    SELECT date_trunc('month', today::timestamp) AT TIME ZONE 'Asia/Ho_Chi_Minh'                          AS month_from,
+           (date_trunc('month', today::timestamp) + interval '1 month') AT TIME ZONE 'Asia/Ho_Chi_Minh'   AS month_to
+      FROM shop
+)
+SELECT m.sales, m.orders, w.waiting, p.pairs, p.shoes
+  FROM (SELECT coalesce(sum(o.total), 0)::bigint AS sales, count(*)::bigint AS orders
+          FROM orders o, span s
+         WHERE o.status <> 'cancelled' AND o.placed_at >= s.month_from AND o.placed_at < s.month_to) m,
+       (SELECT count(*)::bigint AS waiting FROM orders WHERE status IN ('placed', 'confirmed')) w,
+       (SELECT coalesce(sum(stock), 0)::bigint AS pairs, count(*)::bigint AS shoes FROM product_stock) p
+```
+
+**5.2 The 14 days** — exactly 14 rows, oldest first, scanned into `(date string, sales int64)`.
+
+```sql
+WITH shop AS (
+    SELECT ($1::timestamptz AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS today
+), sold AS (
+    SELECT (o.placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS day, sum(o.total) AS sales
+      FROM orders o, shop s
+     WHERE o.status <> 'cancelled'
+       AND o.placed_at >= ((s.today - 13)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')
+       AND o.placed_at <  ((s.today + 1)::timestamp  AT TIME ZONE 'Asia/Ho_Chi_Minh')
+     GROUP BY 1
+)
+SELECT to_char(d.day, 'YYYY-MM-DD') AS date, coalesce(sold.sales, 0)::bigint AS sales
+  FROM (SELECT s.today - 13 + i AS day FROM shop s, generate_series(0, 13) AS i) d
+  LEFT JOIN sold ON sold.day = d.day
+ ORDER BY d.day
+```
+
+The series is an **integer** `generate_series` added to a `date`, never `generate_series(date, date, interval)`: that form resolves to `timestamptz` and its `::date` would then depend on the session's `TimeZone`.
+
+**5.3 Pairs by line** — one row per line, scanned into `(line, name string, pairs int64)`.
+
+```sql
+WITH sold AS (
+    SELECT p.line_id, sum(i.qty)::bigint AS pairs
+      FROM order_items i
+      JOIN orders   o ON o.id = i.order_id   AND o.status <> 'cancelled'
+      JOIN products p ON p.id = i.product_id AND p.line_id IS NOT NULL
+     GROUP BY p.line_id
+)
+SELECT l.id AS line, l.name, coalesce(sold.pairs, 0)::bigint AS pairs
+  FROM lines l
+  LEFT JOIN sold ON sold.line_id = l.id
+ ORDER BY coalesce(sold.pairs, 0) DESC, l.seq
+```
+
+**5.4 Running low** — scanned into `(id, name, category, image string, stock int64, sizes_low []string)`.
+
+```sql
+SELECT p.id, p.name, coalesce(p.category_id, '') AS category, p.image, v.stock, v.sizes_low
+  FROM product_stock v
+  JOIN products p ON p.id = v.product_id
+ WHERE cardinality(v.sizes_low) > 0 AND v.stock < 15
+ ORDER BY v.stock, p.seq
+```
+
+**5.5 The five latest orders** — scanned into nine columns.
+
+```sql
+SELECT o.id, o.number, o.customer,
+       coalesce(f.product_id, '') AS product, coalesce(p.name, '') AS product_name, coalesce(f.size, '') AS size,
+       o.status,
+       to_char(o.placed_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD"T"HH24:MI:SS') || '+07:00' AS placed_at,
+       o.total
+  FROM orders o
+  LEFT JOIN LATERAL (SELECT i.product_id, i.size FROM order_items i WHERE i.order_id = o.id AND i.line_no = 1) f ON true
+  LEFT JOIN products p ON p.id = f.product_id
+ ORDER BY o.placed_at DESC, o.seq DESC
+ LIMIT 5
+```
+
+`placed_at` is formatted by the same expression `orders/read.go` and `orders/list.go` use, so an order reads the same second in the overview, the list and the order page.
+
+## 6. Limits and cost
+
+| Aspect | Decision |
+|---|---|
+| Deadline | `overviewTimeout = 5 * time.Second` on the request's context: ten times the p95 bound, and shorter than the browser client's 15 s, so the handler answers `500` before `api.ts` gives up |
+| Connections | One pooled connection per request, for the length of five statements. The overview takes no lock, so it neither waits for an order being placed nor makes one wait |
+| Size of the answer | A few kilobytes: 14 days, ≤ 5 orders, one row per line, and the running-low list (≤ the number of shoes). It is the same size with 14 orders and with 10,000 (SC-16) |
+| p95 | ≤ 500 ms at 10,000 orders and 1,000 shoes (SC-17); the estimate of ERD §4 is two orders of magnitude below it. No index and no cache is added to meet it (ERD O2, O3) |
+| Retries | None server-side. `api.ts` tries a failed GET (no answer or 5xx) once more; a `401` or `403` is never retried |
+
+## 7. The Go surface
+
+Two new files in `internal/admin`, **every identifier starting with `overview` or `Overview`** so that "Manage shoes…" (also adding files to the package, in parallel) collides with nothing. The handler holds **no SQL**; the store holds all of it. The package's existing `reply`, `refuse`, `internalMessage` and `Pool` (`staff.go`, `staff_store.go`) are reused, not redefined.
+
+```go
+// overview.go
+type overviewDB interface{ BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error) } // *pgxpool.Pool and admin.Pool satisfy it
+
+type overviewReader interface {
+	read(ctx context.Context, now time.Time) (overviewAnswer, error)
+}
+
+type overviewHandler struct {
+	reader overviewReader
+	log    *slog.Logger
+	now    func() time.Time
+}
+
+func RegisterOverview(mux *http.ServeMux, db overviewDB, log *slog.Logger, now func() time.Time)  // §1
+func (h *overviewHandler) mount(mux *http.ServeMux)  // mux.Handle("GET /v1/admin/overview", auth.Require(auth.Admin, auth.Staff)(http.HandlerFunc(h.get)))
+func (h *overviewHandler) get(w http.ResponseWriter, r *http.Request)  // §3 steps 3–6; reply(w, 200, a); refuse(w, 500, "internal", internalMessage, nil)
+
+// The answer. These structs ARE the privacy rule: a field that is not here cannot be sent.
+type overviewAnswer struct {
+	Month         overviewMonth     `json:"month"`
+	WaitingOrders int64             `json:"waiting_orders"`
+	PairsOnShelf  int64             `json:"pairs_on_shelf"`
+	Shoes         int64             `json:"shoes"`
+	RunningLow    []overviewLowShoe `json:"running_low"`
+	SalesByDay    []overviewDay     `json:"sales_by_day"`
+	PairsByLine   []overviewLine    `json:"pairs_by_line"`
+	LatestOrders  []overviewOrder   `json:"latest_orders"`
+}
+type overviewMonth struct { Sales int64 `json:"sales"`; Orders int64 `json:"orders"` }
+type overviewLowShoe struct {
+	ID string `json:"id"`; Name string `json:"name"`; Category string `json:"category"`; Image string `json:"image"`
+	Stock int64 `json:"stock"`; SizesLow []string `json:"sizes_low"`
+}
+type overviewDay struct { Date string `json:"date"`; Sales int64 `json:"sales"` }
+type overviewLine struct { Line string `json:"line"`; Name string `json:"name"`; Pairs int64 `json:"pairs"` }
+type overviewOrder struct {
+	ID string `json:"id"`; Number string `json:"number"`; Customer string `json:"customer"`
+	Product string `json:"product"`; ProductName string `json:"product_name"`; Size string `json:"size"`
+	Status string `json:"status"`; PlacedAt string `json:"placed_at"`; Total int64 `json:"total"`
+}
+
+// overview_store.go
+type overviewStore struct{ db overviewDB }
+func (s overviewStore) read(ctx context.Context, now time.Time) (overviewAnswer, error)
+// BeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}); defer Rollback(context.WithoutCancel(ctx));
+// the five statements of §5; every list is made with make(T, 0, n) so it encodes as [] and never as null; rows.Err() is checked.
+```
+
+`get` on a store error: `errors.Is(err, context.Canceled) && r.Context().Err() != nil` → return with nothing written; otherwise `auth.LogFailure(h.log, "overview request failed", "overview.read", err)` and the `500` above.
+
+## 8. Tests the backend PR ships
+
+Database cases use `dbtest.Migrated(t)` (a schema of its own with the 14 sample orders, 12 shoes and 5 lines; skipped without `TEST_DATABASE_URL`, proved first in CI) and the **fixed clock** `time.Date(2026, 11, 25, 12, 0, 0, 0, time.FixedZone("ICT", 7*3600))`. A database test serves the handler with `auth.WithUser` in the context as the staff harness does, so `auth.Resolve` is not what fails when a case breaks the database. The expected values of a case that is not the sample are computed by the oracle SQL of ERD §7, which is **not** the handler's statement.
+
+| Test | What it proves | SC |
+|---|---|---|
+| `TestOverviewIsDealerOnly` (no database: a fake reader that fails the test if called) | No user → `401`, a `customer` → `403`, both before the reader runs, with the error envelope and none of the eight keys; `admin` and `staff` → `200` | SC-1, SC-2 |
+| `TestOverviewShape` (fake reader) | The body's top-level keys are exactly the eight; each row has exactly its keys (decode into `map[string]any`); numbers have no decimal point; `Cache-Control: no-store`; `Content-Type: application/json; charset=utf-8`; `?zzz=1&now=2020-01-01&month=1` gives the **identical** body; with an empty answer every list is `[]` in the **raw** bytes, never `null` | SC-3, SC-12 |
+| `TestOverviewDatabaseFailureIsGeneric500` | A reader that fails (an error text holding SQL, a table name and the sentinel `0999000TCOV`) → `500`, `{"error":"internal","message":"Something went wrong. Please try again."}` and nothing else (none of the error's text, SQL or sentinel is in the body); the cause is in the log. A **closed pool** through the real store gives the same | SC-13 |
+| `TestOverviewAbandonedRequestWritesNothing` | A cancelled request context → no body, no `500` logged as an error | §3 |
+| `TestOverviewSampleSetAtTheSRSClock` | `month` 47660000 / 13; `waiting_orders` 2; `sales_by_day` 14 entries `2026-11-12`…`2026-11-25` with the SRS amounts, summing to 47660000, `2026-11-16` and `2026-11-20` 0; `pairs_by_line` Samba 8, Gazelle 2, Megaride 2, Handball Spezial 1, Adizero 1 in that order; `latest_orders` DOI-24816, 24815, 24814, 24817, 24813 with `placed_at` `…+07:00` and `product`/`size` of the first pair. **Running low is compared with the oracle, not with a literal:** the seed's placeholder counts (ERD Q1) decide which shoes qualify | SC-4 to SC-8 |
+| `TestOverviewCancelledAndWaiting` | Setting each status on DOI-24816 in turn moves `waiting_orders` only for `placed` / `confirmed`; cancelling DOI-24813 removes it from `month`, its day and its line and **keeps it among the five latest as `cancelled`**; placing an order through `orders.Place` (or inserting one) changes `month`, `waiting_orders`, its day and its line on the next read | SC-5, SC-7, SC-14 |
+| `TestOverviewShelfAndRunningLow` | In an emptied schema: shoes of 18, 24, 31 pairs → `pairs_on_shelf` 73, `shoes` 3; a draft of 10 adds 10 and counts; 5, 14, 15, 18 pairs and sizes of 1 or 2 pairs → 5 and 14 listed, 5 first, 15 and 18 absent; 9 pairs with no 1–2 size absent; a size of exactly 2 in, exactly 3 out; a qualifying draft in; two equal stocks keep `products.seq` order; each row has the six keys | SC-9, SC-10 |
+| `TestOverviewMonthAndDayBoundaries` | With the clock at `2026-12-01 12:00 +07:00`, orders at `2026-11-30 23:59:59 +07:00`, `2026-11-30 16:59:59 +00:00`, `2026-11-30 11:59:59 -05:00` are November's; `2026-12-01 00:00:00 +07:00`, `2026-11-30 17:00:00 +00:00`, `2026-11-30 12:00:00 -05:00` are December's: `month` holds only the second three, `2026-12-01` holds them and `2026-11-30` holds the first three. The same test runs with the **session `TimeZone` set to `UTC` and to `America/New_York`** and gives the same answer. A clock at 00:00:00 and at 23:59:59 Vietnam time reads the same "today" it names | SC-11 |
+| `TestOverviewLinesAndPairs` | An order of two pairs, a Samba and a Gazelle, adds each pair's `qty` to its own shoe's line; a line nothing sold is present with 0 and, with ties, in `lines.seq` order; a shoe with no line is in no row; no orders at all → every line present with 0 | SC-7, SC-12 |
+| `TestOverviewEqualsIndependentSums` | A generated set (a few hundred orders over three months, every status, one to three pairs, several shoes and lines, written in `+07:00` and UTC) → `month`, each of the 14 days, each line's pairs and `waiting_orders` equal the oracle SQL, field by field; **the sample set too** | SC-15 |
+| `TestOverviewHoldsNoPrivateData` | 10,000 generated orders carrying the sentinels `0999000TCOV`, `tcov@example.invalid`, `TCOV ADDRESS`, `TCOV NOTE` → the raw body contains none of them, holds exactly five orders, and is within a few kilobytes of the body for 14 orders. **Also a test over the store's own SQL text:** none of `phone`, `email`, `address`, `note`, `city` appears in any of the five constants | SC-16 |
+| `TestOverviewP95` | 10,000 orders and 1,000 shoes (5–12 sizes of 3–9 pairs), `ANALYZE`, 100 sequential requests through the handler → p95 ≤ 500 ms. If it fails on a shared runner it is reported to TL (ERD O2), not relaxed | SC-17 |
+| `TestOverviewSchemaAssumptions` | ERD §6 | — |
+
+Frontend tests: `dealer-dashboard-overview.test.tsx` keeps its 13 cases; only its source of the answer changes (§9).
+
+## 9. The frontend's swap from its mock
+
+| Step | In `code/frontend` |
+|---|---|
+| 1 | `src/lib/overview.ts`: delete `import { readOverview } from "./mock/dealer-dashboard-figures-and-charts"`; add `import { api } from "./api"`; make the one source `const read: () => Promise<unknown> = () => api.get<unknown>("admin/overview");` and fix its comment. **Nothing else in the file changes**: the types, `isOverview`, `dayOfMonth`, `useOverview` and the retry stay as approved |
+| 2 | Delete `src/lib/mock/dealer-dashboard-figures-and-charts.ts` (it is the story's only mock) |
+| 3 | `src/test/dealer-dashboard-overview.test.tsx`: move `sampleOverview` and `emptyOverview` into the test file; repoint `vi.mock` from the mock module to `../lib/api`, keeping the real `ApiError` (`vi.mock("../lib/api", async (original) => ({ ...(await original<typeof import("../lib/api")>()), api: { ...(await original<typeof import("../lib/api")>()).api, get: vi.fn() } }))`), and make `read` the mocked `api.get`; the failure cases reject with `new ApiError(500, "internal", "…")`, `new ApiError(0, "network", "…")`, `new ApiError(401, …)` and `new ApiError(403, …)` |
+| 4 | `grep -rn "lib/mock/dealer-dashboard" code/frontend/src` finds nothing (CI warns while a mock is imported). `AdminOverview.tsx` already imports no `useCollection`, `Order`, `Product` or `Line` |
+
+**No `content.json` key, component, page, route (`/admin` is routed inside `SignedIn` since "Dealer sign-in"), `src/App.tsx` or `api.ts` change.** The GET carries the session cookie (`credentials: "include"`); a failed GET is two requests (no answer or 5xx) and a `401` / `403` is one, which the page shows, as it shows every failure, as "We could not load the overview." (story decision 3).
+
+**Branch.** The backend branch is cut from the UI branch `feature/dealer-dashboard-figures-and-charts-ui`: `overview.ts`, its test and the mock exist only there. PR #76 merges first (flow steps 11–12), then the backend PR.
+
+## 10. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| V1 | An undefined query parameter on a route that takes none (SC-3; test-case §5 point 4) | **Ignored**: `200` and a body identical to the one without it. No input is read, so none can be refused. This is `_base.md` §2.4's rule for a URL a person edited, and it holds for `?now=` as much as for `?zzz=` | `400 bad_request`: this route has no parameter to name, and a dealer's bookmark with a stray `?utm_source=` would stop working. A `?now=` that moved the clock: it would let a test route into production |
+| V2 | A database that cannot be reached (test-case §5 point 3) | **`500 internal`**, as `_base.md` §2.3 says ("including … a database that cannot be reached"). `503 unavailable` is the process shutting down and `/healthz` | `503` for `BeginTx` and `500` for a statement: two codes for one condition, and the page shows both as the same sentence |
+| V3 | Where does "today" come from? | **A clock the handler is given**: `RegisterOverview(…, now func() time.Time)`, `time.Now` from `server.New`, a fixed instant in a test. It is read once per request and handed to the store as `$1`; the database's `now()` is **not** used for "today" here (it is the clock of every other story's windows, but a test cannot move it) | An environment variable or a query parameter for the date: a deployed server's figures would be one request away from being wrong. `now()` inside the statements: the SRS literals could then only be proved on the day they happen to be true |
+| V4 | One snapshot or five autocommit statements | **One `REPEATABLE READ, READ ONLY` transaction** (ERD O4) | See ERD O4 |
+| V5 | Where does the SQL live, and may `internal/admin` hold it? | In `overview_store.go`. `staff.go` says `internal/admin` "holds no SQL" because the **accounts** have an owner (`internal/auth`); the overview is a **read model across five tables** that no package owns, and it writes none of them (ERD O6) | Five exported functions in five packages for one page |
+| V6 | How is a latest order's `placed_at` written? | By the statement, with the expression `orders/read.go` and `orders/list.go` already use (`to_char(… AT TIME ZONE 'Asia/Ho_Chi_Minh', …) \|\| '+07:00'`). `Asia/Ho_Chi_Minh` is a fixed UTC+7, so the literal offset is exact | Marshalling a Go `time.Time` in a fixed zone: also `+07:00`, but a third place that formats the same instant |
+| V7 | Logging a failure | `auth.LogFailure(log, "overview request failed", "overview.read", err)` — the helper `staff.go` uses: a database error is logged by SQLSTATE and constraint only | `log.Error(…, "error", err)` with the raw error: a failed `CHECK` or a driver message can carry a row, and this route reads orders |
+| V8 | A cap on `running_low`, or a total beside it | **No** (ERD O10). The list is every shoe running low; the page's figure is its length | A cap plus a `running_low_total` field: a contract change and a frontend change for a list a few dozen long |
+| V9 | May the page's four figures be given as separate endpoints so that a slow one does not hold the others? | **No.** One request is the story's point (ADMIN-021 item 3, SC-25): the "Today" sentence's counts must equal the figures above it, and five statements on one snapshot are what guarantee it | `GET /v1/admin/overview/month`, `…/low`: five round trips for a page that is read a few times a day, and figures taken at five instants |
+
+### Conflicts with merged decisions
+
+None. I read `services/_base.md` §1.1, §2.1–§2.4, §2.9, §3.25, §3.26–§3.27 (the guard and error conventions), `services/staff-accounts-managed-by-the-owner.md` (the shape of this file and `internal/admin`'s helpers), `services/manage-shoes-lines-categories-reviews-and-orders.md` §1 (the parallel use of `internal/admin` and of the `server.go` region) and the merged `internal/admin`, `internal/server`, `internal/orders` and `internal/auth` code. **One correction, not a conflict:** the example in `_base.md` §3.25 names a seeded shoe wrongly (`handball-spezial-earth-strata`); §4 above gives the seed's id. Two statements are **refinements of silence** (V1: what an unknown parameter does; the 5-second deadline and the abandoned-request rule of §3), and neither changes a status, field or code.
+
+## 11. Migration plan
+
+| Step | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| This story | **No migration file.** | Revert the backend PR (and the frontend swap with it): the endpoint is gone and the page reads its mock again, which exists only while PR #76 is unmerged — after both merge, a revert of the backend PR alone leaves `/admin` on its error view, **so the two are reverted together** | Not applicable: nothing is added to any migration; nothing in any database changes at deploy time, so the deploy needs no order between the backend and the frontend beyond "the backend first": a frontend that asks before the route exists gets the catch-all `404`, which the page shows as the error view and "Try again" recovers from |
+
+## 12. Hand-over
+
+| Who | What they must know from this design |
+|---|---|
+| Dev, backend step | **No migration.** `internal/admin/overview.go` and `overview_store.go` with the five statements of §5 as given; one line in `server.go`; the swap of §9 (the BE branch is cut from the UI branch and PR #76 merges first); the tests of §8. Reuse `reply`, `refuse`, `internalMessage` and `auth.LogFailure`; define nothing whose name does not start with `overview`. Every list is made non-nil. **Do not add an index, a cache or a setting** |
+| Test lead | The SRS literals hold at the fixed clock in the backend test over the migrated sample set (SC-4 to SC-8, SC-11). On the running shop the clock is real: compare the page with the endpoint and the endpoint with the sums of ERD §7, never with a literal (story §8). Running low on the seeded shop is whatever the placeholder counts give, **not** "two shoes" — that is the substituted answer of the page cases. SC-14's cancel half is a SQL `UPDATE` until "Dealer handles orders" (item 17) merges |
+| "Dealer handles orders" (item 17) and "Manage shoes…" (item 10) | They write what this reads: an order's status (a cancelled order leaves every figure on the next read and stays among the five latest) and a shoe's pairs (through `internal/stock`, the one definition behind `product_stock`). Neither needs to know the overview exists. `GET /v1/orders` and the menu's `limit=1` read are theirs, not this route's |
+| PM | Two product questions the design does not decide and the story already carries: whether a latest-orders row's time should be pinned to Vietnam time (the chart's day labels already are), and whether "pairs sold by line" should be this month's rather than all time (ERD O5) |
 
 
 <!-- story 13: Product page waits for the shoe before saying it is missing -->
@@ -3757,4 +4882,300 @@ Story §3 says: build only after item 4 has merged. The facts that make that con
 | Dev, the catch-up of #40 | The table of §6. Only imports, the mock's deletion **and its test `shop-mock.test.ts`'s**, `pageSize: 20` and the `vi.mock` path differ; do not carry the knobs, the stand-in reading of the shoes or the test of either |
 | Test lead | Count requests by §2.1 (a failing read is two requests, because of `api.ts`'s one retry); a failed list is the same view for every rejection (§2); the shop's one way to the empty state is `total` 0; fault, delay and offline come from interception, never from the product |
 | UI follow-ups from the review of PR #40 (not backend, not blocking) | "Clear all" sits between Price and the Size pills (SC-3 lists it last; the test cases do not pin the place); keyboard focus after "Try again" falls to the page when its button unmounts; a failure for `(query, page 1)` shows at once if the visitor returns to that query before another read settles (clearing the failure when the effect starts fixes it); `filtering` counts any unknown parameter; a long sort label can wrap at 320px beside "Filter (n)". Dev may take them with the next change to the file or leave them; none changes a contract here. The third of them, and one more the review of the caught-up head found, are ruled in §3.2 as R1 and R2 |
+
+
+<!-- story 17: Dealer handles orders: status, courier, payment -->
+# Service contracts — Dealer handles orders: status, courier, payment (plan item 17, "S16")
+
+Module `admin` (handlers) and `orders` (the rules and the SQL) · Requirements ADMIN-016, ADMIN-004 (AC-6, AC-9), ADMIN-011 (AC-12, AC-14, AC-15, AC-20), ADMIN-014 (AC-7, AC-8) · Story `docs/admin/stories/dealer-handles-orders-status-courier-payment.md` · UI PR #77 · Tables: `docs/architecture/erd/dealer-handles-orders-status-courier-payment.md` (**none changed**).
+
+This file **extends** `services/_base.md` §3.11, §3.14, §3.15 and §3.16 and the order of §2.8. Their routes, auth, field names and error codes **stand**. It adds the order in which a request is refused, every field rule and sentence, the dealer's two reads, what a refused body does (nothing), the Go surface, the tests the backend PR ships, and the frontend's swap from its mock. It adds **no error code** to the catalog (§2.3), no second error or list shape, no table, no setting and no secret. Every path is written the way the Go backend mounts it — **no `/api` prefix**: the browser's `/api/v1/orders/doi-24818` reaches Go as `/v1/orders/doi-24818`.
+
+## 1. Endpoints
+
+| # | Method and path | Auth | What this story does |
+|---|---|---|---|
+| 3.11 | `GET /v1/orders/{id}` | token, linked customer, **dealer** | Adds the dealer branch (§3.1). The public statement, the token path and the customer path are not edited |
+| 3.14 | `GET /v1/orders` | dealer | Serves `phone`, `email`, `address`, `note`, `transaction_no` and `product_name`; the default order is newest first (§3.2) |
+| 3.15 | `PUT /v1/orders/{id}` | dealer | New (§3.3) |
+| 3.16 | `DELETE /v1/orders/{id}` | dealer | New (§3.4) |
+
+"Dealer" is `auth.Require(auth.Admin, auth.Staff)`: no session `401 unauthenticated`, a customer `403 forbidden`, **both before the body, the id or the database are read**, so a visitor's call for an id that does not exist is `401`, never `404` (SC-1). An admin and a staff session get identical answers everywhere below.
+
+**Mounting.** `admin.RegisterOrders(mux, db, log)` in `internal/admin/orders.go` mounts two **literal** patterns, `PUT /v1/orders/{id}` and `DELETE /v1/orders/{id}`, each wrapped in `auth.Require(auth.Admin, auth.Staff)`. `server.New` gains **one line**, `admin.RegisterOrders(mux, pool, log)`, after `admin.RegisterRecords` (item 10 adds that line too; whichever PR merges second keeps both). `PUT /v1/orders`, `PATCH`, and `POST /v1/orders/{id}` have no pattern and answer `404 not_found` through the catch-all, for every caller. **On every answer of the two routes** (the success and every refusal the handler writes): `Content-Type: application/json; charset=utf-8` except `204`, `Cache-Control: no-store`, and the `X-Request-Id` the middleware echoes. No new setting, secret or `.env.example` line.
+
+## 2. The mock, read and judged
+
+The UI PR (#77) adds `src/lib/mock/dealer-handles-orders-status-courier-payment.ts`, imported only by `src/lib/dealer-handles-orders-status-courier-payment.ts` through one `transport` constant (the UI review checked that; it did not review the mock's contents). It is unreviewed input: its shape is compared with `_base.md` §2.8, §3.11 and §3.14–§3.16, **which decide it where they speak**.
+
+| Mock / frontend assumption | Contract | Judgment | Frontend change at the swap |
+|---|---|---|---|
+| `read` answers a `DealerOrder`: `id`, `number`, `placed_at` (RFC 3339, `+07:00`), `status`, `product`, `size`, `qty`, `total`, `delivery_fee`, `payment`, `paid`, `delivery`, `carrier`, `tracking`, `eta` (`""` when none), `customer`, `city`, `phone`, `email`, `address`, `note`, `transaction_no`, `items[]` (`product`, `name`, `colourway`, `image`, `size`, `qty`, `unit_price`) | The dealer view of `_base.md` §2.8 with `items` (§3.1) | **Sound, field for field.** Names, types, units and "`""` when unset" match. `delivery_fee` is the one field the page's type names and never draws | None |
+| `update` answers the same `DealerOrder`, **with `items`**; the page merges `{...order, ...answer}` | The `PUT` answers the dealer view read in the same transaction, `items` included (§3.3) | **Sound.** The merge stays as a safety net | None |
+| `transport` throws an `ApiError(status, code, message, errors)`; a failure to connect is status `0` | `src/lib/api.ts` already does exactly this (`failure()` reads `error`, `message`, `errors`; `put` and `delete` exist on `main`) | **Sound.** The mock imports the real `ApiError`, so the page's `instanceof` checks hold | `transport` becomes three `api` calls (§5) |
+| `404` is "missing" only when `status === 404 && code === "not_found"` | The server's own body for a missing or malformed id is `not_found`; a gateway's 404 reaches `api.ts` as code `internal` | **Sound, and the right guard.** Without the code check a broken proxy rule would tell the dealer every order is gone | None |
+| The 422 sentences: `"An order cannot go from <a> to <b>."`, `"An order that is <status> cannot be changed."`, `"This cannot be changed."`, `"Only the payment provider marks this order paid."`, `"Write the date as year-month-day, for example 2026-11-26."`, `"Enter the customer's name."` | §3.3 adopts all six **as written** | **Sound.** The page shows `errors[key]` as sent | None |
+| The 422 sentences `"Keep this to 200 characters."` and `"Keep the note to 5,000 characters."`, `"This must be text."` | §3.3 words them `<Label> can have at most 200 characters.` etc.; a value of the wrong type is a **400** (`<Label> must be text.`), not a 422 | **Differs in words, not in shape.** The page never reads a sentence's words and `errors[key]` is still keyed by field | None. The mock's 422 for a non-text value is the one behavioural difference; the page cannot send one |
+| The 400 for an unknown key carries no `errors` | §3.3: `400 bad_request` with `errors.<key>` "Not a field of this order." | Sound | None |
+| `remove` answers 409 `conflict` with the sentence in `message` and no `errors`; the page reads `e.message` for 409 and 404 | §3.4 does exactly this (the envelope carries `errors` only on the codes of §2.3) | **Sound** | None |
+| `expired` is a `401` only | The server answers `401` to no or an ended session; `403` only to a customer session, which never reaches `/admin` (the gate) | Sound | None |
+| The list's "shoe" column resolves the first pair's id to a name from the **first 100 shoes** and falls back to the id | The list has only the first pair's `product` id; a shop of hundreds of shoes would show ids for the rest, so SC-25 ("shows the name of the first pair's shoe") would fail beyond shoe 100 | **Not sound at the shop's scale.** The server adds `product_name` to each list item (§3.2, as the overview's `latest_orders` already carries one) | `AdminOrders.tsx` reads `r.product_name` for the column and drops its `useCollection("products", { pageSize: 100 })` read |
+| The list's default order is whatever `ListPage` gets (no sort) | `_base.md` §2.4's default is `seq` ascending, oldest first | **The contract's default is wrong for this list** (ADMIN-011 AC-12: newest first), and `ListPage` has no default sort the story may set | None: the server answers newest first for this list only (§3.2) |
+| Seeded `transaction_no` on four sample orders (`14123455`…`14123457`) | The 14 sample orders have no payment rows: `transaction_no` is `""` until item 8 makes a payment | Mock-only data | None; `OrderFacts` already draws the line only when the string is non-empty |
+| `?mock=slow` / `offline` / `expired` | **No delay, fault or sleep route, header or query parameter is added to the backend** | Mock-only controls | Deleted with the mock; the tests' `replaceState("?mock=…")` cases become `vi.mock("../lib/api")` stubs that throw the real `ApiError` (`status` 0 for offline, 401 for expired, a promise held for two seconds for slow) |
+
+## 3. Contracts
+
+### 3.1 `GET /v1/orders/{id}` — the dealer branch (project §3.11)
+
+**Rule.** Before the token path, `orders.read` asks `auth.FromContext(ctx)`. A session of role `admin` or `staff` is answered **the dealer view, whatever header the request carries** (a dealer's `X-Order-Token` is not looked at). Any other caller — no session, a customer — takes the path that exists today, byte for byte: token → public view; linked customer → public view; anything else → `404`. A dealer branch is **never** added to `authorize` (decision D2): `authorize` returns a `Ref` that can never hold a private column, and that guarantee is what SC-3 stands on.
+
+1. `{id}` is matched against `^[a-z0-9][a-z0-9._-]*$` and at most 100 characters; else `404 not_found`, no query.
+2. One statement, `dealerViewSQL`, a constant of its own beside the public `viewSQL` and **not derived from it by string edits**: it lists every column it returns. It is the public view's eighteen keys (`id`, `number`, `placed_at`, `status`, `paid`, `total`, `delivery_fee`, `delivery`, `payment`, `carrier`, `tracking`, `eta`, `customer`, `city`, `product`, `size`, `qty`, `items`) plus `phone`, `email`, `address`, `note` and `transaction_no` (ERD §6). Like the public statement it is one `SELECT json_build_object(…)`, so the order and its pairs agree. It never selects `is_sample`, `idempotency_key`, `account_id`, `source` or `invented`.
+3. No row → `404 not_found`, the body `{"error":"not_found","message":"Not found."}` the project writes everywhere.
+
+**Success** `200`, `Cache-Control: no-store`: the dealer view.
+
+```json
+{
+  "id": "doi-24818", "number": "DOI-24818", "placed_at": "2026-11-26T09:12:00+07:00", "status": "packed",
+  "paid": true, "total": 6380000, "delivery_fee": 0, "delivery": "standard", "payment": "vnpay",
+  "carrier": "GHN", "tracking": "GHN-PT27XM", "eta": "2026-11-30", "customer": "Lan Nguyen", "city": "Da Nang",
+  "product": "samba-og-w-core-black", "size": "38", "qty": 1,
+  "items": [
+    { "product": "samba-og-w-core-black", "name": "Samba OG Black", "colourway": "Core Black", "image": "/images/ref/samba-og-w-core-black.jpg", "size": "38", "qty": 1, "unit_price": 3090000 },
+    { "product": "gazelle-indoor-solar-gold", "name": "Gazelle Indoor Solar Gold", "colourway": "Solar Gold", "image": "/images/ref/gazelle-indoor-solar-gold.jpg", "size": "42", "qty": 1, "unit_price": 3290000 }
+  ],
+  "phone": "0912 345 678", "email": "", "address": "12 Example Street, Ward 1", "note": "Call before delivering.", "transaction_no": "14123456"
+}
+```
+
+| Code | HTTP | Trigger |
+|---|---|---|
+| `not_found` | 404 | The id does not exist or cannot be an id (a dealer is told the truth about a missing order; a visitor keeps the one body for every cause) |
+| `internal` | 500 | The statement fails or times out (the 5-second context). Generic body; the cause is logged beside the order id and the request id |
+
+**Notes.** A dealer's browser that opens a customer's order page sends its session cookie and so receives the dealer view in the network answer (the contract's "(1) a dealer session"); the customer pages draw none of the private fields and SC-27 is checked with **no dealer session** (Test: open the customer page in a window with no admin cookie, as item 10's D2 already says for the shop pages). `POST /v1/orders/{id}/payment` is untouched: a dealer session without the token still answers `404` there (§3.13).
+
+### 3.2 `GET /v1/orders` — the dealer's list (project §3.14)
+
+**Auth, query, answer** — §3.14 and §2.4 **stand**: `auth.Require(auth.Admin, auth.Staff)` before the query string is read; `page`, `limit` (default 12, above 100 served as 100), `q`, `sort`, `status=a,b`, `payment=a,b`, `placed_at_from` / `_to`, `total_from` / `_to`, and the answer `{ "items", "total", "page", "limit" }` with `Cache-Control: no-store`. The grammar is `data`'s one reader; this story writes no second query language. Three things change:
+
+| Change | Rule |
+|---|---|
+| **The private columns are served** | Each item is the dealer view **without `items`**: `id`, `number`, `placed_at`, `status`, `product`, **`product_name`**, `size`, `qty` (the first pair's), `total`, `payment`, `paid`, `delivery`, `carrier`, `tracking`, `eta`, `customer`, `city`, `phone`, `email`, `address`, `note`, `transaction_no`. `phone`, `email`, `address`, `note` and `transaction_no` are `Private` columns: **selected only by this handler**, never filterable, sortable or searchable. A filter, range or `sort` on one of them is `400 bad_request` naming it, for every caller including a dealer (`?phone=`, `?email=`, `?address=`, `?note=`, `?transaction_no=`; `_base.md` §2.4's list of private fields gains `transaction_no`) |
+| **`product_name`** | The first pair's shoe's name, `""` when the order has no pair. A public column: it may be filtered and sorted like `product`. A shoe an order refers to cannot be deleted, so the name is always there |
+| **Default order** | With no `sort`, `placed_at DESC, seq DESC` (newest first, ties by position). With a `sort`, the contract's rule stands: the chosen field, then `seq ASC`. The deviation is this collection's alone (`Collection.DefaultOrder`; every other collection keeps `seq ASC`) |
+
+`GET /v1/orders` for the menu's count stays `?status=placed,confirmed&limit=1`, read as `total`. The search `q` still looks in the order number and the customer's name only; a private column is never searched.
+
+| Code | HTTP | Trigger |
+|---|---|---|
+| `unauthenticated` / `forbidden` | 401 / 403 | No session / a customer, **before** the query string is read |
+| `bad_request` | 400 | `page`/`limit`/`q`/`sort` malformed, a range that is not a number or date, a filter or sort on a private column |
+| `internal` | 500 | The statement fails or times out |
+
+### 3.3 `PUT /v1/orders/{id}` (project §3.15)
+
+**Purpose** — move an order along, set the courier's details, correct the customer's details, edit the note. **Partial**: only the fields sent change. **All or nothing**: a body with one valid change and one refused field applies neither (`{"status":"confirmed","total":1}` leaves the order `placed`).
+
+**Order in which a request is refused.** The first row that fails answers; rows 7 to 11 collect **every** fault they can see before answering, so the page shows each beside its field in one save.
+
+| # | Check | Answer |
+|---|---|---|
+| 1 | The route exists | `404 not_found` (catch-all) |
+| 2 | A dealer session | `401` / `403` |
+| 3 | `Content-Type` is `application/json` (a `charset` is allowed) | `415 unsupported_media_type` |
+| 4 | The body is at most **64 KiB** | `413 payload_too_large` |
+| 5 | The body is **one JSON object**, nothing after it (an empty body is not one) | `400 bad_request`, `errors.body` "Send one JSON object." |
+| 6 | `{id}` matches `^[a-z0-9][a-z0-9._-]*$`, at most 100 characters | `404 not_found`, no query |
+| 7 | Every key is one of the **ten editable fields**, one of the **eleven refused names** + `paid`, or `id`; every editable value is a JSON string. Nothing else is read from the database yet | `400 bad_request`, `errors.<key>`: "Not a field of this order." for a key the order does not have (`colour`, `seq`, `is_sample`, `account_id`); "<Label> must be text." for `null`, a number, a boolean, an array or an object. `id` is read and discarded, whatever its value |
+| 8 | The refused names present: `number`, `placed_at`, `product`, `size`, `qty`, `items`, `total`, `delivery_fee`, `payment`, `delivery`, `transaction_no`, `paid` — **by name, whatever the value and the JSON type**, even the value the order already has | collected as `422`: `paid` → "Only the payment provider marks this order paid."; every other → "This cannot be changed." |
+| 9 | The value rules of every editable field present (table below) | collected as `422` |
+| 10 | Open a transaction (`READ COMMITTED`, 5 s context), `SET LOCAL lock_timeout = '3s'`, `orders.LockOrder(id)` | `404 not_found` for no such order (this wins over every `422`) |
+| 11 | The **state rules**, judged on the status the order has under the lock (ERD §3): the move, and a delivered or cancelled order's locked fields | collected as `422` |
+| 12 | Any fault from 8, 9 or 11 | roll back; `422 invalid`, `errors` naming every field at fault, `message` "Check the details of this order." Nothing in the body is applied |
+| 13 | Apply (ERD §5: one `UPDATE`, or the cancel with its pairs, `orders.Update`), read the dealer view **in the same transaction** (`orders.ReadDealer`), commit | `200` the dealer view of §3.1 |
+
+**The ten editable fields** (the labels are the schema's own, and the page's)
+
+| Field (Label) | Rule | Sentence on a fault |
+|---|---|---|
+| `status` (Status) | one of `placed`, `confirmed`, `packed`, `shipped`, `delivered`, `cancelled` (the stored words, never "On its way") | not one of the six: "Status must be placed, confirmed, packed, shipped, delivered or cancelled." |
+| `carrier` (Carrier), `tracking` (Tracking number) | text, at most **200** characters, `""` clears | "Carrier can have at most 200 characters." · "Tracking number can have at most 200 characters." |
+| `eta` (Expected) | `""` (clears; stored as no date) or a real calendar date written `YYYY-MM-DD`, from 1900 to 2999. `26/11/2026`, `2026-13-40`, `2026-2-3`, `tomorrow` are refused | "Write the date as year-month-day, for example 2026-11-26." |
+| `customer` (Customer) | required, at most 200 | "Enter the customer's name." · "Customer can have at most 200 characters." |
+| `phone` (Phone) | at least **9 digits** (the ASCII digits it contains; the one rule checkout uses), at most 200 characters | "Check the phone number: it needs at least 9 digits." · "Phone can have at most 200 characters." |
+| `email` (Email) | `""`, or an address `auth.NormalizeEmail` accepts (at most 200). Stored trimmed, as typed | "Enter a valid email address, or leave it empty." |
+| `address` (Address) | required, at most 200 | "Enter the street address." · "Address can have at most 200 characters." |
+| `city` (City or province) | required, at most 200 | "Enter the city or province." · "City or province can have at most 200 characters." |
+| `note` (Internal note) | at most **5,000** characters (5,000 is accepted, 5,001 is not), `""` clears | "Internal note can have at most 5,000 characters." |
+
+Text is **trimmed** before it is judged and stored; limits count characters (runes), not bytes. A value holding U+0000 is refused with "<Label> holds a character that is not allowed." (PostgreSQL cannot store it). Required means present and not empty after trimming; the table's `CHECK`s (`ck_orders_customer_not_blank`, `phone`, `address`, `city`) are the backstop, never the message.
+
+**The state rules (row 11)** — with `S` the stored status under the lock:
+
+| Body says | `S` is | Result |
+|---|---|---|
+| `status` = `T` (one of the six) | `delivered` or `cancelled` | **422** `errors.status` "An order cannot go from S to T." — **even when `T` equals `S`**: a delivered or cancelled order accepts no `status` at all |
+| `status` = `S` | `placed`, `confirmed`, `packed` or `shipped` | no-op: nothing changes, no error |
+| `status` = `T` | one step forward (`placed→confirmed`, `confirmed→packed`, `packed→shipped`, `shipped→delivered`) or `placed`/`confirmed`/`packed` → `cancelled` | the move |
+| `status` = `T` | anything else: a skip, a step back, `shipped → cancelled` | **422** `errors.status` "An order cannot go from S to T." (the stored words: `placed`, `confirmed`, `packed`, `shipped`, `delivered`, `cancelled`) |
+| `carrier`, `tracking`, `eta`, `customer`, `phone`, `email`, `address` or `city` | `delivered` or `cancelled` | **422** naming each such field present: "An order that is S cannot be changed." (this sentence replaces any value sentence for the same key) |
+| `note` | any | allowed |
+
+Because the rule reads `S` before the move, one body may move an order and correct it together: `{"status":"delivered","eta":"2026-11-27"}` on a `shipped` order is a `200`; the same body on a `delivered` order is two `422`s.
+
+**Cancelling** (`status: "cancelled"` from `placed`, `confirmed` or `packed`) is `orders.Cancel` inside the same transaction (ERD §3, §5): the status changes by a conditional `UPDATE`, and **only if a row changed** the order's pairs are locked in `(product_id, size)` order and returned by `stock.Return` (not for one of the 14 sample orders, ERD E1). A second cancel, sent after the first or at the same moment, finds `cancelled` under the lock at row 11 and is `422` "An order cannot go from cancelled to cancelled."; the pairs went back exactly once. The same holds against the 30-minute expiry and a late VNPay notice (item 8 calls the same `Cancel`). The shoes' last-pairs lists, sold-out lists and totals follow with no statement of their own (they are the view `product_stock`).
+
+**Example.**
+
+```
+PUT /v1/orders/doi-24818
+{ "status": "shipped", "carrier": "GHN", "tracking": "GHN-PT27XM", "eta": "2026-11-30", "note": "" }
+→ 200  { …the dealer view of §3.1, status "shipped", carrier "GHN", tracking "GHN-PT27XM", eta "2026-11-30", note "" }
+
+PUT /v1/orders/doi-24818   { "status": "packed", "email": "abc", "total": 1 }      (the order is placed)
+→ 422  { "error": "invalid", "message": "Check the details of this order.",
+         "errors": { "status": "An order cannot go from placed to packed.",
+                     "email": "Enter a valid email address, or leave it empty.",
+                     "total": "This cannot be changed." } }          (the order is untouched)
+```
+
+`PUT` with `{}` is `200` and changes nothing (no statement writes, `updated_at` stays). The customer's order page and `/track` read the new `status`, `carrier`, `tracking` and `eta` the next time they load; nothing is pushed (story decision 8). A changed `phone` is the one `/track` matches from then on (decision 7): the matcher reads the stored value.
+
+| Code | HTTP | Trigger |
+|---|---|---|
+| `unauthenticated` / `forbidden` | 401 / 403 | Row 2 |
+| `unsupported_media_type` | 415 | Row 3 |
+| `payload_too_large` | 413 | Row 4 |
+| `bad_request` | 400 | Rows 5 and 7: not one JSON object, a key the order does not have, a value of the wrong type. `errors` names it |
+| `not_found` | 404 | Rows 1, 6, 10: no such order, an id that cannot be one |
+| `invalid` | 422 | Rows 8, 9, 11: a refused name, a value rule, a state rule. `errors` names **every** field at fault |
+| `internal` | 500 | A failed statement, a lock that timed out (3 s), the 5-second context, a deadlock (none is possible by construction, ERD §4: it is logged and answered, not retried). Generic body; nothing is stored. The cause is logged beside the order id and the request id, **never a field value** |
+
+### 3.4 `DELETE /v1/orders/{id}` (project §3.16)
+
+**Purpose** — remove an order. **Only a cancelled, unpaid order.** **Auth** — dealer (`401` / `403` before anything is read). No body is read; one that is sent is ignored.
+
+| # | Check | Answer |
+|---|---|---|
+| 1 | The route exists; a dealer session | `404` / `401` / `403` |
+| 2 | `{id}` matches `^[a-z0-9][a-z0-9._-]*$`, at most 100 characters | `404 not_found`, no query |
+| 3 | Open a transaction, `SET LOCAL lock_timeout = '3s'`, `orders.LockOrder(id)` | `404 not_found` for no such order (a second `DELETE` of the same id is this) |
+| 4 | The order is not `cancelled` — `placed`, `confirmed`, `packed`, `shipped` or `delivered`, paid or not | `409 conflict`, `message` **"Cancel the order first."** |
+| 5 | The order is `cancelled` **and** `paid` | `409 conflict`, `message` **"A paid order cannot be deleted; refund it in VNPay's portal first."** |
+| 6 | `DELETE FROM orders WHERE id = $1`; commit | `204`, no body |
+
+The two `409` bodies are `{"error":"conflict","message":"<the sentence>"}` with **no `errors` key** (the envelope carries `errors` only on the codes of §2.3): item 10's delete question and the order page both show `message`. Rule 4 is judged before rule 5, so a placed, paid order is told to cancel it first. On `204` the order's pairs, tokens, payment attempts and notices are gone with it (ERD §7), the shelf counts and the order-number counter are untouched, the order's token and the dealer's `GET` now answer `404`, and the next order placed is numbered above it.
+
+| Code | HTTP | Trigger |
+|---|---|---|
+| `unauthenticated` / `forbidden` | 401 / 403 | Row 1 |
+| `not_found` | 404 | Rows 1–3: no route, an id that cannot be one, no such order |
+| `conflict` | 409 | Rows 4–5, nothing deleted |
+| `internal` | 500 | A failed statement, a lock timeout, the 5-second context. Generic body; nothing deleted |
+
+**Notes.** Idempotent by being final: the repeat is `404`. Not rate limited (a dealer session). One log line at `info` per write — `order write`, `action` (`update`, `cancel`, `delete`), `id`, `fields` (the **names** that changed, never a value) and the request id the access log carries — and none for a refusal.
+
+## 4. What the Go code does, and where
+
+Names are Dev's; the split is not. Each file stays well under 300 lines. The import graph stays acyclic: `admin → orders, data, stock, auth, httpx`; `orders → data, stock, auth, httpx`; `payments → orders`; `orders` imports neither `admin` nor `payments`.
+
+| File | Holds |
+|---|---|
+| `internal/admin/orders.go` | `RegisterOrders(mux, db, log)`; the pipeline of §3.3 rows 1–13 and §3.4 (transaction, answers, the log line); reuses the helpers of `staff*.go` (`reply`, `refuse`, `notFound`, `invalid`, `Pool`) as `records.go` does |
+| `internal/admin/orders_input.go` | **Pure**, table-tested: reads the body into an `orders.Patch`, collects the 400 faults (rows 5, 7) and the 422 faults (rows 8, 9). The field table (key, label, rule, sentences) is the only place a column name for the `UPDATE` comes from |
+| `internal/orders/update.go` | `Patch` (one `*string` per editable field, `nil` = not sent); `Judge(stored Locked, p Patch) map[string]string` — the **pure** state rules of row 11, the one function that knows the six statuses' moves; `Update(ctx, tx, id, stored, p)` — applies the move and the fields (§3.3 row 13); `Delete(ctx, tx, id)` — rows 3–6 of §3.4, returning `ErrNotFound` or a `*Refusal` (the type the pay route's 409 already uses) |
+| `internal/orders/settle.go` | Item 8's `PayWindow`, `LockOrder`, `MarkPaid`, `Cancel`, `CheckPayable` (item 8 services §5.2). This story changes **`Cancel`** in two ways and nothing else (ERD E1, E2): `RETURNING is_sample` and no pairs for a sample; `stock.Lock` of the order's keys before `stock.Return` |
+| `internal/orders/dealer.go` | `dealerViewSQL`, `ReadDealer(ctx, q, id)` (the one reader of the dealer view: the `GET` and the `PUT`'s answer both call it, so they cannot differ), the `transaction_no` fragment (ERD §6), and the team list's mount |
+| `internal/orders/list.go` | `dealerList` gains `product_name` (`LEFT JOIN products pr ON pr.id = oi.product_id`; `coalesce(pr.name,'')`, filter `pr.name`) and `transaction_no` (`Private`), sets `DefaultOrder: "t.placed_at DESC, t.seq DESC"`; `phone`, `email`, `address`, `note` stay `Private` |
+| `internal/data` | `Collection.DefaultOrder string` (empty = `t.seq`, what `orderBy` returns today when no `sort`); `ListHandlerServing(db, log, c, served ...Access)`; `selectList` and `listSQL` take the set of access classes they serve. **`ListHandler` is `ListHandlerServing(db, log, c, Public)`**, so every registry list and every test of it is unchanged. Filters, ranges, sorts and words keep their `Access == Public` test, so a `Private` column is served and still refused as a filter |
+| `internal/orders/orders.go` | `Register` mounts the team's list as `auth.Require(admin, staff)(data.ListHandlerServing(db, log, dealerList, data.Public, data.Private))`, and `read` gains the dealer branch of §3.1 |
+| `internal/server/server.go` | `admin.RegisterOrders(mux, pool, log)` |
+
+The `Collection` comment in `data/collections.go` that says handlers put "ONLY the Public columns" in their SELECT is rewritten to say that only a handler that names `Private` in its served set selects it (today: the team's orders list), and that nothing but `Public` is ever filterable, sortable or searchable. **If item 10's `View` and `selectList(view)` are on `main` first**, the served set is the same idea one level down: `ListHandlerServing` passes the classes its caller names, `ListHandler` stays pinned to `Public` (item 10's D13), and the second PR to merge adapts to the other's signatures.
+
+## 5. The frontend at the swap (the backend PR's frontend half)
+
+All of it is in `src/lib/dealer-handles-orders-status-courier-payment.ts`, `AdminOrders.tsx`, the mock's deletion and the test. No component changes.
+
+| # | Change | Why |
+|---|---|---|
+| 1 | `transport` becomes `read: (id) => api.get<DealerOrder>(\`orders/${encodeURIComponent(id)}\`)`, `update: (id, body) => api.put<DealerOrder>(…, body)`, `remove: (id) => api.delete(…)`. `api.ts` is **not edited** (`put` and `delete` are on `main`; `delete` resolves on `204`) | The mock is deleted |
+| 2 | A `read` answer that is not an object with an `items` array is `failed`, not a page that throws on `order.items.map` | A 200 that is not the dealer view (a proxy's page) must not blank the order page |
+| 3 | `AdminOrders.tsx`: the "shoe" column renders `r.product_name` (falling back to the id when it is `""`), and the `useCollection("products", { pageSize: 100 })` read and its `Map` are deleted | §2, row 10 |
+| 4 | Delete `src/lib/mock/dealer-handles-orders-status-courier-payment.ts` and the `?mock=` reading. **`src/lib/mock/orders.ts` stays** (the Track page imports it) | SC-40; the product must not read a `mock` parameter |
+| 5 | `src/test/dealer-handles-orders.test.tsx`: keep every assertion; the `replaceState("?mock=…")` cases become `vi.mock("../lib/api")` stubs that throw the **real** `ApiError` — `new ApiError(0, "network", …)` for offline, `(401, "unauthenticated", …)` for expired, a promise resolved after two seconds for slow, `(422, "invalid", …, errors)` for a refusal, `(409, "conflict", "Cancel the order first.")` for the delete. One case: a `read` of `{}` is `failed` | SC-31 to SC-38 |
+| 6 | **How the whole page and the list limit what they send (story decision 2).** The order page sends `changes(order, values)`: only the editable fields that changed, the note alone for a locked order (already built; it is the only caller of `update` besides the list). The **list's row menu "Edit"** is item 10's `RecordDialog`, whose body is `bodyOf(specs, values, existing)`: the keys of its `fields` prop whose value differs from the row, never the whole row. `AdminOrders` passes exactly the ten editable fields as `fields`, so that body is a subset of them, changed fields only; `bodyOf` adds `pairs` / `seen_pairs` only when the row has `sizes`, which an order never does. The server's rule does **not** loosen: a body naming `total`, `number`, `paid` or any refused field is `422` whatever the value. If item 10's backend ever changes `bodyOf` so that it sends a field outside `fields`, the first symptom is a `422` naming it on every list save, and the fix belongs to item 10 | The story names this as TL's to design; no code of this story's runs in the list's dialog |
+| 7 | The list's Delete is item 10's `DeleteQuestion` → `store.deleteRow("orders", id)` → `DELETE /v1/orders/{id}`; its 409 `message` is shown inside the open question. Nothing here | SC-37 |
+
+Not edited by this PR: `store.ts`, `ListPage.tsx`, `RecordPage.tsx`, `Form.tsx`, `fields.tsx`, `content.json`, `schema.json`, `theme.css`, `App.tsx`, `api.ts`, `admin-nav.ts`, `lib/mock/orders.ts`.
+
+## 6. Tests the backend PR ships
+
+Database cases run in CI (`TEST_DATABASE_URL`); the pure ones run everywhere. **The seeded shoes hold at most 3 pairs per size**: a case that needs more sets them with plain SQL first.
+
+| Test | Proves |
+|---|---|
+| `Judge` table test: every `(S, T)` of the 6 × 6 grid, `S == T` on each status, every locked field × `delivered` and `cancelled`, `note` on both | SC-4 to SC-6, SC-13, SC-16 |
+| `orders_input` table tests: each field at its limit (200 / 201, 5,000 / 5,001, phone 8 / 9 digits, `eta` `2026-11-26`, `""`, `26/11/2026`, `2026-13-40`, `2026-2-3`, `tomorrow`), whitespace-only, U+0000, `null` and a number for a text field (400), `colour` (400), every refused name with its own value (422), `paid` true and false, `id` ignored, `{}`, a body that is an array or empty, two faults named together | SC-13, SC-15, SC-17, SC-18 |
+| SQL text tests: the public `viewSQL` and the public list SQL name none of `phone`, `email`, `address`, `note`, `transaction_no`, `is_sample`, `idempotency_key`, `account_id`; `dealerViewSQL` names the five and none of the last three; the team list's SELECT names the five and its filter, sort and search expressions name none | SC-2, SC-3 |
+| Route-table test: `PUT` and `DELETE /v1/orders/{id}` exist behind `auth.Require`; `PUT /v1/orders`, `PATCH /v1/orders/x`, `POST /v1/orders/x` are `404`; no session `401`, a customer `403` for both, **for an id that does not exist too** | SC-1, SC-23 |
+| Handler cases with real sessions (admin, staff, a `users` row of role `customer`, none, a forged and an expired cookie): `401` / `403` leave the order, its pairs and the counts as they were; a refused body leaves the order untouched (`{"status":"confirmed","total":1}`) | SC-1, SC-17 |
+| DB: place orders through `POST /v1/orders` and cancel them — 2 pairs of one size (3 left → 5), a two-shoe order (A·38 +1, B·42 +2, nothing else moves), a last-pair order (sold-out → last-pairs, the shoe is in `GET /v1/products?size=` again), from `placed`, `confirmed` and `packed`; a paid cancelled order is `paid` still; a **sample** cancel changes no count | SC-7, SC-8, SC-11, E1 |
+| DB: the same order cancelled twice in a row (`422` "cancelled to cancelled", counts unchanged), and **two cancels at the same moment, 20 fresh orders**: exactly one `200` and one `422` each time, pairs back once | SC-9 |
+| DB: `Cancel` against a concurrent `Place` of the same shoe and size (50 goroutines of each, `-race`), and against `SetOne` / a shoe save when item 10 is on `main`: no deadlock (`40P01`), no count below 0, the shelf equals placed − taken + returned | ERD §4 |
+| DB: `shipped` and `delivered` cancel → `422` "… from shipped to cancelled." / "… delivered to cancelled."; every skip, step back and `delivered`/`cancelled` start of SC-5; the courier fields on `shipped`, `placed`, `confirmed`, `packed`; `eta` `""` clears to no date; the customer fields on `packed` | SC-4, SC-10, SC-12, SC-14 |
+| DB: the customer's token read shows the new status, carrier, tracking and `eta`; a changed phone is the one `POST /v1/order-lookups` matches | SC-4, SC-12, story decision 7 |
+| DB: delete — each non-cancelled status `409` "Cancel the order first." with the order, pairs, tokens and counts untouched; cancelled unpaid → `204`, pairs, tokens, attempts and notices gone, counts and the counter unchanged, a second `DELETE` `404`, the next placed order numbered higher; cancelled and `paid` → `409` the paid sentence, everything kept | SC-20 to SC-22 |
+| DB: the dealer reads — a two-pair order in the order sent with `items`; `transaction_no` `""` (and, once item 8's tables exist, the number of a success notice inserted by the test); `GET /v1/orders` carries the five fields and `product_name` on every item, none has `items`; newest first; `?phone=`, `?email=`, `?address=`, `?note=`, `?transaction_no=` and `sort=phone` are `400`; a customer's token read and a stranger's read carry none of the five; `Cache-Control: no-store` | SC-2, SC-3, SC-19, SC-24 to SC-26 |
+| DB: `PUT` and `DELETE` of an unknown id and of `NOPE!` are `404`; 100 sequential `PUT`s and 100 `DELETE`s of cancelled orders, p95 under 1 s | SC-23 |
+
+## 7. Where each criterion is enforced
+
+| Criteria | Enforced by |
+|---|---|
+| SC-1 | §1 (`auth.Require` first, on both literal patterns), §3.3 rows 1–2, §3.4 row 1 |
+| SC-2, SC-3 | §3.1 (`dealerViewSQL`, the dealer branch outside `authorize`), §3.2 (`Private` served by one handler, refused as a filter), §4 |
+| SC-4 to SC-6 | §3.3 state rules (row 11, `Judge`) |
+| SC-7 to SC-11 | §3.3 "Cancelling", ERD §3–§5 (`Cancel`, `Lock`, `Return`, E1) |
+| SC-12 to SC-16 | §3.3 field table and state rules |
+| SC-17, SC-18 | §3.3 rows 7–8 (400 for an unknown key, 422 by name for the twelve refused names, all or nothing) |
+| SC-19 | §3.1, ERD §6 (UNVERIFIED for the number until item 8's tables exist) |
+| SC-20 to SC-22 | §3.4, ERD §7 |
+| SC-23 | §3.3 row 10, §3.4 row 3; ERD §5 (about ten statements, each by key) |
+| SC-24 to SC-26 | §3.2 (default order, filters, `product_name`, the menu's count) |
+| SC-27 to SC-30 | §3.1 and the UI PR (the page); §3.1 notes on a dealer's browser |
+| SC-31 to SC-38 | The UI PR; §5 rows 1–7 (the swap) over §3.3 and §3.4's sentences |
+| SC-39 | The UI PR (judged on the mock); Verify at 390 and 320 px |
+| SC-40 | §5 row 4 and the "not edited" list |
+
+## 8. Order of work, and merge hygiene
+
+1. **Branch.** Cut the backend branch from the UI branch (`feature/dealer-handles-orders-status-courier-payment-ui`), since it deletes the mock that branch adds; PR #77 merges first. Grep the head for `^<<<<<<<` and `^>>>>>>>` before any merge (the project has been bitten by markers on `main`).
+2. **Order of work.** `stock.Return` and `orders.Cancel` (with E1 and E2) → `Judge`, `Update`, `Delete` and `orders_input` → `admin.RegisterOrders` → the dealer reads (`data` served set and default order, `dealerList`, `ReadDealer`, the `read` branch) → the frontend swap.
+3. **Item 8 (PR #83) shares `Cancel`, `LockOrder` and `stock.Return`.** Whichever merges first creates them as item 8's services file §5.2 and §5.4 write them **plus E1 and E2**; the second adopts them, keeping the superset. If PR #83 is on `main` when this backend is cut, `transaction_no` is the fragment of ERD §6 from the first commit; if it is not, it is the constant `''` in one place and SC-19's number half stays UNVERIFIED, and the PR says so.
+4. **Item 10 shares `data`, `stock`, `server.go` and the `Collection` comment.** Every addition here is additive and independent; the second PR to merge adapts to the first's signatures (§4, last paragraph).
+5. **Items 6 and 15 share `read.go`.** The dealer branch sits **before** whatever `authorize` / `Access` extraction those PRs make and does not call it, so it is the same few lines on either side of the merge. The token and customer paths must keep passing their own tests unchanged.
+6. Database tests (`TEST_DATABASE_URL`) first run in CI; Verify confirms they were not skipped. The admin screens have not been walked in a browser at 390 and 320 px (the UI review said so): Verify must.
+
+## 9. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| D1 | Where do the handlers live? | `admin` (the dealer's writes; `_base.md` §1.1 says "`admin` handlers call `orders.Update` / `Cancel` / `Delete`"), the rules and SQL in `orders` (its only writer) | Everything in `orders`: the dealer's input judge and sentences would sit beside checkout's. Everything in `admin`: it would write another package's table |
+| D2 | How does a dealer read an order without a token? | A branch in `read`, before and outside `authorize`; its own statement `dealerViewSQL` | `Access.Dealer` inside `authorize` (item 6's table suggests it): `authorize` returns a `Ref` that cannot hold a private column, and that is what the SC-3 test stands on; a dealer mode that returns more columns would weaken it for every later story |
+| D3 | `PUT` answers one fault or all? | **All**, in one `errors` map | First fault only: the page would refuse a second field after the dealer fixed the first, one round trip each |
+| D4 | `404` or `422` for a faulty body to a missing order? | `404`: the lock comes before the state and value-by-state rules, and the missing order is told first | `422` first: a deleted order's page would show field errors for a record that is not there |
+| D5 | Is a refused name refused when it carries the stored value? | **Yes**, whatever the value and type (story decision 2, `paid: false` on an unpaid order is `422`) | Tolerating an unchanged value: it would let a whole-record client work by accident and let a future change to `total` slip through a "same value" test |
+| D6 | One body moves the order and corrects it? | Yes: the locked-field rule reads the status before the move | After the move: `{"status":"delivered","eta":…}` on a shipped order would be refused for a state the order is only entering |
+| D7 | `email` stored as typed? | Validated with `auth.NormalizeEmail`, stored trimmed **as typed** | Storing its lower-cased result: a dealer who types `Long@Example.com` would see another text come back |
+| D8 | A body with an unknown key | `400` with `errors.<key>` (§2.5's rule), not `422` | `422` like the shoe collections: those are one of §2.5's three SRS-forced exceptions; ADMIN-016 AC-15 forces `422` only for "a field that may not change" |
+| D9 | Retry a deadlock once, as item 10's writes do? | No | A retry would hide a lock order that is wrong. ERD §4 makes a deadlock impossible by construction; if one is reported it is a bug to see |
+| D10 | `product_name` and the default order are departures from `_base.md` | Both stated here (§2, §3.2), both additive to the frontend's contract | Keeping the first 100 shoes lookup, and `seq ASC`: the first breaks SC-25 beyond the hundredth shoe, the second SC-24 from the first day |
+
+## 10. Open questions
+
+None blocks the backend. Q1 (a customer who pays after the dealer cancelled and deleted the order) and Q2 (the list's Edit dialog offers every status) are in `erd/dealer-handles-orders-status-courier-payment.md` §8 with their defaults. **Migration plan:** none — forward, backward and populated-table safety are in that file's §9.
 
