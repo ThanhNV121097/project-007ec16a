@@ -6,6 +6,9 @@ import { Motion } from "./motion";
 import SiteFooter from "./components/SiteFooter";
 import SiteHeader from "./components/SiteHeader";
 import About from "./pages/About";
+import Account from "./pages/Account";
+import AccountSignIn from "./pages/AccountSignIn";
+import AccountSignUp from "./pages/AccountSignUp";
 import AdminKinds from "./pages/AdminKinds";
 import AdminLines from "./pages/AdminLines";
 import AdminOrder from "./pages/AdminOrder";
@@ -21,6 +24,7 @@ import Checkout from "./pages/Checkout";
 import Contact from "./pages/Contact";
 import Home from "./pages/Home";
 import Order from "./pages/Order";
+import PaymentReturn from "./pages/PaymentReturn";
 import Product from "./pages/Product";
 import Returns from "./pages/Returns";
 import Shipping from "./pages/Shipping";
@@ -63,11 +67,15 @@ export default function App() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders/:id" element={<Order />} />
+        <Route path="/payment/return" element={<PaymentReturn />} />
         <Route path="/track" element={<Track />} />
         <Route path="/shipping" element={<Shipping />} />
         <Route path="/returns" element={<Returns />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/account" element={<Account />} />
+        <Route path="/account/sign-in" element={<AccountSignIn />} />
+        <Route path="/account/sign-up" element={<AccountSignUp />} />
       </Route>
       <Route path="/admin/sign-in" element={<AdminSignIn />} />
       <Route path="/admin" element={<SignedIn><AdminOverview /></SignedIn>} />

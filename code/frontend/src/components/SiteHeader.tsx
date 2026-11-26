@@ -6,6 +6,7 @@ import { useCart } from "../lib/cart";
 import { closeBag, openBag, useBagOpen } from "../lib/bag";
 import type { Line } from "../lib/shop";
 import CartDrawer from "./CartDrawer";
+import AccountEntry from "./account/AccountEntry";
 import Icon from "./Icon";
 import Logo from "./Logo";
 import MenuToggle from "./MenuToggle";
@@ -72,6 +73,7 @@ export default function SiteHeader() {
                 <T k={`nav.links.${i}.label`} />
               </Link>
             ))}
+            <AccountEntry variant="bar" />
           </nav>
           <div className="-mr-2 flex items-center">
             <button type="button" aria-label={searchLabel} aria-expanded={searching}
@@ -115,6 +117,7 @@ export default function SiteHeader() {
               <T k={`nav.links.${i}.label`} />
             </Link>
           ))}
+          <AccountEntry variant="menu" onNavigate={() => setOpen(false)} />
         </nav>
         <Rule />
         <nav className="flex flex-col gap-3 text-base" aria-label="Help">
