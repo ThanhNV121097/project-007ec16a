@@ -6,24 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
-	"slices"
-=======
 	"time"
->>>>>>> refs/heads/main
 
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
 )
 
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
-// The four sentences a refused "Pay now" can carry. They are four different
-// sentences under one code, `conflict`: the page branches on none, a person reads
-// the message.
-=======
 // The sentences a refused "Pay now" can carry. They are different sentences under
 // one code, `conflict`: the page branches on none, a person reads the message.
 // MsgRunOut (settle.go) is the one for an order whose 30 minutes are over.
->>>>>>> refs/heads/main
 const (
 	msgCancelled   = "This order was cancelled, so it cannot be paid."
 	msgPaid        = "This order is already paid."
@@ -45,20 +35,6 @@ func (r *Refusal) Error() string { return r.Message }
 var ErrPaymentUnavailable = errors.New("payment provider unavailable")
 
 // decide is what the route refuses, in order: cancelled, then paid, then a way to
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
-// pay the shop does not complete online, then no provider registered, then a
-// provider that is not available. It reads the order's row and the provider map
-// and nothing else. Cancelled comes before paid: an order cancelled after it was
-// paid must say it was cancelled.
-func decide(ref Ref, providers map[string]Provider) (Provider, error) {
-	switch {
-	case ref.Status == "cancelled":
-		return nil, &Refusal{msgCancelled}
-	case ref.Paid:
-		return nil, &Refusal{msgPaid}
-	case !slices.Contains(offered, ref.Payment):
-		return nil, &Refusal{msgNotOnline}
-=======
 // pay the shop does not complete online, then its 30 minutes having run out (all
 // four are CheckPayable, the one function that holds the state rules), then no
 // provider registered, then a provider that is not available. It reads the order's
@@ -67,7 +43,6 @@ func decide(ref Ref, providers map[string]Provider) (Provider, error) {
 func decide(ref Ref, providers map[string]Provider, now time.Time) (Provider, error) {
 	if r := CheckPayable(PayState{Status: ref.Status, Payment: ref.Payment, Paid: ref.Paid, PlacedAt: ref.PlacedAt}, now); r != nil {
 		return nil, r
->>>>>>> refs/heads/main
 	}
 	p := providers[ref.Payment]
 	if p == nil {
@@ -81,17 +56,11 @@ func decide(ref Ref, providers map[string]Provider, now time.Time) (Provider, er
 
 // payURL runs the state and availability checks and then asks the provider, with a
 // 3-second limit, for the address to pay at. An error, a timeout or an empty
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
-// address is an internal error. It writes nothing and makes no call of its own.
-func (s *service) payURL(ctx context.Context, ref Ref, c Client) (string, error) {
-	prov, err := decide(ref, s.providers)
-=======
 // address is an internal error, except a *Refusal the provider found under its
 // own lock, which stays the 409 it names. This function writes nothing and makes
 // no call of its own: the provider keeps its own attempt.
 func (s *service) payURL(ctx context.Context, ref Ref, c Client) (string, error) {
 	prov, err := decide(ref, s.providers, s.now())
->>>>>>> refs/heads/main
 	if err != nil {
 		return "", err
 	}
@@ -121,16 +90,9 @@ func hasBody(r *http.Request) bool {
 
 // payHandler answers POST /v1/orders/{id}/payment: "Pay now". Order of checks:
 // access (404), a body was sent (400), the order's state (409), availability (409
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
-// or 503), the address (200 or 500). Every answer is no-store. The route writes
-// nothing, so a repeated press answers what the first did. The access statement
-// and the ask for the address share one txTimeout deadline, as GET's read does:
-// an access statement that times out is a 500, never a hung request.
-=======
 // or 503), the address (200, 409 or 500). Every answer is no-store. The access
 // statement and the ask for the address share one txTimeout deadline, as GET's
 // read does: an access statement that times out is a 500, never a hung request.
->>>>>>> refs/heads/main
 func (s *service) payHandler(w http.ResponseWriter, r *http.Request) {
 	noStore(w)
 	id := r.PathValue("id")
