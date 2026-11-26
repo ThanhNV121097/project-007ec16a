@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
@@ -35,7 +34,7 @@ func TestTheMoMoRequestCarriesTheStoredAmountAndAVerifiableSignature(t *testing.
 	}
 	want := momoCreate{
 		PartnerCode: momoPartner, RequestID: "DOI-24818-1", OrderID: "DOI-24818-1", Amount: 3140000,
-		OrderInfo:   "Thanh toan don hang DOI-24818", RedirectURL: "https://shop.example.test/payment/return",
+		OrderInfo: "Thanh toan don hang DOI-24818", RedirectURL: "https://shop.example.test/payment/return",
 		IPNURL: "https://shop.example.test/api/v1/payments/momo/ipn", RequestType: "captureWallet", ExtraData: "", Lang: "en",
 		Signature: req.Signature,
 	}
@@ -79,6 +78,7 @@ func TestTheMoMoAddressesFollowTheOriginRule(t *testing.T) {
 	}
 }
 
+// standIn is MoMo's side: a transport that answers what it is told and writes down what it was asked.
 type standIn struct {
 	status int
 	body   string
@@ -93,27 +93,28 @@ func (s *standIn) lines() []string {
 	return append([]string(nil), s.seen...)
 }
 
-func (s *standIn) server(t *testing.T) *httptest.Server {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw, _ := io.ReadAll(r.Body)
-		s.mu.Lock()
-		s.seen = append(s.seen, r.Method+" "+r.URL.Path+" "+r.Header.Get("Content-Type")+" "+string(raw))
-		s.mu.Unlock()
-		if s.delay > 0 {
-			select {
-			case <-time.After(s.delay):
-			case <-r.Context().Done():
-			}
+func (s *standIn) RoundTrip(r *http.Request) (*http.Response, error) {
+	raw, _ := io.ReadAll(r.Body)
+	s.mu.Lock()
+	s.seen = append(s.seen, r.Method+" "+r.URL.Path+" "+r.Header.Get("Content-Type")+" "+string(raw))
+	s.mu.Unlock()
+	if s.delay > 0 {
+		select {
+		case <-time.After(s.delay):
+		case <-r.Context().Done():
+			return nil, r.Context().Err()
 		}
-		if s.status == http.StatusFound {
-			http.Redirect(w, r, "https://elsewhere.example/pay", http.StatusFound)
-			return
-		}
-		w.WriteHeader(s.status)
-		_, _ = w.Write([]byte(s.body))
-	}))
-	t.Cleanup(srv.Close)
-	return srv
+	}
+	resp := &http.Response{StatusCode: s.status, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(s.body)), Request: r}
+	if s.status == http.StatusFound {
+		resp.Header.Set("Location", "https://elsewhere.example/pay")
+	}
+	return resp, nil
+}
+
+// client is the provider's own client, with the stand-in as its transport and redirects never followed.
+func (s *standIn) client() *http.Client {
+	return &http.Client{Transport: s, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 
 // SC-8, E3: what MoMo can answer, and that every answer that is not an address is an error.
@@ -137,7 +138,8 @@ func TestMoMoMustGiveAUsableAddressOrTheAskFails(t *testing.T) {
 		"no answer in time":                 {200, good, 5 * time.Second, ""},
 	} {
 		stub := &standIn{status: c.status, body: c.body, delay: c.delay}
-		m := momoAt(stub.server(t).URL, "https://shop.example.test")
+		m := momoAt("https://test-payment.momo.vn", "https://shop.example.test")
+		m.client = stub.client()
 		req, _ := m.build(momoOrder, "DOI-24818-1", orders.Client{})
 		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 		got, err := m.ask(ctx, "DOI-24818", req)
