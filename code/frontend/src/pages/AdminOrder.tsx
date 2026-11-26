@@ -2,7 +2,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useContent } from "../editable";
 import DashboardLayout from "../components/DashboardLayout";
 import OrderRecord from "../components/OrderRecord";
-import { Breadcrumb, Button, Empty } from "../components/admin/index";
+import OrderState from "../components/OrderState";
+import { Breadcrumb } from "../components/admin/index";
 import { titleOf } from "../components/admin/fields";
 import { useCollection } from "../data";
 import { useDealerOrder } from "../lib/dealer-handles-orders-status-courier-payment";
@@ -35,15 +36,7 @@ export default function AdminOrder() {
   return (
     <DashboardLayout title={area} nav={nav}>
       <Breadcrumb trail={[{ label: area, to: BACK }, { label: heading }]} />
-      {load.state === "loading" && <p role="status" className="text-sm text-ink-soft">Loading the order…</p>}
-      {load.state === "failed" && (
-        <Empty title="We could not load this order." note="Check the connection and try again."
-          action={<Button onClick={retry}>Try again</Button>} />
-      )}
-      {load.state === "missing" && (
-        <Empty title="This record is not here" note="It may have been deleted since the link was made."
-          action={<Button onClick={() => navigate(BACK)}>Back to the list</Button>} />
-      )}
+      {load.state !== "ready" && <OrderState state={load.state} onRetry={retry} onBack={() => navigate(BACK)} />}
       {order && (
         <OrderRecord order={order} title={heading} backTo={BACK} onSaved={replace}
           paymentName={nameIn(methods, order.payment)} deliveryName={nameIn(options, order.delivery)} />
