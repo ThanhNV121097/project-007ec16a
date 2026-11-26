@@ -1,5 +1,7 @@
 import { T, useContent } from "../editable";
+import { MOMO } from "../lib/more-ways-to-pay-vietqr-transfer-and-momo";
 import type { PaymentState } from "../lib/online-payment-with-vnpay";
+import { MOMO_TIMED_OUT_KEY, useMomoTimedOutWords } from "../lib/payment-words";
 import { fill } from "../lib/shop";
 import Icon from "./Icon";
 import OutlinePill from "./OutlinePill";
@@ -22,6 +24,8 @@ export interface PaymentResultProps {
   /** `loading` until the shop has answered the first time. */
   state: PaymentState | "loading";
   order: Order | null;
+  /** The way to pay the shop says the order uses: it picks whose name the "not heard yet" words carry. */
+  way?: string;
   trying: boolean;
   tryFailed: boolean;
   onTryAgain: () => void;
@@ -29,8 +33,15 @@ export interface PaymentResultProps {
 
 const wordsOf = (state: PaymentState) => `${KEY}.${state.replace("-", "_")}`;
 
+/** The one state whose words name the provider: "we have not heard from … yet". */
+const namesProvider = (state: PaymentState, way?: string) => state === "timed-out" && way === MOMO;
+
 /** The one h1: what became of the payment. "Could not check" has no heading of its own, so its alert is the heading. */
-function Heading({ state }: { state: PaymentState }) {
+function Heading({ state, way }: { state: PaymentState; way?: string }) {
+  const momo = useMomoTimedOutWords();
+  if (namesProvider(state, way)) {
+    return <h1 data-testid="payment-state" data-state={state} data-edit={`${MOMO_TIMED_OUT_KEY}.heading`} className={BIG}>{momo.heading}</h1>;
+  }
   if (state === "check-failed") {
     return (
       <h1 data-testid="payment-state" data-state={state} className={LONG}>
@@ -46,12 +57,14 @@ function Heading({ state }: { state: PaymentState }) {
 }
 
 /** The state line, with the order number where its words ask for one. */
-function Line({ state, number }: { state: PaymentState; number: string }) {
-  const key = `${wordsOf(state)}.line`;
+function Line({ state, number, way }: { state: PaymentState; number: string; way?: string }) {
+  const momo = useMomoTimedOutWords();
+  const own = namesProvider(state, way);
+  const key = own ? `${MOMO_TIMED_OUT_KEY}.line` : `${wordsOf(state)}.line`;
   const text = useContent(key);
   return (
     <p data-testid="payment-line" data-edit={key} className="max-w-[44ch] text-sm leading-relaxed text-ink-soft">
-      {fill(text ?? "", { number })}
+      {fill(own ? momo.line : text ?? "", { number })}
     </p>
   );
 }
@@ -108,12 +121,12 @@ function Actions({ state, order, trying, tryFailed, onTryAgain }: Omit<PaymentRe
  * guessed from the address. The line sits in a status region that is there from
  * the first paint, so the change from "confirming" to "paid" is announced.
  */
-export default function PaymentResult({ state, order, trying, tryFailed, onTryAgain }: PaymentResultProps) {
+export default function PaymentResult({ state, order, way, trying, tryFailed, onTryAgain }: PaymentResultProps) {
   const loading = state === "loading";
   const known = loading ? null : state;
   return (
     <section className="flex flex-col items-start gap-5 py-16 lg:py-24">
-      {known && <Heading state={known} />}
+      {known && <Heading state={known} way={way} />}
       <div role="status" aria-busy={loading || undefined} className="w-full max-w-[44ch]">
         {loading && (
           <div aria-hidden="true" className="flex flex-col gap-4">
@@ -121,7 +134,7 @@ export default function PaymentResult({ state, order, trying, tryFailed, onTryAg
             <span className="block h-4 w-full bg-surface" />
           </div>
         )}
-        {known && known !== "check-failed" && <Line state={known} number={order?.number ?? ""} />}
+        {known && known !== "check-failed" && <Line state={known} number={order?.number ?? ""} way={way} />}
       </div>
       {known && <Actions state={known} order={order} trying={trying} tryFailed={tryFailed} onTryAgain={onTryAgain} />}
     </section>
