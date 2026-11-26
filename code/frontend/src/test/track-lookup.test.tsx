@@ -70,7 +70,7 @@ describe("a right pair", () => {
     await screen.findByText("the order page");
     expect(JSON.parse(localStorage.getItem("doi:placed") ?? "null")).toEqual([FOUND]);
     expect(localStorage.length).toBe(1);
-    expect(JSON.stringify(localStorage)).not.toMatch(/0938|Lan/);
+    expect(localStorage.getItem("doi:placed")).not.toMatch(/0938|Lan/);
   });
 
   it("holds one entry for an order looked up twice, with the newest token", async () => {
@@ -160,7 +160,7 @@ describe("each way it can fail has its own sentence, in the same place", () => {
     expect(button()).toBeEnabled();
   });
 
-  it("says it could not look that up when the connection fails and the browser is offline by then", async () => {
+  it("says it is offline when the connection fails and the browser has gone offline meanwhile", async () => {
     post.mockImplementationOnce(() => {
       vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(false);
       return Promise.reject(new ApiError(0, "network", "x"));
