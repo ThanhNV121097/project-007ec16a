@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/jackc/pgx/v5"
@@ -14,7 +15,7 @@ import (
 // phone, email, address or note.
 type AccountOrder struct {
 	ID, Number, Status string
-	PlacedAtTime       timeValue
+	PlacedAt           time.Time
 	Total              int64
 }
 
@@ -26,7 +27,7 @@ func (o AccountOrder) MarshalJSON() ([]byte, error) {
 		PlacedAt string `json:"placed_at"`
 		Status   string `json:"status"`
 		Total    int64  `json:"total"`
-	}{o.ID, o.Number, o.PlacedAtTime.In(ict).Format("2006-01-02T15:04:05") + "+07:00", o.Status, o.Total})
+	}{o.ID, o.Number, o.PlacedAt.In(ict).Format("2006-01-02T15:04:05") + "+07:00", o.Status, o.Total})
 }
 
 // ListFor is a customer's own orders, newest first (page >= 1, 1 <= limit <= 100),
@@ -52,7 +53,7 @@ func ListFor(ctx context.Context, db DB, accountID string, page, limit int) ([]A
 	items := []AccountOrder{}
 	for rows.Next() {
 		var o AccountOrder
-		if err := rows.Scan(&o.ID, &o.Number, &o.PlacedAtTime, &o.Status, &o.Total); err != nil {
+		if err := rows.Scan(&o.ID, &o.Number, &o.PlacedAt, &o.Status, &o.Total); err != nil {
 			rows.Close()
 			return nil, 0, err
 		}
@@ -110,7 +111,7 @@ func AddToAccount(ctx context.Context, db DB, addr string, p Pair, accountID str
 	if err != nil {
 		return AccountOrder{}, err
 	}
-	return AccountOrder{ID: m.ID, Number: m.Number, Status: m.Status, PlacedAtTime: m.PlacedAt, Total: m.Total}, nil
+	return AccountOrder{ID: m.ID, Number: m.Number, Status: m.Status, PlacedAt: m.PlacedAt, Total: m.Total}, nil
 }
 
 // callerAccount is the id placement links an order to: the session's own, and
