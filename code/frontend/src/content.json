@@ -350,13 +350,15 @@
       "delivery_title": "Free delivery",
       "description": "Your address, delivery and payment for your adidas order.",
       "empty": "Nothing to check out yet.",
+      "failed": "We could not place your order. Nothing was charged. Please try again.",
       "head_alt": "A parcel sealed with packing tape",
       "heading": "Checkout",
       "line": "{variant} · Qty {qty}",
       "missing": "Fill in your name, street address and city.",
       "name": "Full name",
-      "next_online": "After you press Place order you pay on the {method} page; the order is marked paid at once and packed today.",
+      "next_online": "After you press Place order you pay on the {method} page; we pack your order after the payment is confirmed.",
       "note": "Note for the courier (optional)",
+      "offline": "You seem to be offline. Check your connection and try again.",
       "paying": "Placing your order…",
       "phone": "Phone",
       "phone_bad": "Check the phone number — we text you when the pair is on its way.",
@@ -367,7 +369,8 @@
       "step_payment": "Payment",
       "summary": "Your order",
       "terms": "By placing the order you accept the delivery information and that exchanges are not accepted.",
-      "title": "Checkout"
+      "title": "Checkout",
+      "unavailable": "Online payment is not available right now. Please try again later."
     },
     "contact": {
       "about": "You are asking about",
