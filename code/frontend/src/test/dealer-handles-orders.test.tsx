@@ -211,7 +211,7 @@ describe("the order page", () => {
   it("leaves only the note editable on a delivered order", async () => {
     await open("doi-24810");
     tab("Customer");
-    expect(screen.getAllByRole("textbox").map((t) => t.getAttribute("id") ?? "")).toHaveLength(1);
+    expect(screen.getAllByRole("textbox")).toHaveLength(1);
     expect(screen.getByLabelText("Internal note")).toBeEnabled();
   });
 
