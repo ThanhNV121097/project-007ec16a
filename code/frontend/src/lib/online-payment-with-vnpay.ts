@@ -28,7 +28,7 @@ export interface OrderState {
   status: string;
   paid: boolean;
   /** The order's way to pay, as the shop says it ("" when it does not): which provider's words the page uses. */
-  payment: string;
+  payment?: string;
 }
 
 /** What the transport hands back: the HTTP status (0 when no answer came) and the JSON body. */
@@ -245,6 +245,6 @@ export function usePaymentReturn(reference: string | null, code: string | null):
 
   // When the shop says it knows nothing of the token, nothing about any order is drawn.
   const order = held && phase.kind !== "no-match" ? { id: held.id, number: held.number } : null;
-  const way = phase.kind === "order" ? phase.order.payment : "";
+  const way = phase.kind === "order" ? phase.order.payment ?? "" : "";
   return { state: stateOf(phase, code, timedOut), order, way, trying, tryFailed, again };
 }
