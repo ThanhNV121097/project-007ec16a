@@ -133,6 +133,16 @@ describe("the heading and the line under it", () => {
   });
 
   it.each([
+    ["2026-11-25T05:30:00+07:00", "25/11/2026, 05:30"],
+    ["2026-12-31T23:59:00+07:00", "31/12/2026, 23:59"],
+  ])("writes the placed time %s as %s: Vietnam's clock, the hour with two digits", async (placedAt, written) => {
+    serveOrder({ placed_at: placedAt });
+    show();
+    await heading();
+    expect(screen.getByText(new RegExp(`Order DOI-24818 · placed ${written}`))).toBeInTheDocument();
+  });
+
+  it.each([
     ["placed", "We have your order."],
     ["confirmed", "Your order is confirmed."],
     ["packed", "Your order is packed."],
