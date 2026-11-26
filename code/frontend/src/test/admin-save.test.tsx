@@ -52,7 +52,7 @@ describe("saving from the add dialog", () => {
     shop.create.mockReturnValueOnce(answer.promise);
     const saved = vi.fn();
     openAdd("lines", "Lines", saved);
-    expect(screen.getByText("Add to lines")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add to lines" })).toBeInTheDocument();
     type("Name", "Samba");
     press("Add");
     const busy = await screen.findByRole("button", { name: "Saving…" });
