@@ -18,7 +18,9 @@ function etaLine(order: PublicOrder, eta: string, done: string): string {
  * The answer at the left — the number and when it was placed, the heading by
  * status (or the thanks, when the address carries `placed`), the line under
  * it and the five steps — and the first pair running off the right edge from
- * 1024px. A first pair with no picture draws no picture and no box.
+ * 1024px. A first pair with no picture draws no picture and no box, and the
+ * two left-hand blocks both start at column 1 so they stack instead of the
+ * steps moving up beside the heading into the space the picture left.
  */
 export default function OrderHead({ order, placed }: { order: PublicOrder; placed: boolean }) {
   const headlines = useContent<Record<string, string>>("pages.order.headline");
@@ -30,7 +32,7 @@ export default function OrderHead({ order, placed }: { order: PublicOrder; place
   const line = etaLine(order, etaText, doneText);
   return (
     <section className="grid gap-x-8 gap-y-10 pb-10 pt-8 lg:grid-cols-12 lg:pt-10">
-      <div className="min-w-0 lg:col-span-6">
+      <div className="min-w-0 lg:col-span-6 lg:col-start-1">
         <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink-soft">
           {fill(numberText, { number: order.number, date: formatDateTime(vietnamTime(order.placed_at)) })}
         </p>
@@ -46,7 +48,7 @@ export default function OrderHead({ order, placed }: { order: PublicOrder; place
           </Link>
         </Bleed>
       )}
-      <div className="min-w-0 lg:col-span-6"><OrderSteps status={order.status} /></div>
+      <div className="min-w-0 lg:col-span-6 lg:col-start-1"><OrderSteps status={order.status} /></div>
     </section>
   );
 }
