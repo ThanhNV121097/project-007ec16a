@@ -85,7 +85,7 @@ func (h *ordersHandler) update(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	tx, err := h.begin(ctx)
 	if err != nil {
-		h.internal(w, r, "orders.update", err)
+		h.internal(w, "orders.update", err)
 		return
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
@@ -95,7 +95,7 @@ func (h *ordersHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		h.internal(w, r, "orders.update", err)
+		h.internal(w, "orders.update", err)
 		return
 	}
 	faults := body.faults
@@ -110,16 +110,16 @@ func (h *ordersHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := orders.Update(ctx, tx, stored, body.patch); err != nil {
-		h.internal(w, r, "orders.update", err)
+		h.internal(w, "orders.update", err)
 		return
 	}
 	view, err := orders.ReadDealer(ctx, tx, id)
 	if err != nil {
-		h.internal(w, r, "orders.update", err)
+		h.internal(w, "orders.update", err)
 		return
 	}
 	if err := tx.Commit(ctx); err != nil {
-		h.internal(w, r, "orders.update", err)
+		h.internal(w, "orders.update", err)
 		return
 	}
 	action := "update"
@@ -142,7 +142,7 @@ func (h *ordersHandler) remove(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	tx, err := h.begin(ctx)
 	if err != nil {
-		h.internal(w, r, "orders.delete", err)
+		h.internal(w, "orders.delete", err)
 		return
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
@@ -154,11 +154,11 @@ func (h *ordersHandler) remove(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusConflict, "conflict", err.Error(), nil)
 		return
 	case err != nil:
-		h.internal(w, r, "orders.delete", err)
+		h.internal(w, "orders.delete", err)
 		return
 	}
 	if err := tx.Commit(ctx); err != nil {
-		h.internal(w, r, "orders.delete", err)
+		h.internal(w, "orders.delete", err)
 		return
 	}
 	h.log.Info("order write", "action", "delete", "id", id, "request_id", httpx.RequestIDFrom(ctx))
