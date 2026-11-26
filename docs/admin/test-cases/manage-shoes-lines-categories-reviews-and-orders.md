@@ -824,4 +824,4 @@ No case is `Check: manual`: every criterion is a response (`fetch_url`), a rende
 | SC-39 100 saves and 100 deletes at p95 ≤ 1 s | BE | TC-88 |
 | Contract (`services.md` §2.3, §2.5, §3.22, §3.23, §3.24, §3.6) | — | C-1 … C-8 |
 
-**Counts:** 39 acceptance criteria, all covered; 88 `TC` cases and 8 `C` cases, 96 in all. 52 are `fetch_url`, 1 is `render_url`, 43 are `interact_page`, none is `manual`.
+**Counts:** 39 acceptance criteria, all covered; 88 `TC` cases and 8 `C` cases, 96 in all. 57 are `fetch_url`, 2 are `render_url`, 37 are `interact_page`, none is `manual`. Risk level: **high** (public file store, money-bearing stock counts, and the lock on what the public shop shows), so every refusal, boundary and role is written value by value.
