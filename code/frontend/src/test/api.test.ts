@@ -134,6 +134,64 @@ describe("post", () => {
   });
 });
 
+describe("request headers", () => {
+  it("adds a GET's headers to the ones every call carries, with the cookie", async () => {
+    const mock = stubFetch(async () => reply({ id: "doi-24818" }));
+    await api.get("orders/doi-24818", undefined, { "X-Order-Token": "tok-1" });
+    const init = mock.mock.calls[0][1];
+    expect(mock.mock.calls[0][0]).toBe("/api/v1/orders/doi-24818");
+    expect(init?.credentials).toBe("include");
+    expect(init?.headers).toEqual({ Accept: "application/json", "X-Order-Token": "tok-1" });
+  });
+
+  it("sends a GET with no headers exactly as before", async () => {
+    const mock = stubFetch(async () => reply({}));
+    await api.get("products");
+    expect(mock.mock.calls[0][1]?.headers).toEqual({ Accept: "application/json" });
+  });
+
+  it("shares one request between reads with the same address and headers, and none between different ones", async () => {
+    const mock = stubFetch(async () => reply({ id: "doi-24818" }));
+    await Promise.all([
+      api.get("orders/doi-24818", undefined, { "X-Order-Token": "tok-1" }),
+      api.get("orders/doi-24818", undefined, { "X-Order-Token": "tok-1" }),
+    ]);
+    expect(mock).toHaveBeenCalledTimes(1);
+    await Promise.all([
+      api.get("orders/doi-24818", undefined, { "X-Order-Token": "tok-1" }),
+      api.get("orders/doi-24818", undefined, { "X-Order-Token": "tok-2" }),
+      api.get("orders/doi-24818"),
+    ]);
+    expect(mock).toHaveBeenCalledTimes(4);
+  });
+
+  it("tries a GET with headers once more after a 5xx, with the headers both times", async () => {
+    const mock = stubFetch(async () => reply({ error: "internal", message: "x" }, 500));
+    await expect(api.get("orders/doi-24818", undefined, { "X-Order-Token": "tok-1" })).rejects.toMatchObject({ status: 500 });
+    expect(mock).toHaveBeenCalledTimes(2);
+    expect((mock.mock.calls[1][1]?.headers as Record<string, string>)["X-Order-Token"]).toBe("tok-1");
+  });
+
+  it("adds a POST's headers, sends no body and no content type, and never tries again", async () => {
+    const mock = stubFetch(async () => reply({ error: "conflict", message: "Online payment is not available yet." }, 409));
+    await expect(api.post("orders/doi-24818/payment", undefined, { "X-Order-Token": "tok-1" })).rejects.toMatchObject({ status: 409, code: "conflict" });
+    expect(mock).toHaveBeenCalledTimes(1);
+    const [url, init] = mock.mock.calls[0];
+    expect(url).toBe("/api/v1/orders/doi-24818/payment");
+    expect(init).toMatchObject({ method: "POST", credentials: "include" });
+    expect(init?.body).toBeUndefined();
+    expect(init?.headers).toEqual({ Accept: "application/json", "X-Order-Token": "tok-1" });
+  });
+
+  it("sends a POST that fails to connect once", async () => {
+    const mock = stubFetch(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    await expect(api.post("orders/doi-24818/payment", undefined, { "X-Order-Token": "tok-1" })).rejects.toMatchObject({ status: 0, code: "network" });
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("time and sharing", () => {
   it("aborts a request unanswered after 15 seconds and counts it as a failure", async () => {
     vi.useFakeTimers();
