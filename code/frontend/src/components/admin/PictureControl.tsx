@@ -38,7 +38,7 @@ export default function PictureControl({ spec, value, error, onChange, onWorking
 
   return (
     <Field label={spec.label} hint={spec.hint} group>
-      <div className="flex items-center gap-4" aria-busy={sending} {...invalid(spec.key, error ?? (refused ? "refused" : undefined))}>
+      <div className="flex flex-wrap items-center gap-4" aria-busy={sending} {...invalid(spec.key, error ?? (refused ? "refused" : undefined))}>
         <span className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-ground text-ink-soft">
           {src ? <img src={src} alt="" className="h-full w-full object-contain" /> : <Icon name="image" size={24} />}
         </span>
