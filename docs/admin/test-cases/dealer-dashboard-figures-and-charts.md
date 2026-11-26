@@ -46,7 +46,7 @@ Written before the implementation exists, from the requirements, the story and t
 | FX-ANS-B | FX-ANS-A with `running_low` holding five shoes (§4) | SC-19 |
 | FX-ANS-NOORD | FX-ANS-A with no orders: `month` 0 and 0, `waiting_orders` 0, `running_low` `[]`, 14 entries of 0, every line `pairs` 0, `latest_orders` `[]`; `pairs_on_shelf` 73 and `shoes` 3 as before | SC-22, SC-24 |
 | FX-ANS-EMPTY | Everything zero or empty: `month` 0 / 0, `waiting_orders` 0, `pairs_on_shelf` 0, `shoes` 0, `running_low` `[]`, 14 entries of 0, `pairs_by_line` `[]`, `latest_orders` `[]` | SC-22, SC-23 |
-| FX-BIG | 10,000 orders `tc-ov-big-<i>` (`generate_series`), every status, placed over the last 120 days, each carrying the sentinels phone `0999000TCOV`, email `tcov@example.invalid`, address `TCOV ADDRESS`, note `TCOV NOTE`, one to three pairs; plus 1,000 shoes `tc-ov-big-<i>` with 5 to 12 sizes each. The five newest orders of the shop are five of these | SC-16, SC-17 |
+| FX-BIG | 10,000 orders `tc-ov-big-<i>` (`generate_series`), every status, placed over the last 120 days, each carrying the sentinels phone `0999000TCOV`, email `tcov@example.invalid`, address `TCOV ADDRESS`, note `TCOV NOTE`, one to three pairs;  SC-16, SC-17 |
 
 ## 4. The substituted answers
 
