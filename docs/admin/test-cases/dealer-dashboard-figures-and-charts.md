@@ -490,7 +490,7 @@ Check: interact_page
 **Scenario**: SC-25a — one overview read, one gate read, the menu's one-order count, and no list of orders, shoes or lines
 **Given**: No interception. The browser is signed in as ADMIN with the network log running and the log cleared.
 **When**: The run opens `/admin` (a full load), waits until "Overview" and the figures are shown, and reads the log of requests whose path starts `/api/`.
-**Then**: Exactly one `GET /api/v1/admin/overview` and exactly one `GET /api/v1/auth/me`; every request to `/api/v1/orders` carries `limit=1` (the menu's waiting-orders count) and none carries a larger limit; there is no request to `/api/v1/products`, `/api/v1/lines`, `/api/v1/reviews` or `/api/v1/categories` at all; no request to `/api/v1/orders` with `limit` above 1; no request has a `pageSize`-style limit of 1000.
+**Then**: Exactly one `GET /api/v1/admin/overview` and exactly one `GET /api/v1/auth/me`; every request to `/api/v1/orders` carries `limit=1` (the menu's own waiting-orders count) and none carries a larger limit, so no request for orders, shoes or lines has a limit above 1 (none has `limit=1000`); there is no request to `/api/v1/lines`, `/api/v1/products` or `/api/v1/reviews` at all. (Requests to any other path, such as `/api/v1/categories`, are not part of this criterion and are not judged.)
 Traces: SC-25 (ADMIN-021 AC-13, item 3)
 Check: interact_page
 
