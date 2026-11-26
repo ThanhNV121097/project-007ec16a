@@ -7,6 +7,7 @@
   { "path": "/checkout", "name": "Checkout" },
   { "path": "/orders/:id", "name": "Order", "example": "/orders/doi-24817" },
   { "path": "/track", "name": "Track an order" },
+  { "path": "/payment/return", "name": "Payment result", "example": "/payment/return?vnp_TxnRef=DOI-24820-1&vnp_ResponseCode=24" },
   { "path": "/shipping", "name": "Delivery" },
   { "path": "/returns", "name": "Returns" },
   { "path": "/about", "name": "About" },
