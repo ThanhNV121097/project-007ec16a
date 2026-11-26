@@ -34,6 +34,16 @@ export async function readPaymentOptions(): Promise<PaymentOption[]> {
   return Array.isArray(r.items) ? r.items : [];
 }
 
+/** The ways the shop lists, those it refused to place an order with marked as not open. */
+export function waysOf(listed: PaymentOption[], refused: string[]): PaymentOption[] {
+  return listed.map((o) => (refused.includes(o.id) ? { ...o, is_available: false } : o));
+}
+
+/** The way the visitor picked while it is open, else the first open one; none when no way is open. */
+export function chosenWay(ways: PaymentOption[], picked: string): PaymentOption | undefined {
+  return ways.find((o) => o.id === picked && o.is_available) ?? ways.find((o) => o.is_available);
+}
+
 /** An unpaid, not cancelled bank-transfer order: it is paid by the QR code, never by "Pay now". */
 export function payByTransfer(order: { payment: string; paid: boolean; status: string }): boolean {
   return order.payment === BANK && !order.paid && order.status !== "cancelled";
