@@ -537,9 +537,9 @@ Traces: SC-27 (ADMIN-021 item 4, AC-15; story decision 4)
 Check: interact_page
 
 **Scenario**: SC-27e — when the retry fails again the message returns, and a later retry can still succeed
-**Given**: The first and second overview answers are 500 (the second held for 1 second first); the third is FX-ANS-A.
-**When**: The run opens `/admin`, presses "Try again" (second request), waits for the page to settle, presses "Try again" again (third request).
-**Then**: After the first press the loading line shows, then "We could not load the overview." is back with its "Try again" button and still no figure; after the second press the figures and panels of SC-18a are drawn; the log holds exactly three overview reads.
+**Given**: The interception runs in three phases, switched by the run, because a failed attempt is **two** requests (the client retries a failed GET once, `api.ts`). Phase 1: every overview request is answered 500. Phase 1b, set before the first press: the first overview request is held for 1 second and then answered 500, and every one after it is answered 500 at once. Phase 2, set before the second press: every overview request is answered 200 with FX-ANS-A.
+**When**: The run opens `/admin` in phase 1 and waits for the failure view (reading the number N1 of overview requests, expected 2), switches to phase 1b, presses "Try again", waits for the page to settle, switches to phase 2 and presses "Try again" again.
+**Then**: After the first press the loading line shows (during the 1-second hold), then "We could not load the overview." is back with its "Try again" button and still no figure or panel, and the log holds N1 + 2 overview requests (the new attempt and its one retry); after the second press the figures and panels of SC-18a are drawn, the message and the loading line are gone, and the log holds N1 + 3 overview requests in all (the third attempt succeeds at its first request: 5 in all when N1 is 2).
 Traces: SC-27 (ADMIN-021 AC-15; "when it fails again the message returns")
 Check: interact_page
 
