@@ -16,6 +16,7 @@ import (
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/db"
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/payments"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/server"
 	"github.com/ThanhNV121097/project-007ec16a/backend/migrations"
 )
@@ -56,6 +57,9 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	go auth.RunPurge(ctx, pool, log)
+	// An unpaid online order is given up after 30 minutes and its pairs go back on
+	// the shelf: once now, then every 30 seconds.
+	go payments.RunExpiry(ctx, pool, log, time.Now)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
