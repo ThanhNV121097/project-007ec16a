@@ -91,6 +91,29 @@ describe("saving from the add dialog", () => {
     expect(screen.queryByText("Enter a whole number")).toBeNull();
   });
 
+  it("shows the shop's earlier sentence and the blank-field sentence together, with nothing else lost", async () => {
+    shop.create.mockResolvedValueOnce(reply(422, { error: "invalid", message: "x", errors: { since: "Enter a whole number" } }));
+    openAdd("lines", "Lines");
+    type("Name", "Samba");
+    type("First made", "1949");
+    press("Add");
+    await screen.findByText("Enter a whole number");
+    // The name is cleared and Add pressed again: the client finds the blank name
+    // before sending, and the shop's sentence for the untouched field stays.
+    type("Name", "");
+    press("Add");
+    expect(screen.getByText("Name is needed")).toBeInTheDocument();
+    expect(screen.getByText("Enter a whole number")).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("First made")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("First made")).toHaveValue(1949);
+    expect(shop.create).toHaveBeenCalledTimes(1);
+    // Editing a field takes only its own sentence away.
+    type("First made", "1950");
+    expect(screen.queryByText("Enter a whole number")).toBeNull();
+    expect(screen.getByText("Name is needed")).toBeInTheDocument();
+  });
+
   it("says it could not save when the shop cannot be reached, and lets the person try again", async () => {
     shop.create.mockResolvedValueOnce(reply(0));
     openAdd("lines", "Lines");
