@@ -47,8 +47,30 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 		TmnCode: cfg.VNPayTmnCode, HashSecret: cfg.VNPayHashSecret,
 		PaymentURL: cfg.VNPayPaymentURL, PublicBaseURL: cfg.PublicBaseURL,
 	}, pool, log, nil)
-	orders.Register(mux, pool, log, orders.Options{Providers: map[string]orders.Provider{"vnpay": vnpay}})
-	payments.Register(mux, vnpay)
+	// The bank-transfer and MoMo providers are registered always too, so an order of a
+	// way whose settings were removed answers 503 and not "not available yet"; only
+	// the ways whose settings are valid are LISTED, and VNPay comes first.
+	momo := payments.NewMoMo(payments.MoMoConfig{
+		PartnerCode: cfg.MoMo.PartnerCode, AccessKey: cfg.MoMo.AccessKey, SecretKey: cfg.MoMo.SecretKey,
+		APIURL: cfg.MoMo.APIURL, PublicBaseURL: cfg.PublicBaseURL,
+	}, pool, log, nil)
+	bank := payments.NewBank(cfg.Bank)
+	offered := []string{"vnpay"}
+	if bank.Available() {
+		offered = append(offered, "bank")
+	}
+	if momo.Available() {
+		offered = append(offered, "momo")
+	}
+	// A key at fault is named once, never its value, and never stops the server.
+	for _, w := range cfg.Warnings {
+		log.Warn(w)
+	}
+	orders.Register(mux, pool, log, orders.Options{
+		Providers: map[string]orders.Provider{"vnpay": vnpay, "bank": bank, "momo": momo},
+		Offered:   offered,
+	})
+	payments.Register(mux, vnpay, momo)
 	mux.HandleFunc("/", notFound)
 
 	// The chain, outermost first: RequestID, Recover, AccessLog, CORS, CleanPaths
