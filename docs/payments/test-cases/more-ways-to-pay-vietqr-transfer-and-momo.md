@@ -255,7 +255,7 @@ Traces: SC-9 (PAY-021 item 2; ORD-007 AC-14)
 Check: interact_page
 
 **Scenario**: TC-28 — a paid, a cancelled and an expired MoMo order answer three different 409 sentences; a stranger gets the one 404
-**Given**: P-MOMO or P-ALL; RESET; three MoMo orders: O1 paid (`paid = true`, status `placed`), O2 `status = 'cancelled'`, O3 `status = 'shipped'` with DUE(O3, '31 minutes') (a shipped order is untouched by the timers, so the refusal is read without a race); each with its token; a fourth order O4 (T4) unpaid; SNAPSHOT of each.
+**Given**: Any profile with VNPay's keys (the 409 and 404 answers are decided before MoMo's keys are read, so FX-MOMO arranged orders serve); RESET; three MoMo orders: O1 paid (`paid = true`, status `placed`), O2 `status = 'cancelled'`, O3 `status = 'shipped'` with DUE(O3, '31 minutes') (a shipped order is untouched by the timers, so the refusal is read without a race); each with its token; a fourth order O4 (T4) unpaid; SNAPSHOT of each.
 **When**: `POST /api/v1/orders/<id>/payment` with each order's own token and no body; then for O4 with (a) no token, (b) O1's token, (c) an empty token, and for `doi-99999` with T4; each is also sent as `GET /api/v1/orders/<id>` with the same headers.
 **Then**: O1, O2, O3 each answer 409 `{"error":"conflict","message":<sentence>}` with no `errors` key; the three sentences are pairwise different; O1's contains `paid`, O2's contains `cancel`; no attempt row is added and each SNAPSHOT is equal. Every request of (a), (b), (c) and the unknown id answers 404 `{"error":"not_found","message":S}` with the one same sentence S and the same body as the matching GET; no body holds an id, a token or `DOI-`.
 Traces: SC-9 (PAY-001 item 7; ORD-007 AC-17, AC-18, AC-19, AC-20)
