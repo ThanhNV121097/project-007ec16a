@@ -330,7 +330,9 @@ var registry = []*Collection{
 		text("size_bought"), text("fit"), text("body"), text("status")).
 		searching("strpos(doi_fold(t.name || ' ' || t.body), {w}) > 0" +
 			" OR t.product_id IN (SELECT p.id FROM products p WHERE strpos(doi_fold(p.name), {w}) > 0)").
-		onlyLive("t.status = 'live'"),
+		// A shown review of a shoe that is a draft goes with the shoe: it is the
+		// team's until the shoe is on sale again.
+		onlyLive("t.status = 'live' AND t.product_id IN (SELECT lp.id FROM products lp WHERE lp.status = 'live')"),
 	build("shop", "shop_terms t",
 		text("id"), text("standard_days"), text("dispatch_cutoff"), text("reply_time"),
 		decimal("rating"), col("review_count", Int)).
