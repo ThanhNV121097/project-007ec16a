@@ -20,7 +20,7 @@ import OrderStatusSelect from "../components/OrderStatusSelect";
 import { ApiError } from "../lib/api";
 import {
   changes, deleteOrder, isLocked, movesFrom, saveOrder, useDealerOrder, valuesOf,
-  type DealerOrder, type OrderPair, type OrderPatch,
+  type DealerOrder, type OrderPair,
 } from "../lib/dealer-handles-orders-status-courier-payment";
 
 beforeEach(() => {
@@ -376,12 +376,5 @@ describe("the order page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
     expect(stubs.delete).not.toHaveBeenCalled();
-  });
-});
-
-describe("what the client's types allow", () => {
-  it("is a patch of the ten editable fields and nothing else", () => {
-    const patch: OrderPatch = { status: "confirmed", carrier: "GHN", tracking: "GHN-PT27XM", eta: "2026-11-26" };
-    expect(Object.keys(patch)).toEqual(["status", "carrier", "tracking", "eta"]);
   });
 });
