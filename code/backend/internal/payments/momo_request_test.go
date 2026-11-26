@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -82,13 +83,22 @@ type standIn struct {
 	status int
 	body   string
 	delay  time.Duration
+	mu     sync.Mutex
 	seen   []string
+}
+
+func (s *standIn) lines() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.seen...)
 }
 
 func (s *standIn) server(t *testing.T) *httptest.Server {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw, _ := io.ReadAll(r.Body)
+		s.mu.Lock()
 		s.seen = append(s.seen, r.Method+" "+r.URL.Path+" "+r.Header.Get("Content-Type")+" "+string(raw))
+		s.mu.Unlock()
 		if s.delay > 0 {
 			select {
 			case <-time.After(s.delay):
@@ -135,10 +145,11 @@ func TestMoMoMustGiveAUsableAddressOrTheAskFails(t *testing.T) {
 		if (err == nil) != (c.wantURL != "") || got != c.wantURL {
 			t.Errorf("%s: %q %v", name, got, err)
 		}
-		if len(stub.seen) != 1 || !strings.HasPrefix(stub.seen[0], "POST /v2/gateway/api/create application/json") {
-			t.Errorf("%s: the stand-in saw %v (one POST, never a retry)", name, stub.seen)
+		seen := stub.lines()
+		if len(seen) != 1 || !strings.HasPrefix(seen[0], "POST /v2/gateway/api/create application/json") {
+			t.Errorf("%s: the stand-in saw %v (one POST, never a retry)", name, seen)
 		}
-		for _, line := range stub.seen {
+		for _, line := range seen {
 			if strings.Contains(line, momoAccess) || strings.Contains(line, momoSecretKey) {
 				t.Errorf("%s: a key left the shop in %s", name, line)
 			}
