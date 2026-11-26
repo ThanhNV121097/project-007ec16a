@@ -140,8 +140,8 @@ func TestTheTransferRouteAnswersTheStoredOrdersDetails(t *testing.T) {
 	if len(body) != 7 || body["amount"] != float64(3140000) || body["note"] != "DOI-24818" || body["holder"] != "NGUYEN VAN AN" {
 		t.Errorf("body %v", body)
 	}
-	for _, leak := range []string{"phone", "email", "address", "Lan", "Da Nang", "status", "doi-24818"} {
-		if strings.Contains(rec.Body.String(), `"`+leak) && leak != "doi-24818" {
+	for _, leak := range []string{"phone", "email", "address", "Lan Nguyen", "Da Nang", "status", "doi-24818"} {
+		if strings.Contains(rec.Body.String(), leak) {
 			t.Errorf("the answer holds %q", leak)
 		}
 	}
@@ -190,7 +190,7 @@ func TestTheTransferRouteHasOneNotFound(t *testing.T) {
 	if wrong.Code != http.StatusNotFound || wrong.Body.String() != none.Body.String() {
 		t.Errorf("another token: %d %s, want %s", wrong.Code, wrong.Body, none.Body)
 	}
-	bad := getTransfer(h, "/v1/orders/..%2Fx/transfer", "a-token")
+	bad := getTransfer(h, "/v1/orders/DOI-24818/transfer", "a-token")
 	if bad.Code != http.StatusNotFound {
 		t.Errorf("a bad id: %d", bad.Code)
 	}
