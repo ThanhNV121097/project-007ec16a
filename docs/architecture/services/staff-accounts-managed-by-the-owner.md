@@ -261,4 +261,31 @@ None. Refinements of silence only: §4.5 points 1–5 and the display-name and A
 | Dev, backend step | Four routes, the functions of §5.1, the swap of §7, T1–T8. **No migration.** Check R1–R3 first and edit what is missing |
 | Test lead | SC-9/SC-10 are guard-first: a bad body or a bad id as staff or with no session is `403` / `401`, never `404`/`400`. SC-37: `PUT {"role":"admin"}` to a customer's id is `404` (target before body); to the admin's id `409`. SC-36: `POST` with `role` is `400`, `PUT` with `role` is `422`. The 404 sentence is "That account was not found." |
 | "Dealer sign-in" (item 9) | R1, R2, R3 and the shared `NormalizeEmail` are checked at its backend review |
-| "Customer accounts" (item 15) | Reuses `NormalizeEmail`, `HashPassword`, `CreateUser` and `DisplayName` from §5.1 rather than writing a second copy |
+| "Customer accounts" (item 15) | Reuses `NormalizeEmail`, `HashPassword`, `CreateUser` and `DisplayName` from §5.1 rather than writing a second copy. Call them by the names in §10 (`auth.User`, `auth.Querier`), not by §5.1's `Account` and `Q` |
+
+## 10. As built: reconciliation with the merged backend (PR #56)
+
+This design merged in PR #46. The backend and the frontend swap landed in PR #56 (verified at a30b1428f9ff, merged as e81029fa), and the UI PR #36 was then caught up with main and approved at its head 9448adb25a9b. The design step ran again after that review, so this section is the one place the design was checked against the code on `main` instead of against a plan.
+
+**Behaviour is unchanged.** Every route, status, error code, sentence, check order (§3), account shape (§4.1) and decision (S1–S13) stands as written; the code was read against them and no row of §3 or §4 differs. **No endpoint, table, column, index or migration is added or changed by this reconciliation.** What differs is only what things are *called*, which matters because "Customer accounts" (plan item 15) calls these functions.
+
+| §1 / §5.1 says | The code on `main` has | Why it matters |
+|---|---|---|
+| `admin.RegisterStaff(mux, deps)` | `RegisterStaff(mux *http.ServeMux, db Pool, log *slog.Logger)` in `internal/admin/staff.go`; `Pool` is `auth.Querier` plus `Begin` and `BeginTx`; `server.New` calls `admin.RegisterStaff(mux, pool, log)` | The one line `server.go` gained |
+| Files `staff.go`, `staff_input.go` | Three: `staff.go` (the four handlers, the shared target check, `readObject`), `staff_input.go` (the pure rules and `readPaging`), `staff_store.go` (the `store` interface and `pgStore`: the `REPEATABLE READ, READ ONLY` list transaction, the locked `READ COMMITTED` update transaction, the one retry on `40P01`) | `internal/admin` still holds **no SQL**; every statement is a function of `internal/auth` |
+| A new type `auth.Account` with `DisplayName()` | **None.** The account is item 9's `auth.User`; `User.DisplayName()` calls the package function `auth.DisplayName(name, email)` | Do not declare a second account type |
+| `Q` | `auth.Querier` | Same meaning: the pool or a `pgx.Tx` |
+| `Team(ctx, tx pgx.Tx, limit, offset int) ([]Account, int, error)` | `Team(ctx, q Querier, limit, offset int64) ([]User, int64, error)`; the caller passes the read-only transaction | Counts and offsets are `int64` |
+| `Target(ctx, q, id, lock) (Account, error)` | Same contract, returns `auth.User`; a non-uuid id is `ErrNotFound` **without a query** | The §4.5 point 2 rule lives here as well as in the handler |
+| (not listed) | `auth.IsID(s string) bool` (a canonical lower-case uuid) and `auth.LogFailure(log, msg, operation, err)` (logs SQLSTATE and constraint name only, never `PgError.Detail`) | Both are exported for the handler; `LogFailure` is the one way `internal/admin` logs a database error |
+| `ErrNotFound`, `ErrEmailTaken`, `NormalizeEmail`, `HashPassword`, `CreateUser`, `NewUser` listed with this story | `ErrNotFound`, `IsID`, `Team`, `Target`, `EmailTaken`, `SetName`, `SetActive`, `SetPassword`, `DeleteStaff` and `LogFailure` are new, in `internal/auth/accounts.go`. `ErrEmailTaken`, `NormalizeEmail`, `HashPassword`, `CreateUser` and `NewUser` are item 9's (`admin.go`, `email.go`, `password.go`), unchanged | **One** `CreateUser` and one `NewUser`; item 15 calls the same ones |
+
+**The list's paging faults.** §3.1 step 3 left the sentences open. As built: `400 bad_request`, message "Some parameters are not valid.", `errors.page` or `errors.limit` "page must be a whole number from 1." / "limit must be a whole number from 1." for a value that is not digits only, for `page` or `limit` of `0`, and for a `page` above 2147483647; a `limit` above 100 is served as 100; any other parameter is ignored. No other sentence of §4.4 changes.
+
+**R1–R3 (§5.2)** were found on `main` as written and no statement of item 9 was edited: `Resolve` filters `AND u.is_active` (`auth.go`), the session insert is the `INSERT … SELECT … FOR SHARE OF u … AND u.password_hash = $3` (`session.go`), and `EnsureAdmin` writes `is_active = true` on both its insert and its update (`admin.go`).
+
+**Tests.** `go test ./...` passes with no database. The suites are in `internal/admin`: `staff_input_test.go` (the pure rules), `staff_test.go` and `staff_write_test.go` (the handlers over `fake_test.go`'s in-memory store), `staff_log_test.go` (nothing secret reaches the log) and `staff_db_test.go` (the database cases and `TestStaffSchemaAssumptions`, which skip without `TEST_DATABASE_URL`, so their first run is CI).
+
+**The frontend swap (§7), as it landed.** `src/lib/staff.ts` calls `api.get("admin/staff", { limit: 100 })`, `api.post`, `api.put` and `api.delete`, keeps the answer's `total`, and `failure()` reads `ApiError` exactly as §7 says; `src/lib/api.ts` gained `put` and `delete`. **The mock was never merged:** `main`'s `src/lib/mock/` holds only `orders.ts` (read by Track until its story lands), there is no `src/lib/mock/staff.ts`, and nothing imports one. PR #36's head differs from `main` by added assertions in `src/test/staff.test.tsx` only, so it must never be merged with a mock-backed `staff.ts`.
+
+**`design/pages.json`.** The last row of §7 said TL adds `/admin/staff` when the route is on `main`. It is (`App.tsx`, inside `SignedIn`), so this PR adds `{ "path": "/admin/staff", "name": "Staff", "auth": true, "dashboard": true, "roles": ["admin"] }` as the file's last entry. That is the whole of the change outside these two documents.
