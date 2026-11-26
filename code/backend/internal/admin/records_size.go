@@ -53,8 +53,12 @@ func (h *recHandler) setSize(w http.ResponseWriter, r *http.Request) {
 	}{{"pairs", &pairs}, {"seen_pairs", &seen}} {
 		raw, sent := obj[c.name]
 		n, whole := wholeNumber(raw)
-		if !sent || !whole || n < 0 || n > recMaxPairs {
+		if !sent || !whole || n < 0 {
 			faults[c.name] = recWholePairs
+			continue
+		}
+		if n > recMaxPairs {
+			faults[c.name] = recManyPairs
 			continue
 		}
 		*c.into = int(n)
