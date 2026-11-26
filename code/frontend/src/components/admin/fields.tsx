@@ -47,11 +47,19 @@ export interface FieldSpec {
   section?: string;
   /** Hidden in the table below 1024px. */
   secondary?: boolean;
+  /** Drawn as a value and never sent: the shop works it out (a rating, the lists of sizes, the stock). */
+  readOnly?: boolean;
 }
 
 /** Never shown or edited: the id is the row's identity and _source/_picture
  *  are the design's own marks, which the Studio's Check reads. */
 const OWN = new Set(["id", "_source", "_picture"]);
+
+/** What the shop derives, by collection: never typed, never sent. A shoe's sizes
+ *  are typed, but their lists and total come from the count of each size. */
+const DERIVED: Record<string, readonly string[]> = {
+  products: ["sizes_low", "sizes_out", "stock", "rating", "review_count"],
+};
 
 /** "created_at" → "Created at", "fullName" → "Full name", "ao-khoac" → "Ao khoac". */
 export function labelOf(key: string): string {
@@ -59,9 +67,8 @@ export function labelOf(key: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
 }
 
-/** A value that is a picture: a path to one, or one held inline — which is
- *  what the form's own picture control writes when a file is chosen. */
-const IMAGE_PATH = /^data:image\/|\.(jpe?g|png|webp|gif|avif|svg)(\?.*)?$/i;
+/** A value that is a picture: the address of one. */
+const IMAGE_PATH = /\.(jpe?g|png|webp|gif|avif|svg)(\?.*)?$/i;
 
 function strings(rows: readonly Row[], key: string): string[] {
   return rows.map((r) => r[key]).filter((v): v is string => typeof v === "string" && v.trim() !== "");
@@ -96,7 +103,9 @@ export function fieldsOf(collection: string): FieldSpec[] {
     const spec: FieldSpec = {
       key: f.key, label: f.label ?? labelOf(f.key), type: f.type,
       hint: f.hint, required: f.required, section: f.section,
+      readOnly: DERIVED[collection]?.includes(f.key) || undefined,
     };
+    if (collection === "products" && f.key === "sizes") spec.type = "sizes";
     if (f.options) {
       spec.options = f.options.map((o) => (typeof o === "string" ? [o, labelOf(o)] : [o[0], o[1]]) as [string, string]);
     } else if (f.type === "text" || f.type === "url") {
@@ -192,7 +201,7 @@ function cell(spec: FieldSpec, row: Row): ReactNode {
  */
 export function columnsFromFields(fields: readonly FieldSpec[], max = 6): Column<Row>[] {
   return fields
-    .filter((f) => f.type !== "longtext" && f.type !== "list")
+    .filter((f) => f.type !== "longtext" && f.type !== "list" && f.type !== "sizes")
     .slice(0, max)
     .map((f, i) => ({
       key: f.key,
@@ -204,10 +213,18 @@ export function columnsFromFields(fields: readonly FieldSpec[], max = 6): Column
     }));
 }
 
-/** An empty record shaped by the fields, for the add dialog. */
+/**
+ * An empty record shaped by the fields, for the add dialog. A new shoe starts
+ * as a draft, so one half filled in is never public; staff choose "On sale"
+ * when it is ready.
+ */
 export function blank(fields: readonly FieldSpec[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  for (const f of fields) out[f.key] = f.type === "bool" ? false : f.type === "list" ? [] : "";
+  for (const f of fields) {
+    out[f.key] = f.type === "bool" ? false : f.type === "list" || f.type === "sizes" ? [] : "";
+    if (f.key === "status" && f.options?.some(([v]) => v === "draft")) out[f.key] = "draft";
+    if (f.type === "sizes") out.pairs = {};
+  }
   return out;
 }
 
