@@ -43,8 +43,19 @@ func recNotFound(w http.ResponseWriter) { refuse(w, http.StatusNotFound, "not_fo
 const recordsLock = "admin:records"
 
 // inTx runs fn in one transaction that holds the records lock. A nil result
-// commits; any error rolls back.
+// commits; any error rolls back. PostgreSQL ends one side of a deadlock (a save
+// of one shoe meeting an order that takes two shoes' rows) with SQLSTATE 40P01
+// and the transaction is run once more; fn only judges and writes what the
+// request said, so running it twice is the same as running it once.
 func (h *recHandler) inTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
+	err := h.inTxOnce(ctx, fn)
+	if isDeadlock(err) {
+		err = h.inTxOnce(ctx, fn)
+	}
+	return err
+}
+
+func (h *recHandler) inTxOnce(ctx context.Context, fn func(tx pgx.Tx) error) error {
 	tx, err := h.db.Begin(ctx)
 	if err != nil {
 		return err
