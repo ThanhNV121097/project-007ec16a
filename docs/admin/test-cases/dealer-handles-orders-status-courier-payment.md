@@ -38,7 +38,7 @@ Written before the implementation exists, from the requirements, the story and t
 
 | Id | What is made | Used by |
 |---|---|---|
-| FX-STAFF | Made by `POST /v1/admin/staff` as ADMIN: name "Tc Staff A", email `tc-sa@example.com`, password `staff-pass-A1`, active | SC-1 … SC-23, SC-31 … |
+| FX-STAFF | Made by `POST /v1/admin/staff` as ADMIN: name "Tc Staff A", email `tc-sa@example.com`, password `staff-pass-A1`, active | every case that names `STAFF` or `EXPIRED` (SC-1, SC-2, SC-1d, SC-23a) |
 | FX-CUSTOMER | Made as FX-STAFF with name "Tc Customer", `tc-customer@example.com`, `customer-pass-1`, then `UPDATE users SET role = 'customer' WHERE email = 'tc-customer@example.com'` (a customer row whose hash the backend wrote; the sign-in endpoint serves any row) | SC-1, SC-3, SC-27 |
 | FX-CUSTOMER-2 | The same with `tc-customer2@example.com`, `customer-pass-2` — a second customer to whom no order is linked | SC-3 |
 | REQ | The request body of every order placed for a case, sent as `POST /v1/orders` with `Content-Type: application/json` and a fresh header `Idempotency-Key: tc-ho-<case>-<n>`: `{"items":[{"product":"samba-og-w-core-black","size":"38","qty":1}],"delivery":"standard","payment":"vnpay","customer":"Lan Nguyen","phone":"0912 345 678","address":"12 Example Street, Ward 1","city":"Da Nang","note":"Call before delivering."}`. The answer's `order.id` is `<id>` and `token` is `<token>`; a placed order is `status` `placed`, `paid` false, total 3.290.000 ₫ at the shoe's current price | every case that needs an order |
