@@ -154,6 +154,9 @@ type listRequest struct {
 	words []string
 	// sort is nil for the seed's order.
 	sort *sortKey
+	// dealer is true for a session of the shop's team: the list is not narrowed
+	// to what is on sale and the dealer's columns are served.
+	dealer bool
 }
 
 // firstValue is the first value of a repeated name.
@@ -540,6 +543,9 @@ func where(c *Collection, req listRequest) (string, []any) {
 		ph := "(SELECT doi_fold(" + next(w) + "))"
 		conds = append(conds, "("+strings.ReplaceAll(c.Search, "{w}", ph)+")")
 	}
+	if !req.dealer && c.Live != "" {
+		conds = append(conds, "("+c.Live+")")
+	}
 	if len(conds) == 0 {
 		return "TRUE", nil
 	}
@@ -563,15 +569,20 @@ func listSQL(c *Collection, req listRequest) (string, []any) {
 	cond, args := where(c, req)
 	n := len(args)
 	sql := "SELECT (SELECT count(*) FROM " + c.From + " WHERE " + cond + ") AS total, " +
-		"coalesce((SELECT json_agg(p) FROM (SELECT " + c.selectList() + " FROM " + c.From +
+		"coalesce((SELECT json_agg(p) FROM (SELECT " + c.viewList(req.dealer) + " FROM " + c.From +
 		" WHERE " + cond + " ORDER BY " + orderBy(req) + " LIMIT $" + strconv.Itoa(n+1) + " OFFSET $" + strconv.Itoa(n+2) +
 		") p), '[]'::json)::text AS items"
 	args = append(args, req.limit, (req.page-1)*req.limit)
 	return sql, args
 }
 
-// recordSQL is the one statement of a record: its public columns as a JSON
-// object.
-func recordSQL(c *Collection) string {
-	return "SELECT row_to_json(p)::text FROM (SELECT " + c.selectList() + " FROM " + c.From + " WHERE t.id = $1) p"
+// recordSQL is the one statement of a record: its columns as a JSON object. A
+// caller who is not the team gets the public columns, and only a record that is
+// on sale: a draft answers as an id that does not exist.
+func recordSQL(c *Collection, dealer bool) string {
+	live := ""
+	if !dealer && c.Live != "" {
+		live = " AND (" + c.Live + ")"
+	}
+	return "SELECT row_to_json(p)::text FROM (SELECT " + c.viewList(dealer) + " FROM " + c.From + " WHERE t.id = $1" + live + ") p"
 }
