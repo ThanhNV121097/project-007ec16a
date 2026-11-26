@@ -74,27 +74,25 @@ func readLookup(w http.ResponseWriter, r *http.Request) (Pair, bool) {
 
 	var p Pair
 	texts := map[string]*string{"number": &p.Number, "phone": &p.Phone}
-	faults := fieldErrors{}
+	faults, bad := fieldErrors{}, false
 	for _, name := range slices.Sorted(maps.Keys(fields)) {
 		dst, defined := texts[name]
 		switch {
 		case !defined:
+			bad = true
 			if len(faults) < maxFaults && lookupKeyName.MatchString(name) {
 				faults[name] = undefinedSentence
 			}
-			if len(faults) == 0 {
-				faults["body"] = undefinedSentence
-			}
 		case !lookupText(dst, fields[name]):
-			faults[name] = textSentence
+			bad, faults[name] = true, textSentence
 		}
 	}
 	for name := range texts {
 		if _, present := fields[name]; !present {
-			faults[name] = lookupNeededSentence
+			bad, faults[name] = true, lookupNeededSentence
 		}
 	}
-	if len(faults) > 0 {
+	if bad {
 		httpx.Error(w, http.StatusBadRequest, "bad_request", lookupCheckSentence, faults)
 		return Pair{}, false
 	}
