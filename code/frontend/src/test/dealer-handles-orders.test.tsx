@@ -8,8 +8,9 @@ vi.hoisted(() => {
 });
 
 import OrderRecord from "../components/OrderRecord";
+import OrderStatusSelect from "../components/OrderStatusSelect";
 import {
-  changes, deleteOrder, isLocked, movesFrom, saveOrder, valuesOf, type OrderPatch,
+  changes, deleteOrder, isLocked, movesFrom, saveOrder, valuesOf, type DealerOrder, type OrderPatch,
 } from "../lib/dealer-handles-orders-status-courier-payment";
 import { resetMock, transport } from "../lib/mock/dealer-handles-orders-status-courier-payment";
 
@@ -134,7 +135,9 @@ describe("the order page", () => {
     expect(screen.getByText(/^Long in Hà Nội ordered 2 pairs on .* — /)).toBeInTheDocument();
     expect(screen.getByText("EU 37 1/3")).toBeInTheDocument();
     expect(screen.getByText("EU 38")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Samba OG Core Black" })).toBeInTheDocument();
+    // The name is written beside each picture, so the picture itself says nothing twice.
+    expect(screen.getByText("Samba OG Core Black")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Samba OG Core Black" })).toBeNull();
   });
 
   it("shows how it was paid as text, with VNPay's number when there is one", async () => {
@@ -161,7 +164,8 @@ describe("the order page", () => {
     expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["Order", "Delivery", "Customer"]);
     tab("Delivery");
     expect(screen.getByLabelText("Carrier")).toHaveValue("GHTK");
-    expect(screen.getByText("Year-month-day, for example 2026-11-26")).toBeInTheDocument();
+    const hint = screen.getByText("Year-month-day, for example 2026-11-26");
+    expect(screen.getByLabelText("Expected")).toHaveAttribute("aria-describedby", hint.id);
   });
 
   it("saves the address and the note, and says so", async () => {
@@ -180,12 +184,61 @@ describe("the order page", () => {
     type("Email", "abc");
     type("City or province", "Hà Nội");
     save();
-    expect(await screen.findByText("Enter a valid email address, or leave it empty.")).toBeInTheDocument();
+    const sentence = await screen.findByText("Enter a valid email address, or leave it empty.");
+    expect(sentence).toHaveAttribute("role", "alert");
     expect(screen.getByLabelText("Email")).toHaveValue("abc");
     expect(screen.getByLabelText("Email")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Email")).toHaveAttribute("aria-describedby", sentence.id);
+    expect(screen.getByLabelText("City or province")).not.toHaveAttribute("aria-invalid");
     expect(screen.getByLabelText("City or province")).toHaveValue("Hà Nội");
     expect(screen.queryByText("We could not save. Please try again.")).toBeNull();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+  });
+
+  it("ties both the hint and the refusal to Expected", async () => {
+    await open("doi-24814");
+    tab("Delivery");
+    type("Expected", "26/11/2026");
+    save();
+    const sentence = await screen.findByRole("alert");
+    const hint = screen.getByText("Year-month-day, for example 2026-11-26");
+    expect(screen.getByLabelText("Expected")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Expected")).toHaveAttribute("aria-describedby", `${hint.id} ${sentence.id}`);
+    expect(screen.getByLabelText("Expected")).toHaveValue("26/11/2026");
+  });
+
+  it("marks Status invalid and announces the shop's sentence beside it", () => {
+    const said = "An order cannot go from cancelled to packed.";
+    render(
+      <OrderStatusSelect label="Status" value="packed" error={said} onChange={() => undefined}
+        options={[{ value: "confirmed", label: "Confirmed" }, { value: "packed", label: "Packed" }]} />,
+    );
+    const sentence = screen.getByText(said);
+    expect(sentence).toHaveAttribute("role", "alert");
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveAttribute("aria-describedby", sentence.id);
+  });
+
+  it("reads Saving… on a disabled button while the shop takes its time, then Save changes again", async () => {
+    await open("doi-24814");
+    window.history.replaceState({}, "", "/?mock=slow");
+    tab("Customer");
+    type("Address", "9 New Street");
+    save();
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+    expect(await screen.findByText("Saved.", {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+  }, 8000);
+
+  it("keeps the order's pairs when the shop's answer comes without them", async () => {
+    const { order, onSaved } = await open("doi-24815");
+    const bare = { ...order, address: "9 New Street", items: undefined } as unknown as DealerOrder;
+    vi.spyOn(transport, "update").mockResolvedValueOnce(bare);
+    tab("Customer");
+    type("Address", "9 New Street");
+    save();
+    expect(await screen.findByText("Saved.")).toBeInTheDocument();
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ address: "9 New Street", items: order.items }));
   });
 
   it("says it could not save when the shop does not answer, and keeps the button", async () => {
