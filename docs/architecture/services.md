@@ -2224,6 +2224,46 @@ No other. I read `services/_base.md` §2.1–2.6, §3.11, §3.13; `services/chec
 
 **None.** This story creates no table, column, index, constraint or function and adds no `.sql` file (ERD file §5). Forward: nothing runs. Backward: revert the backend PR; the schema is exactly S5's before and after, so there is no populated table to protect and no irreversible step to justify.
 
+## 12. As built, and rulings after the review of the backend PR (#65)
+
+Written after the backend PR (#65, head `0a675db`) was built from §1–§11 and reviewed, and after the UI PR (#41, head `a7f378e`) was read again. **Nothing in §1–§11 is withdrawn.** This section records what the build showed the design had not said, what is accepted as built, and the rules the open stories on the same files follow. Where this section and an earlier one differ, **this section wins**. It adds no endpoint, no error code, no table and no setting.
+
+### 12.1 The mock, read again
+
+PR #41 still holds `src/lib/mock/order-page-and-pay-now.ts` (`getOrder`, `postPayment`, each answering `{status, body}`; `PublicOrder` with `items[]`, ids for `payment` and `delivery`, `eta` as `YYYY-MM-DD` or `""`). It was compared with §2.8, §3.11 and §3.13 again: every judgment of §2 holds, and the mock gained nothing the contract lacks. Its two departures stay the ones §2 names (any 404 counted as "not found"; a mock-shaped `{status, body}` instead of `ApiError`), both removed at the swap. PR #65 re-applies #41's own files **without** the mock and without `src/lib/order-words.ts` (P11), so #41 is closed as superseded when #65 merges; nothing of it is merged on its own.
+
+### 12.2 Rulings
+
+| # | What the build showed | Ruling | Rejected alternative, and why |
+|---|---|---|---|
+| Q1 | §7 row 2 needs the browser to send `X-Order-Token`, but `src/lib/api.ts` on main sends only `Accept` (and `Content-Type` with a body) and de-duplicates in-flight GETs by address alone. The design assumed a way to add a header and did not say how | `api.get(path, params?, headers?)` and `api.post(path, body?, headers?)`: **one optional trailing `headers: Record<string, string>`**, merged over `Accept`. A GET's in-flight de-duplication key is the address **plus** the headers, so two readers holding different tokens never share an answer. The retry rules (a failed GET once, a POST never), the 15 s timeout, 204 handling, `credentials: "include"` and `ApiError` are exactly as they were; no existing caller changes; the new cases live in `src/test/api.test.ts`. **This binds later stories**: the VNPay return page and any other call that sends a credential header use this parameter, and **no story adds a second fetch wrapper** | A second fetch function inside the order client: two places with their own timeout, retry and error mapping, which drift. An options object replacing the second parameter: edits every existing caller for a header only one story sends |
+| Q2 | §6's sketch runs `authorize` on `r.Context()`, but §3.3 says "the access statement fails **or times out**" is `500 internal`. With no deadline the only bound is the server's 60 s `WriteTimeout`; `GET` is bounded by `txTimeout` (5 s) | `payHandler` creates `ctx, cancel := context.WithTimeout(r.Context(), txTimeout)` **before** `authorize` and passes that same `ctx` on to `payURL`, whose own 3 s provider limit is a child of it, so the whole call is bounded by 5 s. An expired deadline is `500 internal` with the generic body, the cause logged beside the order and request id. This is a contract rule, not a style note: TL's review lists it as should-fix 1 on #65, to be applied before or with the merge | A shorter, separate limit for the access statement: a second constant for one indexed read, with no requirement behind it |
+| Q3 | §3.3 leaves the 503 message to S7 | As built the message is "Online payment is not available right now. Please try again later." (`msgUnavailable`), a placeholder no page reads. S7 may reword it; this story's fake-driven test checks the status and the code only | — |
+| Q4 | The story says "three different sentences" (SC-2 to SC-4); the contract has four 409 sentences (SC-5's is the fourth) | **Four**, as §3.3: cancelled, already paid, cannot be paid online, not available yet. The page branches on none of them | — |
+
+### 12.3 Accepted as built (names or shape differ from §4–§6; behaviour does not)
+
+- `Pay(ctx, ref, client)` is `payURL(ctx, ref, client)`, a method of the package's service; `decide(ref, providers)` is pure over the order's row and the provider map; `Refusal` and `ErrPaymentUnavailable` are as §6 names them.
+- `authorize(ctx, q, id, access, mode)` takes `mode` and ignores it today (`_ mode`): the argument is the extension point of §4's table, not dead code. `Access.couldOpen(id)` is the shape check (id and token patterns); `GET` calls it **before** it opens its snapshot, so a malformed id or token costs no transaction either, and the 404 bytes are the same.
+- `fail(w, r, id, err)` is the one error mapper of both routes and `notFound(w)` the one writer of the 404 body. The accounts design (`services/customer-accounts-sign-up-sign-in-my-orders.md`) calls that writer `orders.WriteNotFound` (exported). **The rule is one writer, not its spelling**: whichever of the two stories merges second reconciles to one function and its tests.
+- `GET /v1/orders/{id}` reads inside `BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY` → `authorize` → `viewSQL` → commit, under `txTimeout`. `tokenSQL` is gone; `order_tokens` is named by exactly one read statement in the package (`accessSQL`).
+- Tests: `pay_test.go` runs with no database (every `decide` combination, the byte-identical 404s with zero queries for unformed ids and tokens, the three presses, the body after access, a failing `querier`, the fake providers, the absence of an HTTP client); `pay_db_test.go` runs against PostgreSQL with the seeded orders and skips without `TEST_DATABASE_URL`, so **its first real run is CI and Verify must confirm it ran and did not skip**. Nit, not required: one seeded order per case in `TestPayRefusesByStateAgainstTheSeededOrders`.
+- Frontend: `src/lib/order-page-and-pay-now.ts` on `api.ts`; the five keys `load_failed`, `pay_failed`, `pay_now`, `paying`, `retry` under `pages.order` in `content.json` (P11); `Order.tsx` and five components; `OrderHead` puts `lg:col-start-1` on its two left-hand blocks so they stack when the first pair has no picture (SC-18). `src/lib/mock/orders.ts` stays because `Track.tsx` imports it (the track story deletes it when `grep -rn "mock/orders" code/frontend/src` finds no importer).
+- PR #65 also carries the resolution of PR #50's catch-up markers in `lib/orders.ts`, `pages/Checkout.tsx`, `test/orders.test.ts` and the deleted checkout mock (the `be-v2` side of every hunk), which is the same change as the hotfix and drops out of the diff if the hotfix merges first. **Merge hygiene:** grep the head for `^<<<<<<<`, `^>>>>>>>` and `^=======$` before merging.
+
+### 12.4 Rules for the stories that touch the same files (extends §10)
+
+| Story | Rule |
+|---|---|
+| "Customer accounts" (backend PR #69) | Adds `AccountID` and the `EXISTS token OR o.account_id = $3::uuid` predicate to `authorize`. **Whichever of #65 and #69 merges second adapts to the first**: `AccountID` stays in `authorize` for **both** `modeRead` and `modePay` (the linked customer may press "Pay now" with no header), and step 2 becomes "no valid token **and** no `AccountID` **and** not a dealer → `ErrNotFound` with no query". One writer of the 404 body (12.3) |
+| "Dealer handles orders" | Adds `Dealer` in `modeRead` only, never in `modePay`: a dealer session without the token is `404` on this route |
+| "Track an order by number and phone" | Inserts `order_tokens` rows through the same `hashToken`; deletes `src/lib/mock/orders.ts` once nothing imports it |
+| "Online payment with VNPay" | Registers `vnpay` in `orders.Options{Providers}`, adds the "thirty minutes ran out" case to `decide` and takes the order row `FOR UPDATE` in its attempt (ERD E5). Its return page sends the token through the `headers` parameter of Q1. **No line of the route, `Order.tsx`, `PayNow.tsx` or this story's client changes** |
+
+### 12.5 For Test and for running it
+
+No new setting, secret or `.env.example` line: the story runs on the stack as it is. The arrangement SQL is in the ERD file §6; SC-5's "no `payment_attempts` row" is asserted with `to_regclass` (ERD §7), which stays valid after S7. The 2-second answer of SC-10, the 500 and the network failure of SC-11 come from outside the backend (a hold on one URL, an unreachable database, a stopped container); **no test-only route exists**.
+
 
 <!-- story 7: Track an order by number and phone -->
 # Service contracts — Track an order by number and phone (plan item 7)

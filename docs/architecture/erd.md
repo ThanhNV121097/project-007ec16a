@@ -1942,6 +1942,10 @@ A token the test makes up must be 1 to 128 characters of `[A-Za-z0-9_-]` (the AP
 | "Online payment with VNPay" (S7) | Creates `payment_attempts` and `payment_notices`; takes the order row `FOR UPDATE` before inserting an attempt (E5); adds its expiry refusal as one case in the route's decision (services §5); changes no column of `orders` this story reads |
 | "Customer accounts", "Dealer sign-in" | Extend the one access statement and function (services §4) — add `OR o.account_id = $3` and the dealer branch there, nowhere else; `orders.account_id` is their migration |
 
+## 8. As built (backend PR #65)
+
+The ERD was checked again against the backend PR: its file list and its description show **no file under `code/backend/migrations/`**, and every statement the package now holds for this story is one of access patterns 1 and 2 of §3 — the access statement (`accessSQL`: `orders` by primary key with the `EXISTS` on `order_tokens.token_hash`) and the unchanged pair read (`viewSQL`). The route writes nothing and opens no transaction; `GET` now reads inside one `REPEATABLE READ, READ ONLY` snapshot, which changes no table, index or lock. `pay_db_test.go` arranges data exactly as §6 does (`INSERT INTO order_tokens` with the Go-side SHA-256 of a token the test knows; `UPDATE orders` for status and paid). **§1–§7 stand unchanged**; the as-built rulings on the API and the client are in `services/order-page-and-pay-now.md` §12.
+
 
 <!-- story 7: Track an order by number and phone -->
 # ERD — Track an order by number and phone (plan item 7)
