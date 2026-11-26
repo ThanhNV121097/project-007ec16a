@@ -280,7 +280,7 @@ Behaviour:
 1. "Bank transfer (VietQR)" is offered at checkout only when the shop's own bank account — bank, account number and account holder, supplied by the owner — is set.
 2. After an order is placed with it, the order page shows a QR code that carries the shop's account, the order's total as the amount, and the order number as the transfer note, with the account holder, bank, account number, amount and note written beside it for typing by hand, and the line "Scan this QR code with any banking app. We send the pair as soon as the money lands."
 3. Nothing marks the order paid automatically. The dealer marks it paid on the order's page when the money has landed. This is the one case where a dealer marks an order paid by hand, and it exists only from this later story: until then the `admin` module refuses every such attempt (ADMIN-016).
-4. "Pay now" answers 409 for a bank-transfer order; the QR code stays on the order page while the order is unpaid and is not shown once it is paid or cancelled.
+4. "Pay now" answers 409 for a bank-transfer order, so the order page draws no "Pay now" for an unpaid one and shows the QR code in its place; the QR code stays on the order page while the order is unpaid and is not shown once it is paid or cancelled.
 5. A bank-transfer order still unpaid 24 hours after it was placed, whose status is placed, confirmed or packed, is cancelled and its pairs return to the shelf (open question 5). A shipped or delivered order is left alone, as in PAY-003 item 1.
 
 **Acceptance criteria**
