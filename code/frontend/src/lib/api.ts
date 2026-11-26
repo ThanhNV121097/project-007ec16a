@@ -58,9 +58,9 @@ function failure(status: number, body: unknown): ApiError {
 }
 
 /** Request headers a call may add to the ones every call carries (an order's `X-Order-Token`). */
-export type Headers = Record<string, string>;
+export type ExtraHeaders = Record<string, string>;
 
-async function send(url: string, signal: AbortSignal, extra?: Headers): Promise<unknown> {
+async function send(url: string, signal: AbortSignal, extra?: ExtraHeaders): Promise<unknown> {
   let res: Response;
   try {
     res = await fetch(url, { credentials: "include", signal, headers: { Accept: "application/json", ...extra } });
@@ -91,7 +91,7 @@ async function timed<T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> {
 }
 
 /** One GET try, abandoned after 15 seconds. */
-async function attempt(url: string, extra?: Headers): Promise<unknown> {
+async function attempt(url: string, extra?: ExtraHeaders): Promise<unknown> {
   return timed((signal) => send(url, signal, extra));
 }
 
@@ -117,7 +117,7 @@ function shared<T>(key: string, run: () => Promise<T>): Promise<T> {
  * the request; two reads share a request only when their address AND their
  * headers are the same, so one caller's credential never answers another's.
  */
-async function get<T>(path: string, params?: Params, headers?: Headers): Promise<T> {
+async function get<T>(path: string, params?: Params, headers?: ExtraHeaders): Promise<T> {
   const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}${queryString(params)}`;
   const key = headers ? `${url}\n${JSON.stringify(Object.entries(headers).sort())}` : url;
   return shared(key, async () => {
@@ -132,8 +132,8 @@ async function get<T>(path: string, params?: Params, headers?: Headers): Promise
 
 type Write = "POST" | "PUT" | "DELETE";
 
-async function sendWrite(method: Write, url: string, body: unknown, signal: AbortSignal, extra?: Headers): Promise<unknown> {
-  const headers: Headers = { Accept: "application/json", ...extra };
+async function sendWrite(method: Write, url: string, body: unknown, signal: AbortSignal, extra?: ExtraHeaders): Promise<unknown> {
+  const headers: ExtraHeaders = { Accept: "application/json", ...extra };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   let res: Response;
   try {
@@ -152,7 +152,7 @@ async function sendWrite(method: Write, url: string, body: unknown, signal: Abor
   return parsed;
 }
 
-async function write<T>(method: Write, path: string, body?: unknown, headers?: Headers): Promise<T> {
+async function write<T>(method: Write, path: string, body?: unknown, headers?: ExtraHeaders): Promise<T> {
   const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}`;
   return (await timed((signal) => sendWrite(method, url, body, signal, headers))) as T;
 }
@@ -163,7 +163,7 @@ async function write<T>(method: Write, path: string, body?: unknown, headers?: H
  * an ApiError, a refusal carrying the server's envelope. `headers` are added to
  * the request; with no body the call sends none and no content type.
  */
-async function post<T = void>(path: string, body?: unknown, headers?: Headers): Promise<T> {
+async function post<T = void>(path: string, body?: unknown, headers?: ExtraHeaders): Promise<T> {
   return write<T>("POST", path, body, headers);
 }
 
