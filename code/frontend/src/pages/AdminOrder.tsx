@@ -1,34 +1,53 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useContent } from "../editable";
-import RecordPage from "../components/admin/RecordPage";
-import ProductImage from "../components/ProductImage";
-import { useRecord } from "../data";
-import { formatDateTime, formatPrice } from "../lib/format";
-import { fill, type Order, type Product } from "../lib/shop";
+import DashboardLayout from "../components/DashboardLayout";
+import OrderRecord from "../components/OrderRecord";
+import { Breadcrumb, Button, Empty } from "../components/admin/index";
+import { titleOf } from "../components/admin/fields";
+import { useCollection } from "../data";
+import { useDealerOrder } from "../lib/dealer-handles-orders-status-courier-payment";
+import type { DeliveryOption, PaymentMethod } from "../lib/shop";
 import { useAdminNav } from "./admin-nav";
 
+const BACK = "/admin/orders";
+
+/** The name of a record in a short list, or its id while the list is on its way. */
+function nameIn(list: readonly { id: string; name: string }[], id: string): string {
+  return list.find((r) => r.id === id)?.name ?? id;
+}
+
 /**
- * One order, open: a sentence and the pair's picture at the top — who, what,
- * when, how much — then its status, delivery and customer on the tabs the
- * schema gives them.
+ * One order, open: its picture and sentence, then its status, delivery and
+ * customer on three tabs. The page asks the shop for the order and says what
+ * it has: still waiting, could not ask, no such order, or the order itself.
+ * "This record is not here" is only ever the shop's own answer.
  */
 export default function AdminOrder() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const nav = useAdminNav();
-  const order = useRecord<Order>("orders", id).item;
-  const product = useRecord<Product>("products", order?.product).item;
-  const summary = useContent("pages.admin.orders.summary");
+  const { load, replace, retry } = useDealerOrder(id);
+  const methods = useCollection<PaymentMethod>("payments", { pageSize: 20 }).items;
+  const options = useCollection<DeliveryOption>("delivery", { pageSize: 20 }).items;
+  const area = useContent("pages.admin.orders.title");
+  const order = load.state === "ready" ? load.order : undefined;
+  const heading = order ? titleOf({ ...order }) : "";
   return (
-    <RecordPage collection="orders" id={id} nav={nav} backTo="/admin/orders" title={useContent("pages.admin.orders.title")}>
-      {order && (
-        <div className="flex items-center gap-4 rounded-md border border-line bg-surface p-4">
-          <span className="w-16 shrink-0"><ProductImage src={product?.image} alt={product?.name ?? ""} aspect="1/1" /></span>
-          <p className="text-sm text-ink">{fill(summary, {
-            customer: order.customer, city: order.city ?? "", qty: order.qty, product: product?.name ?? "",
-            size: order.size, date: formatDateTime(order.placed_at), total: formatPrice(order.total),
-          })}</p>
-        </div>
+    <DashboardLayout title={area} nav={nav}>
+      <Breadcrumb trail={[{ label: area, to: BACK }, { label: heading }]} />
+      {load.state === "loading" && <p role="status" className="text-sm text-ink-soft">Loading the order…</p>}
+      {load.state === "failed" && (
+        <Empty title="We could not load this order." note="Check the connection and try again."
+          action={<Button onClick={retry}>Try again</Button>} />
       )}
-    </RecordPage>
+      {load.state === "missing" && (
+        <Empty title="This record is not here" note="It may have been deleted since the link was made."
+          action={<Button onClick={() => navigate(BACK)}>Back to the list</Button>} />
+      )}
+      {order && (
+        <OrderRecord order={order} title={heading} backTo={BACK} onSaved={replace}
+          paymentName={nameIn(methods, order.payment)} deliveryName={nameIn(options, order.delivery)} />
+      )}
+    </DashboardLayout>
   );
 }
