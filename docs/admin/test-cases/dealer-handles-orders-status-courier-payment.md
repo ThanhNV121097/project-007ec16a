@@ -213,7 +213,7 @@ Check: fetch_url
 **Scenario**: SC-9b — two cancels at the same moment give one 200, one 422, and the pairs back once, twenty times
 **Given**: ADMIN signed in in a browser page; SHELF(`samba-og-w-core-black`, `38`, 100) read before.
 **When**: In 20 rounds, the page places a fresh order with REQ (`qty` 2, key `tc-ho-race-<n>`), reads the count of `38`, then sends `PUT {"status":"cancelled"}` twice at once with `Promise.all`, reads the order and the count of `38` again.
-**Then**: In every round exactly one answer is 200 (`status` `cancelled`) and the other is 422 with `errors.status` "An order cannot go from cancelled to cancelled."; the count of `38` after the round is exactly 2 higher than before it (never 4, never unchanged); at the end of 20 rounds the count equals the starting 100 minus nothing (every order was cancelled), and no count is above the starting value.
+**Then**: In every round exactly one answer is 200 (`status` `cancelled`) and the other is 422 with `errors.status` "An order cannot go from cancelled to cancelled."; the count of `38` read after the round is exactly 2 higher than the count read after the order was placed (never 4, never unchanged); at the end of the 20 rounds the count of `38` equals the starting 100 again (every order was cancelled once), and it was never above 100 at any reading.
 Traces: SC-9 (ADMIN-016 item 2; story §3 item 3, concurrency)
 Check: interact_page
 
