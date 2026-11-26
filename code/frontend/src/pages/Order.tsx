@@ -24,27 +24,9 @@ export default function Order() {
   usePageMeta("pages.order.title", "pages.order.description");
   const { id } = useParams();
   const [params] = useSearchParams();
-<<<<<<< refs/heads/feature/order-page-and-pay-now-ui
   const read = useOrder(id);
   const payments = useCollection<PaymentMethod>("payments", { pageSize: 10 });
   const deliveries = useCollection<DeliveryOption>("delivery", { pageSize: 10 });
-=======
-  const record = useRecord<OrderRecord>("orders", id).item;
-  const placed = usePlacedOrders().find((o) => o.id === id);
-  const product = useRecord<Product>("products", record?.product).item;
-  const payments = useCollection<PaymentMethod>("payments", { pageSize: 10 }).items;
-  const deliveries = useCollection<DeliveryOption>("delivery", { pageSize: 10 }).items;
-  const headlines = useContent<Record<string, string>>("pages.order.headline");
-  const thanks = useContent("pages.order.thanks");
-  const numberText = useContent("pages.order.number");
-  const etaText = useContent("pages.order.eta");
-  const doneText = useContent("pages.order.done");
-  const paidText = useContent("pages.order.paid");
-  const dueText = useContent("pages.order.due");
-  const freeText = useContent("pages.cart.free");
-  const lineText = useContent("pages.checkout.line");
-  const spec = useContent<Record<string, string>>("pages.order.spec");
->>>>>>> refs/heads/main
 
   if (read.state === "failed") return <OrderLoadError onRetry={read.reload} />;
   if (read.state === "missing") return <OrderMissing />;
