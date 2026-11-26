@@ -32,7 +32,8 @@ In this file "the dealer" means a session whose role is admin or staff.
 **In scope** — the plan items, by title:
 
 - Dealer sign-in and protected admin area
-- Manage shoes, lines, categories, reviews and orders
+- Manage shoes, lines, categories, reviews and orders (ADMIN-010 to ADMIN-015: the records, pictures, visibility, deletes and per-size counts)
+- Dealer handles orders: status, courier, payment (ADMIN-016 and the order parts of ADMIN-004, ADMIN-011, ADMIN-014; split out of the item above)
 - Dealer dashboard figures and charts
 - Staff accounts managed by the owner
 
