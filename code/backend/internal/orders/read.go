@@ -86,17 +86,12 @@ func (s *service) snapshot(ctx context.Context, id string, a Access) (json.RawMe
 // credential in this story. An id or a token that cannot be one never reaches the
 // database, and every way of not being let in answers the same 404.
 func (s *service) read(w http.ResponseWriter, r *http.Request) {
-<<<<<<< refs/heads/feature/dealer-handles-orders-status-courier-payment-be
 	if u, ok := auth.FromContext(r.Context()); ok && (u.Role == auth.Admin || u.Role == auth.Staff) {
 		s.readDealer(w, r)
 		return
 	}
-	id, token := r.PathValue("id"), r.Header.Get("X-Order-Token")
-	if len(id) > 100 || !idPattern.MatchString(id) || !tokenPattern.MatchString(token) {
-=======
 	id, access := r.PathValue("id"), Access{Token: r.Header.Get("X-Order-Token")}
 	if !access.couldOpen(id) {
->>>>>>> refs/heads/main
 		notFound(w)
 		return
 	}
