@@ -140,9 +140,14 @@ function refusals(order: DealerOrder, body: Record<string, unknown>): Record<str
   return errors;
 }
 
+/** What the shop sends: a copy, so a page never holds the shop's own record. */
+function copy(o: DealerOrder): DealerOrder {
+  return { ...o, items: o.items.map((p) => ({ ...p })) };
+}
+
 async function read(id: string): Promise<DealerOrder> {
   await arrive(false);
-  return structuredClone(orders[find(id)]);
+  return copy(orders[find(id)]);
 }
 
 async function update(id: string, body: OrderPatch): Promise<DealerOrder> {
@@ -151,7 +156,7 @@ async function update(id: string, body: OrderPatch): Promise<DealerOrder> {
   const errors = refusals(orders[at], body as Record<string, unknown>);
   if (Object.keys(errors).length > 0) throw new ApiError(422, "invalid", "These details cannot be saved.", errors);
   orders[at] = { ...orders[at], ...body };
-  return structuredClone(orders[at]);
+  return copy(orders[at]);
 }
 
 async function remove(id: string): Promise<void> {
