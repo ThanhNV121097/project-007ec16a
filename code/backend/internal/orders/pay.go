@@ -93,11 +93,15 @@ func hasBody(r *http.Request) bool {
 // payHandler answers POST /v1/orders/{id}/payment: "Pay now". Order of checks:
 // access (404), a body was sent (400), the order's state (409), availability (409
 // or 503), the address (200 or 500). Every answer is no-store. The route writes
-// nothing, so a repeated press answers what the first did.
+// nothing, so a repeated press answers what the first did. The access statement
+// and the ask for the address share one txTimeout deadline, as GET's read does:
+// an access statement that times out is a 500, never a hung request.
 func (s *service) payHandler(w http.ResponseWriter, r *http.Request) {
 	noStore(w)
 	id := r.PathValue("id")
-	ref, err := authorize(r.Context(), s.db, id, Access{Token: r.Header.Get("X-Order-Token")}, modePay)
+	ctx, cancel := context.WithTimeout(r.Context(), txTimeout)
+	defer cancel()
+	ref, err := authorize(ctx, s.db, id, Access{Token: r.Header.Get("X-Order-Token")}, modePay)
 	if err != nil {
 		s.fail(w, r, id, err)
 		return
