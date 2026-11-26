@@ -9,6 +9,7 @@ import {
   buildRequest, detailProblems, keyKeeper, payAddress, placeOrder, rememberOrder, useCurrentPrices, usePaymentOptions,
   type Details, type PlaceResult,
 } from "../lib/orders";
+import { chosenWay, waysOf } from "../lib/more-ways-to-pay-vietqr-transfer-and-momo";
 import type { DeliveryOption, Product } from "../lib/shop";
 import HeadPicture from "../components/HeadPicture";
 import Icon from "../components/Icon";
@@ -77,8 +78,8 @@ export default function Checkout() {
   // The ways the shop lists, in its order; one it refused to place an order with is closed.
   // The first open one is chosen until the visitor chooses another, and Place order is off
   // only when none is open (or the read of what it offers failed, and the page says so).
-  const ways = options.items.map((o) => (closedWays.includes(o.id) ? { ...o, is_available: false } : o));
-  const chosen = ways.find((o) => o.id === picked && o.is_available) ?? ways.find((o) => o.is_available);
+  const ways = waysOf(options.items, closedWays);
+  const chosen = chosenWay(ways, picked);
   const nothing = !options.loading && ways.length === 0;
   const blocked = !chosen;
   const set = (k: keyof Details) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
