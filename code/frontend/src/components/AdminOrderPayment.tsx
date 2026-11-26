@@ -33,14 +33,13 @@ export default function AdminOrderPayment({ id, way, paid, status, transactionNo
   const [phase, setPhase] = useState<Phase>("idle");
   const [marked, setMarked] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
   const isPaid = paid || marked;
   const provider = PROVIDER[way];
 
   // The button leaves when the order is paid and is disabled while it waits: keep the keyboard's place.
   useEffect(() => {
     if (phase === "saved") box.current?.focus();
-    if (phase === "failed") button.current?.focus();
+    if (phase === "failed") box.current?.querySelector<HTMLButtonElement>("button")?.focus();
   }, [phase]);
 
   const press = async () => {
@@ -61,7 +60,7 @@ export default function AdminOrderPayment({ id, way, paid, status, transactionNo
       <div className="flex flex-wrap items-center gap-3">
         <Badge tone={isPaid ? "good" : "warn"}>{isPaid ? "Paid" : "Awaiting payment"}</Badge>
         {way === BANK && !isPaid && (
-          <Button ref={button} data-testid="admin-mark-paid" disabled={phase === "saving"} onClick={() => void press()}>
+          <Button data-testid="admin-mark-paid" disabled={phase === "saving"} onClick={() => void press()}>
             {phase === "saving" ? "Saving…" : "Mark as paid"}
           </Button>
         )}
