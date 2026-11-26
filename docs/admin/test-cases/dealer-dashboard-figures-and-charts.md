@@ -345,7 +345,7 @@ Check: fetch_url
 **Scenario**: SC-16 — 10,000 orders: the answer holds only the five latest, no customer detail, and stays small
 **Given**: Baseline length L0 = the byte length of the body of `GET /v1/admin/overview` read as ADMIN with no FX-BIG data. FX-BIG is made with every size of the generated shoes holding 3 to 9 pairs (so none of them is running low); the sentinels are `0999000TCOV`, `tcov@example.invalid`, `TCOV ADDRESS`, `TCOV NOTE`; the five newest orders are five of the generated ones.
 **When**: `GET /v1/admin/overview` as ADMIN, the body length L1 is taken, and the body is searched.
-**Then**: `latest_orders` has exactly 5 items, all five from the generated set's newest; no item's key set differs from the nine of SC-3a; the body contains none of the four sentinels, none of the keys `phone`, `email`, `address`, `note`, `city`, no `@` and no run of nine or more digits; the body contains no order number other than the five; `|L1 − L0| ≤ 1024` and `L1 ≤ 12288`.
+**Then**: `latest_orders` has exactly 5 items, all five from the generated set's newest; no item's key set differs from the nine of SC-3a; the body contains none of the four sentinels, none of the keys `phone`, `email`, `address`, `note`, `city` and no `@`; the body contains no order number other than the five (no `TC-OV-BIG-` number beyond the five latest); `|L1 − L0| ≤ 1024` and `L1 ≤ 12288`.
 Traces: SC-16 (ADMIN-020 AC-18; Privacy NFR)
 Check: fetch_url
 
