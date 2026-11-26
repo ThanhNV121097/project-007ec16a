@@ -543,9 +543,6 @@ func where(c *Collection, req listRequest) (string, []any) {
 		ph := "(SELECT doi_fold(" + next(w) + "))"
 		conds = append(conds, "("+strings.ReplaceAll(c.Search, "{w}", ph)+")")
 	}
-	if !req.dealer && c.Live != "" {
-		conds = append(conds, "("+c.Live+")")
-	}
 	if len(conds) == 0 {
 		return "TRUE", nil
 	}
@@ -567,6 +564,15 @@ func orderBy(req listRequest) string {
 // database from the public columns, in the requested order.
 func listSQL(c *Collection, req listRequest) (string, []any) {
 	cond, args := where(c, req)
+	if !req.dealer && c.Live != "" {
+		// Whoever is not the team sees only what is on sale, whatever else they
+		// asked for: a ?status=draft finds nothing.
+		if cond == "TRUE" {
+			cond = c.Live
+		} else {
+			cond = "(" + cond + ") AND (" + c.Live + ")"
+		}
+	}
 	n := len(args)
 	sql := "SELECT (SELECT count(*) FROM " + c.From + " WHERE " + cond + ") AS total, " +
 		"coalesce((SELECT json_agg(p) FROM (SELECT " + c.viewList(req.dealer) + " FROM " + c.From +
