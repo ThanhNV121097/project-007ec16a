@@ -1,6 +1,7 @@
 package payments
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log/slog"
@@ -164,7 +165,7 @@ func TestAvailableNeedsBothKeys(t *testing.T) {
 // With a key missing the ask for an address is the 503 of the seam, before any database work.
 func TestAskingWithoutKeysIsUnavailableAndTouchesNoDatabase(t *testing.T) {
 	v := NewVNPay(VNPayConfig{}, nil, quiet(), nil)
-	_, err := v.PaymentURL(t.Context(), orders.Payable{ID: "doi-24818"}, shopClient)
+	_, err := v.PaymentURL(context.Background(), orders.Payable{ID: "doi-24818"}, shopClient)
 	if !errors.Is(err, orders.ErrPaymentUnavailable) {
 		t.Fatalf("got %v", err)
 	}
