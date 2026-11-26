@@ -42,8 +42,8 @@ Written before the implementation exists and before this story's technical desig
 |---|---|---|
 | FX-PIC | Three PNG uploads as ADMIN (`POST /v1/uploads`), each a 1 KB file starting with the PNG prefix; the three returned `url`s are PICS (`/api/v1/uploads/<32 hex>.png`) | TC-04, TC-49 and every case that says "three pictures" |
 | FX-SHOE | `POST /v1/products` as STAFF: `{"name":"Tc Shoe","price":3290000,"line":"samba","category":"women","status":"live","image":PICS[0],"image_back":PICS[1],"image_detail":PICS[2],"pairs":{"38":4,"39":2,"40":0}}` → id `tc-shoe`; dealer view `sizes` `["38","39","40"]`, `sizes_low` `["39"]`, `sizes_out` `["40"]`, `stock` 6 | most of §8 and §10 |
-| FX-REVIEWS | Two live reviews on `tc-shoe` made with `POST /v1/reviews` as STAFF: `{"product":"tc-shoe","name":"Tc Five","rating":5}` and `{"product":"tc-shoe","name":"Tc Four","rating":4}` | TC-41 … TC-45, TC-49 |
-| FX-OTHER | A second live shoe `tc-other` (`{"name":"Tc Other","price":2000000,"status":"live","pairs":{"38":3}}`) | TC-42, TC-44, TC-45 |
+| FX-REVIEWS | Two live reviews on `tc-shoe` made with `POST /v1/reviews` as STAFF: `{"product":"tc-shoe","name":"Tc Five","rating":5}` and `{"product":"tc-shoe","name":"Tc Four","rating":4}` | TC-30, TC-32 … TC-35, TC-43 |
+| FX-OTHER | A second live shoe `tc-other` (`{"name":"Tc Other","price":2000000,"status":"live","pairs":{"38":3}}`) | TC-22, TC-33, TC-37, TC-38 |
 
 ### Restoring the database after a case or a group
 
