@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 import { T, useContent } from "../editable";
+import { payByTransfer } from "../lib/more-ways-to-pay-vietqr-transfer-and-momo";
 import { canPay, type PublicOrder } from "../lib/order-page-and-pay-now";
 import type { DeliveryOption, PaymentMethod } from "../lib/shop";
 import Disclosure from "./Disclosure";
 import OutlinePill from "./OutlinePill";
 import PayNow from "./PayNow";
 import SpecList from "./SpecList";
+import TransferBlock from "./TransferBlock";
 
 /** A value that may be long and unbroken (a customer's name): it wraps rather than widening the page. */
 const wrapped = (text: string) => (text ? <span className="wrap-anywhere">{text}</span> : "");
@@ -15,8 +17,9 @@ const wrapped = (text: string) => (text ? <span className="wrap-anywhere">{text}
  * a raw id is never drawn, so a row whose record is missing is left out), the
  * carrier and tracking number once they are set; then "Pay now" while the
  * order is unpaid and not cancelled, the two closed rows and the way back to
- * the shop. The address, phone, email and note are not here: the shop never
- * sends them.
+ * the shop. An unpaid bank-transfer order has the QR block instead of "Pay
+ * now", a full row above the pairs. The address, phone, email and note are not
+ * here: the shop never sends them.
  */
 export default function OrderDetails({ order, method, option }: { order: PublicOrder; method?: PaymentMethod; option?: DeliveryOption }) {
   const spec = useContent<Record<string, string>>("pages.order.spec");
@@ -24,6 +27,8 @@ export default function OrderDetails({ order, method, option }: { order: PublicO
   const paidText = useContent("pages.order.paid");
   const dueText = useContent("pages.order.due");
   return (
+    <>
+    {payByTransfer(order) && <TransferBlock order={order} />}
     <aside className="flex min-w-0 flex-col gap-8 lg:col-span-5 lg:pl-8">
       <div>
         <T k="pages.order.details" as="h2" className="text-lg text-ink" />
@@ -46,5 +51,6 @@ export default function OrderDetails({ order, method, option }: { order: PublicO
       ]} />
       <div><OutlinePill to="/shop"><T k="pages.cart.keep" /></OutlinePill></div>
     </aside>
+    </>
   );
 }
