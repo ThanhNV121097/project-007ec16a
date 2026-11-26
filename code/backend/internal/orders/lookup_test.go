@@ -153,7 +153,7 @@ func TestReadAsksOnceForACustomerWithNoTokenAndForAGuestWithOne(t *testing.T) {
 		t.Fatalf("a guest with a token: %v", err)
 	}
 	hash, ok := q.args[1].([]byte)
-	if q.opened != 1 || q.calls != 1 || !ok || len(hash) != 32 || q.args[2] != nil {
+	if q.opened != 1 || q.calls != 1 || !ok || len(hash) != 32 || len(q.args) != 2 {
 		t.Errorf("a guest with a token: %d transactions, %d queries, args %v", q.opened, q.calls, q.args)
 	}
 }
