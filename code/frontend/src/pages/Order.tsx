@@ -32,6 +32,8 @@ export default function Order() {
   if (read.state === "missing") return <OrderMissing />;
   if (read.state === "loading" || payments.loading || deliveries.loading) return <OrderLoading />;
   const { order } = read;
+  const method = payments.items.find((m) => m.id === order.payment);
+  const option = deliveries.items.find((d) => d.id === order.delivery);
 
   return (
     <>
@@ -39,9 +41,7 @@ export default function Order() {
       <Rule />
       <div className="grid gap-12 py-10 lg:grid-cols-12 lg:gap-8">
         <OrderLines order={order} />
-        <OrderDetails order={order}
-          method={payments.items.find((m) => m.id === order.payment)}
-          option={deliveries.items.find((d) => d.id === order.delivery)} />
+        <OrderDetails order={order} method={method} option={option} />
       </div>
     </>
   );
