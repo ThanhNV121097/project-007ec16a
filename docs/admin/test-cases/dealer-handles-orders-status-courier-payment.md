@@ -90,7 +90,7 @@ Check: fetch_url
 **Scenario**: SC-1d — an admin session and a staff session get the same answers in every case
 **Given**: FX-STAFF; two identical fresh orders `<a>` (for ADMIN) and `<s>` (for STAFF), each placed with REQ.
 **When**: In turn, on each order with its own session: `PUT {"status":"packed"}`; `PUT {"status":"confirmed"}`; `PUT {"total":1}`; `PUT {"colour":"red"}`; `PUT {"note":"Ring twice."}`; `PUT {"paid":true}`; `DELETE`; `PUT {"status":"cancelled"}`; `DELETE`; `DELETE` again. Then `GET /v1/orders/<id>` and `GET /v1/orders?limit=1&sort=-placed_at` with each session.
-**Then**: For every pair of answers the status code is the same (422, 200, 422, 400, 200, 422, 409, 200, 204, 404), the `error` code is the same, and the `message` and `errors` are the same text; the two 200 bodies are equal once `id`, `number`, `placed_at` and `items[].…` ids are set aside; both reads answer 200 with the same keys.
+**Then**: For every pair of answers the status code is the same (422, 200, 422, 400, 200, 422, 409, 200, 204, 404), the `error` code is the same, and the `message` and `errors` are the same text; the two 200 bodies are equal once `id`, `number` and `placed_at` are set aside; both reads answer 200 with the same keys.
 Traces: SC-1 (ADMIN-004 AC-10; "an admin session and a staff session get the same answers")
 Check: fetch_url
 
