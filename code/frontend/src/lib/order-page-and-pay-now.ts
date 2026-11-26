@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
 import { api, ApiError } from "./api";
 import { storedOrders } from "./orders";
 import type { OrderStatus } from "./shop";
@@ -15,22 +14,6 @@ import type { OrderStatus } from "./shop";
  *
  * The order is the shop's public view: never a phone, an email, an address or a
  * note.
-=======
-import type { OrderStatus } from "./shop";
-import { getOrder, postPayment } from "./mock/order-page-and-pay-now";
-
-/**
- * THE ORDER PAGE'S CLIENT: the order read and the "Pay now" call, the only
- * file the page reaches the shop through. Today it asks the mock; the backend
- * step makes both calls through src/lib/api.ts, with credentials, and reads
- * the order's token from the browser's store in src/lib/orders.ts for the
- * `X-Order-Token` header (no token held: the same call without it, so a
- * signed-in customer's session can open the order). The token is never put in
- * an address, and nothing here keeps one.
- *
- * The order is services.md §2.8's public view: never a phone, an email, an
- * address or a note.
->>>>>>> refs/heads/main
  */
 export interface OrderItem {
   product: string;
@@ -71,7 +54,6 @@ export type OrderRead =
   | { state: "failed" }
   | { state: "ready"; order: PublicOrder };
 
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
 /** The header that opens this order, when this browser holds its token. */
 function tokenHeader(id: string): Record<string, string> | undefined {
   const token = storedOrders().find((o) => o.id === id)?.token;
@@ -91,16 +73,6 @@ async function readOrder(id: string): Promise<OrderRead> {
     // Only the shop's own 404 is "not found": a 404 from a gateway, a 401, a 5xx and no
     // connection are all a failure to read, never a claim that the order does not exist.
     return e instanceof ApiError && e.status === 404 && e.code === "not_found" ? { state: "missing" } : { state: "failed" };
-=======
-async function readOrder(id: string): Promise<OrderRead> {
-  try {
-    const answer = await getOrder(id);
-    if (answer.status === 200 && answer.body) return { state: "ready", order: answer.body as PublicOrder };
-    // Only the shop's 404 is "not found": a 500, a 401 or a body with nothing in it is a failure to read.
-    return answer.status === 404 ? { state: "missing" } : { state: "failed" };
-  } catch {
-    return { state: "failed" };
->>>>>>> refs/heads/main
   }
 }
 
@@ -133,7 +105,6 @@ export function canPay(order: Pick<PublicOrder, "paid" | "status">): boolean {
 }
 
 /**
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
  * One POST, no body, never tried again. Only a 200 answer carrying an http(s)
  * `payment_url` is a success; a 409, a 503, a 500, a 404, a network failure, an
  * answer with no address and an address of any other kind are all the same
@@ -145,18 +116,6 @@ export async function requestPayment(id: string): Promise<{ ok: true; url: strin
     const body = await api.post<{ payment_url?: unknown } | undefined>(`orders/${encodeURIComponent(id)}/payment`, undefined, tokenHeader(id));
     const url = body?.payment_url;
     return typeof url === "string" && /^https?:\/\//i.test(url) ? { ok: true, url } : { ok: false };
-=======
- * One POST, no body. Only a 200 answer carrying an http(s) `payment_url` is a
- * success; a 409, a 503, a 500, a 404, a network failure, an answer with no
- * address and an address of any other kind are all the same failure, so the
- * page needs no change when the shop starts answering with an address.
- */
-export async function requestPayment(id: string): Promise<{ ok: true; url: string } | { ok: false }> {
-  try {
-    const answer = await postPayment(id);
-    const url = (answer.body as { payment_url?: unknown } | undefined)?.payment_url;
-    return answer.status === 200 && typeof url === "string" && /^https?:\/\//i.test(url) ? { ok: true, url } : { ok: false };
->>>>>>> refs/heads/main
   } catch {
     return { ok: false };
   }
