@@ -64,7 +64,8 @@ export default function OrderRecord({ order, title, paymentName, deliveryName, b
     setErrors({});
     const result = await saveOrder(order.id, changes(order, values));
     if (result.ok) {
-      onSaved(result.order);
+      // The shop's answer is the dealer view with its pairs; should one ever come without them, the page keeps its own.
+      onSaved({ ...order, ...result.order });
       setPhase("saved");
     } else if (result.kind === "fields") {
       setErrors(result.errors);
@@ -91,7 +92,9 @@ export default function OrderRecord({ order, title, paymentName, deliveryName, b
         actions={
           <>
             <Button kind="quiet" icon="remove" onClick={() => setConfirming(true)}>Delete</Button>
-            <Button kind="primary" icon="check" disabled={phase === "saving"} onClick={() => void save()}>Save changes</Button>
+            <Button kind="primary" icon="check" disabled={phase === "saving"} onClick={() => void save()}>
+              {phase === "saving" ? "Saving…" : "Save changes"}
+            </Button>
           </>
         }
       />
