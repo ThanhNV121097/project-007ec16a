@@ -31,7 +31,7 @@ func (d *deadlineDB) QueryRow(ctx context.Context, sql string, args ...any) pgx.
 // write timeout would end a statement that hangs.
 func TestPayBoundsTheAccessStatementByTheTransactionTimeout(t *testing.T) {
 	db := &deadlineDB{orderDB: orderDB{order: sample(nil), token: ownToken}}
-	h := mount(db, Options{})
+	h := mountPay(db, Options{})
 	started := time.Now()
 	rec := callPay(h, "doi-24818", ownToken, "")
 	if rec.Code != http.StatusConflict {
@@ -49,7 +49,7 @@ func TestPayBoundsTheAccessStatementByTheTransactionTimeout(t *testing.T) {
 // generic 500 that names no SQL, order or token.
 func TestPayAnAccessStatementThatTimesOutIsAGeneric500(t *testing.T) {
 	db := &orderDB{order: sample(nil), token: ownToken, fails: context.DeadlineExceeded}
-	rec := callPay(mount(db, Options{}), "doi-24818", ownToken, "")
+	rec := callPay(mountPay(db, Options{}), "doi-24818", ownToken, "")
 	e := envelopeOf(t, rec)
 	if rec.Code != http.StatusInternalServerError || e.Error != "internal" || e.Message != "Something went wrong. Please try again." {
 		t.Fatalf("got %d %s", rec.Code, rec.Body)
