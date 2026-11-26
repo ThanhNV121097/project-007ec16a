@@ -125,8 +125,8 @@ The state is judged again under the order's row lock inside the MoMo provider (`
   "account_number": "0071001234567",
   "amount": 3140000,
   "note": "DOI-24818",
-  "payload": "00020101021238570010A00000072701270006970436011300710012345670208QRIBFTTA5303704540731400005802VN62130809DOI-248186304XXXX",
-  "qr": ["111111100010…", "…"]
+  "payload": "00020101021238570010A00000072701270006970436011300710012345670208QRIBFTTA5303704540731400005802VN62130809DOI-248186304<4 hex digits of the checksum>",
+  "qr": ["<one string of 0 and 1 per row of modules>", "…"]
 }
 ```
 
