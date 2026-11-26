@@ -64,17 +64,17 @@ func (o object) undefined(allowed ...string) (map[string]string, bool) {
 	for _, k := range allowed {
 		ok[k] = true
 	}
-	faults, any := map[string]string{}, false
+	faults, found := map[string]string{}, false
 	for k := range o {
 		if ok[k] {
 			continue
 		}
-		any = true
+		found = true
 		if plainName.MatchString(k) {
 			faults[k] = undefinedWords
 		}
 	}
-	return faults, any
+	return faults, found
 }
 
 type kind int
