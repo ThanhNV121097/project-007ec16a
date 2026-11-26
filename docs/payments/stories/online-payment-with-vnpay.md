@@ -51,7 +51,7 @@ This story **registers the `vnpay` provider behind that seam**. Nothing the brow
 | The dealer moving an order along, cancelling it by hand, and the dealer's order screens showing payment state (ADMIN-016) | Dealer screens belong to the admin story. Here an order's status, and the dealer's cancelling at minute 5, are set directly in the test database | "Manage shoes, lines, categories, reviews and orders" |
 | Email or text to the customer when the payment lands | Not in the brief or the plan; the customer is told on the result page and the order page | The owner |
 | Theme tokens, `src/content.json`, `Track.tsx` | Frozen or owned by another story. The new words are listed in the UI PR as content keys for TL to add (§5) | — |
-| `GET /v1/order-lookups` and "Ordered on this phone" | The result page's "Track an order" pill goes to `/track`; the lookup itself is its own item | "Track an order by number and phone" |
+| `POST /v1/order-lookups` and "Ordered on this phone" | The result page's "Track an order" pill goes to `/track`; the lookup itself is its own item | "Track an order by number and phone" |
 
 ## 5. UI scope
 
