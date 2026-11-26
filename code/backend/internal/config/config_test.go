@@ -40,6 +40,24 @@ func TestDatabaseURLIsRequiredAndNeverEchoed(t *testing.T) {
 	}
 }
 
+func TestAdminSettingsAreReadAndOptional(t *testing.T) {
+	got, err := load(env(map[string]string{
+		"DATABASE_URL":   "postgres://x",
+		"ADMIN_EMAIL":    "  dealer@example.com ",
+		"ADMIN_PASSWORD": " a password with spaces ",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AdminEmail != "dealer@example.com" || got.AdminPassword != " a password with spaces " {
+		t.Errorf("admin settings: %q, %q", got.AdminEmail, got.AdminPassword)
+	}
+	none, err := load(env(map[string]string{"DATABASE_URL": "postgres://x"}))
+	if err != nil || none.AdminEmail != "" || none.AdminPassword != "" {
+		t.Errorf("without the settings: %q, %q, %v", none.AdminEmail, none.AdminPassword, err)
+	}
+}
+
 func TestBadPortIsRefused(t *testing.T) {
 	for _, p := range []string{"abc", "0", "70000", "-1"} {
 		_, err := load(env(map[string]string{"PORT": p, "DATABASE_URL": "postgres://x"}))

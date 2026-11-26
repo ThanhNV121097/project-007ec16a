@@ -103,6 +103,37 @@ describe("a failed answer", () => {
   });
 });
 
+describe("post", () => {
+  it("sends the body as JSON with the cookie, and never tries again", async () => {
+    const mock = stubFetch(async () => reply({ error: "internal", message: "x" }, 500));
+    const err = await api.post("auth/sign-in", { email: "a@b.example", password: "pw" }).catch((e: unknown) => e);
+    expect(err).toMatchObject({ status: 500, code: "internal" });
+    expect(mock).toHaveBeenCalledTimes(1);
+    const [url, init] = mock.mock.calls[0];
+    expect(url).toBe("/api/v1/auth/sign-in");
+    expect(init).toMatchObject({ method: "POST", credentials: "include", body: JSON.stringify({ email: "a@b.example", password: "pw" }) });
+    expect((init?.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
+  });
+
+  it("sends no content type without a body and takes a 204 for success", async () => {
+    const mock = stubFetch(async () => new Response(null, { status: 204 }));
+    await expect(api.post("auth/sign-out")).resolves.toBeUndefined();
+    const init = mock.mock.calls[0][1];
+    expect(init?.body).toBeUndefined();
+    expect((init?.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
+  });
+
+  it("carries the envelope of a refusal, and no connection is status 0", async () => {
+    stubFetch(async () => reply({ error: "rate_limited", message: "Too many tries." }, 429));
+    await expect(api.post("auth/sign-in", {})).rejects.toMatchObject({ status: 429, code: "rate_limited" });
+    const down = stubFetch(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    await expect(api.post("auth/sign-in", {})).rejects.toMatchObject({ status: 0, code: "network" });
+    expect(down).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("time and sharing", () => {
   it("aborts a request unanswered after 15 seconds and counts it as a failure", async () => {
     vi.useFakeTimers();

@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/config"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/db"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/server"
@@ -48,6 +49,13 @@ func run(log *slog.Logger) error {
 	if err := db.Migrate(ctx, pool, migrations.FS, log); err != nil {
 		return err
 	}
+	// The admin account comes from the owner's settings. A problem with them is
+	// logged and skipped (the server always starts); only a database error stops
+	// the process, so a deployment that cannot write the row is restarted.
+	if err := auth.EnsureAdmin(ctx, pool, cfg.AdminEmail, cfg.AdminPassword, log); err != nil {
+		return err
+	}
+	go auth.RunPurge(ctx, pool, log)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
