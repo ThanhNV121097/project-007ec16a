@@ -24,7 +24,7 @@ function Details({ order, details }: { order: Pick<PublicOrder, "number">; detai
     <section data-testid="transfer-block" aria-labelledby="transfer-heading" className={`${SLOT} border border-line p-4 sm:p-6`}>
       <h2 id="transfer-heading" className="text-lg text-ink">{words.heading}</h2>
       <div className="mt-5 flex min-w-0 flex-col gap-6 lg:flex-row lg:gap-8">
-        <div className="w-full max-w-64 shrink-0">
+        <div className="w-full max-w-64 shrink-0 lg:w-64">
           <TransferQr payload={details.payload} label={fill(words.qr, { number: order.number })} />
         </div>
         <div className="min-w-0 flex-1">
