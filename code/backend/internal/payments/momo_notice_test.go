@@ -44,7 +44,7 @@ func momoWith(base map[string]any, changes map[string]any) map[string]any {
 		out[k] = v
 	}
 	for k, v := range changes {
-		if v == nil && k != "amount" {
+		if v == nil {
 			delete(out, k)
 		} else {
 			out[k] = v
