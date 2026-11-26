@@ -289,8 +289,8 @@ func TestAFailingDatabaseIsAGeneric500OnBothRoutes(t *testing.T) {
 		got := httptest.NewRecorder()
 		h.ServeHTTP(got, get)
 		for route, rec := range map[string]*httptest.ResponseRecorder{"POST": callPay(h, "doi-24818", ownToken, ""), "GET": got} {
-			if name == "the access statement fails" && route == "GET" {
-				continue // GET opens its snapshot first; the fake cannot
+			if name == "no transaction can open" && route == "POST" {
+				continue // POST opens no transaction: this fake finds no order, which is a 404
 			}
 			e := envelopeOf(t, rec)
 			if rec.Code != http.StatusInternalServerError || e.Error != "internal" || e.Message != "Something went wrong. Please try again." {
