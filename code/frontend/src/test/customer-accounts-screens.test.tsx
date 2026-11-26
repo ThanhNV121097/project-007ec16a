@@ -243,8 +243,18 @@ describe("My account (SC-25, SC-30, SC-32, SC-34)", () => {
   it("lists the orders, saves details, adds a guest order and signs out", async () => {
     await thenAsk(LAN);
     const loading = held();
-    shop.get.mockImplementationOnce(() => loading.promise);
-    shop.get.mockImplementationOnce(() => Promise.resolve(saved));
+    // The first read of the orders stays open; which of the two reads (the saved details, the orders) goes first does not matter.
+    let firstRead = true;
+    shop.get.mockImplementation(async (path: string) => {
+      if (path === "auth/me") return who;
+      if (path === "account") return saved;
+      if (path === "account/orders") {
+        if (!firstRead) return { items: rows, total: rows.length, page: 1, limit: 10 };
+        firstRead = false;
+        return loading.promise;
+      }
+      throw new Error(`unexpected GET ${path}`);
+    });
     account();
     expect(await screen.findByRole("heading", { level: 1, name: "My account" })).toBeInTheDocument();
     expect(screen.getByText("Hello, Lan Nguyen")).toBeInTheDocument();
