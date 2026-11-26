@@ -729,7 +729,7 @@ Check: fetch_url
 
 **Scenario**: TC-91 — MoMo's secret key and access key appear in no served file and no API answer, the refusals and the server errors included
 **Given**: P-MOMO or P-ALL, with MSK and MAK known; RESET; an order O1 and the stand-in's record.
-**When**: These are fetched and their bodies and headers searched: the site's home page; every script and stylesheet the home page references; `/api/v1/payment-options`; the placing answer of PLACE-MOMO; "Pay now" answers 200, 404, 409, 503; MNOTICE answers 204, and 400 for a bad signature, an unknown reference and a wrong amount; the 5xx answer of TC-66 (renamed table); the answers of TRANSFER and of `PUT /api/v1/orders/<id>`.
+**When**: These are fetched and their bodies and headers searched: the site's home page; every script and stylesheet the home page references; `/api/v1/payment-options`; the placing answers of PLACE-MOMO (with the stand-in normal, and with it closed so MoMo's call fails); "Pay now" answers 200, 404, 409, 503; MNOTICE answers 204, and 400 for a bad signature, an unknown reference and a wrong amount; the 5xx answer of TC-66 (renamed table); the answers of TRANSFER and of `PUT /api/v1/orders/<id>`.
 **Then**: None of the bodies, headers or files contains MSK or MAK; none of the files contains a variable whose name starts `VITE_` and holds a MoMo or VietQR setting.
 Traces: SC-36 (Security NFR; PAY-021 data row)
 Check: interact_page
