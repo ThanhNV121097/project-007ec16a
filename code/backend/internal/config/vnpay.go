@@ -35,7 +35,7 @@ func publicOrigin(raw string) (string, error) {
 	}
 	u, err := url.Parse(raw)
 	if err != nil || !webScheme(u) || u.Host == "" || u.User != nil || u.Path != "" || strings.ContainsAny(raw, "?#") {
-		return "", errors.New("PUBLIC_BASE_URL must be a scheme and a host, such as https://shop.example.com, with no path, query or fragment")
+		return "", errors.New("PUBLIC_BASE_URL must be an http or https origin (a scheme and a host, with an optional port) with no path, query or fragment")
 	}
 	return raw, nil
 }
