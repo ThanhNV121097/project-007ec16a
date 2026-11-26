@@ -40,10 +40,11 @@ const (
 	providerTimeout = 3 * time.Second
 )
 
-// offered is the ordered list of ways to pay the shop offers. What is offered is
-// code, never data: cod, bank and momo keep their rows in payment_methods and are
-// never listed or accepted.
-var offered = []string{"vnpay"}
+// defaultOffered is the list of ways to pay when the server passes none: VNPay,
+// the shop's way to pay at launch. What is offered is code and the owner's
+// settings, never data: all four ways keep their rows in payment_methods, and
+// cod is never listed or accepted.
+var defaultOffered = []string{"vnpay"}
 
 // Provider is one way to pay. The consumer (this package) declares it, so a
 // provider package satisfies it without importing orders.
@@ -72,6 +73,10 @@ type Client struct{ IP, Origin string }
 type Options struct {
 	// Providers is keyed by payment_methods.id.
 	Providers map[string]Provider
+	// Offered lists the ids of the ways to pay the shop can complete, in the order
+	// checkout shows them; nil means VNPay alone. Only these are listed by
+	// GET /v1/payment-options and accepted by POST /v1/orders.
+	Offered []string
 	// Now is the clock; time.Now when nil.
 	Now func() time.Time
 }
@@ -87,20 +92,26 @@ type service struct {
 	db        DB
 	log       *slog.Logger
 	providers map[string]Provider
+	offered   []string
 	now       func() time.Time
 }
 
-// Register mounts the five routes of the order on mux.
+// Register mounts the routes of the order on mux.
 func Register(mux *http.ServeMux, db DB, log *slog.Logger, opts Options) {
-	s := &service{db: db, log: log, providers: opts.Providers, now: opts.Now}
+	s := &service{db: db, log: log, providers: opts.Providers, offered: opts.Offered, now: opts.Now}
 	if s.now == nil {
 		s.now = time.Now
+	}
+	if s.offered == nil {
+		s.offered = defaultOffered
 	}
 	mux.HandleFunc("POST /v1/orders", s.create)
 	mux.HandleFunc("GET /v1/orders/{id}", s.read)
 	// "Pay now": no body, the order's own X-Order-Token. Another method on this path
 	// falls to the server's catch-all and answers 404.
 	mux.HandleFunc("POST /v1/orders/{id}/payment", s.payHandler)
+	// A bank-transfer order's QR code and account, to the order's own token.
+	mux.HandleFunc("GET /v1/orders/{id}/transfer", s.transfer)
 	// The team's list: auth.Require answers 401 with no session and 403 for a
 	// customer before the query string is read; a dealer reads the list the generic
 	// reader's grammar gives every collection, over dealerList (list.go).

@@ -33,19 +33,54 @@ type PayState struct {
 }
 
 // CheckPayable returns nil, or the *Refusal of the FIRST rule that fails, in this
-// order: cancelled, paid, a way to pay that is not offered online, and the
-// window of PayWindow from PlacedAt being over at now (the exact deadline counts
-// as over).
+// order: cancelled, paid, a bank transfer (paid by the QR code on its page, never
+// on a provider's), a way to pay that has no provider's page (cod: the sample
+// orders), and the window of PayWindow from PlacedAt being over at now (the exact
+// deadline counts as over). The ways are the code constants of this file, not the
+// offered list, so an order whose way was later unlisted is still judged by what
+// it is.
 func CheckPayable(s PayState, now time.Time) *Refusal {
 	switch {
 	case s.Status == "cancelled":
 		return &Refusal{msgCancelled}
 	case s.Paid:
 		return &Refusal{msgPaid}
-	case !slices.Contains(offered, s.Payment):
+	case s.Payment == bankWay:
+		return &Refusal{msgBankOrder}
+	case !slices.Contains(pageWays, s.Payment):
 		return &Refusal{msgNotOnline}
 	case !now.Before(s.PlacedAt.Add(PayWindow)):
 		return &Refusal{MsgRunOut}
+	}
+	return nil
+}
+
+// TransferWindow is how long an unpaid bank-transfer order may wait before the
+// 24-hour rule gives it up: a transfer takes hours, so the 30 minutes of PayWindow
+// do not suit it.
+const TransferWindow = 24 * time.Hour
+
+// pageWays are the ways to pay that end on a provider's own payment page.
+var pageWays = []string{"vnpay", "momo"}
+
+// The two sentences a bank-transfer order adds to the refusals.
+const (
+	msgBankOrder = "This order is paid by bank transfer. Scan the QR code on its page."
+	msgNotBank   = "This order is not paid by bank transfer."
+)
+
+// CheckTransfer returns nil, or the *Refusal of the FIRST rule that fails when the
+// QR code of an order's transfer is asked for: cancelled, paid, or not a bank
+// transfer. Once the money has landed, or the order was given up, there is
+// nothing to pay into.
+func CheckTransfer(s PayState) *Refusal {
+	switch {
+	case s.Status == "cancelled":
+		return &Refusal{msgCancelled}
+	case s.Paid:
+		return &Refusal{msgPaid}
+	case s.Payment != bankWay:
+		return &Refusal{msgNotBank}
 	}
 	return nil
 }
@@ -94,8 +129,9 @@ WHERE id = $1 AND NOT paid`
 // MarkPaid sets paid, and moves a "placed" order to "confirmed", once: changed is
 // false when the order was already paid. An order that is already cancelled is
 // marked paid and stays cancelled, so the dealer sees it and refunds it. It is the
-// only statement in the project that sets orders.paid for an online order, and
-// only a verified notice from the provider calls it.
+// only statement in the project that sets orders.paid, and it has three callers: a
+// verified VNPay notice, a verified MoMo notice, and the dealer marking a
+// bank-transfer order paid. Nothing else calls it.
 func MarkPaid(ctx context.Context, tx Tx, id string) (changed bool, err error) {
 	tag, err := tx.Exec(ctx, markPaidSQL, id)
 	if err != nil {

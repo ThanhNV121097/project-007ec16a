@@ -33,13 +33,13 @@ func (s *service) available(id string) bool {
 	return true
 }
 
-// paymentOptions answers GET /v1/payment-options: the ways to pay in offered, in
-// that order, from their rows. cod, bank and momo keep their rows in
-// payment_methods and are never listed.
+// paymentOptions answers GET /v1/payment-options: the ways to pay the shop was
+// told it can complete, in the order it listed them (vnpay, bank, momo), not the
+// order of the rows. cod keeps its row in payment_methods and is never listed.
 func (s *service) paymentOptions(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), txTimeout)
 	defer cancel()
-	rows, err := s.db.Query(ctx, "SELECT id, name, note, icon, online FROM payment_methods WHERE id = ANY($1) ORDER BY seq", offered)
+	rows, err := s.db.Query(ctx, "SELECT id, name, note, icon, online FROM payment_methods WHERE id = ANY($1) ORDER BY array_position($1::text[], id)", s.offered)
 	if err != nil {
 		s.internal(w, r, "read payment options", err)
 		return

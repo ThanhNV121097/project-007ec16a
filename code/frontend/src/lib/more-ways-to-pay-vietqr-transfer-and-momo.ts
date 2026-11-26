@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import type { PaymentOption } from "./orders";
 import type { OrderStatus } from "./shop";
-import {
-  demoWay, getTransfer, mockOptions, putPaid, standInModules,
-} from "./mock/more-ways-to-pay-vietqr-transfer-and-momo";
 
 /**
  * THE TWO NEW WAYS TO PAY, FROM THE BROWSER'S SIDE (docs/payments/stories/
@@ -12,11 +9,10 @@ import {
  * lists, the bank-transfer details of an order, the dealer's "Mark as paid",
  * and MoMo's return address.
  *
- * It is the one file these screens reach the shop through. Today the three
- * calls the shop does not answer yet come from the mock; the backend step makes
- * them `api.get("payment-options")`, `api.get("orders/{id}/transfer")` with the
- * order's `X-Order-Token`, and `api.put("orders/{id}", { paid: true })` — the
- * body carries `paid` and nothing else.
+ * It is the one file these screens reach the shop through, over src/lib/api.ts:
+ * `GET /v1/payment-options`, `GET /v1/orders/{id}/transfer` with the order's
+ * `X-Order-Token` (never in an address), and `PUT /v1/orders/{id}` whose body
+ * carries `paid` and nothing else.
  *
  * No page holds a list of ways to pay: the ids come from the shop's own list
  * and from an order's `payment`. The two ids named here are the two ways that
@@ -28,8 +24,6 @@ export const MOMO = "momo";
 
 /** The ways the shop can complete right now, in the order it lists them. */
 export async function readPaymentOptions(): Promise<PaymentOption[]> {
-  const staged = mockOptions();
-  if (staged) return staged;
   const r = await api.get<{ items: PaymentOption[] }>("payment-options");
   return Array.isArray(r.items) ? r.items : [];
 }
@@ -49,7 +43,7 @@ export function payByTransfer(order: { payment: string; paid: boolean; status: s
   return order.payment === BANK && !order.paid && order.status !== "cancelled";
 }
 
-/** The shop's own account and what to type, and the text the QR code carries. */
+/** The shop's own account and what to type, and the QR code of the text it carries. */
 export interface TransferDetails {
   holder: string;
   bank: string;
@@ -59,6 +53,8 @@ export interface TransferDetails {
   /** The order's number. */
   note: string;
   payload: string;
+  /** The code the shop drew: one string of 0 and 1 per row of modules, square, without the quiet zone. */
+  qr: string[];
 }
 
 /** What the shop has said so far: nothing, no account any more, that it could not be asked, or the details. */
@@ -72,63 +68,63 @@ function detailsOf(body: unknown): TransferDetails | null {
   if (typeof body !== "object" || body === null) return null;
   const d = body as Record<string, unknown>;
   const text = ["holder", "bank", "account_number", "note", "payload"].every((k) => typeof d[k] === "string" && d[k] !== "");
-  return text && typeof d.amount === "number" ? (d as unknown as TransferDetails) : null;
+  const qr = d.qr;
+  const square =
+    Array.isArray(qr) && qr.length >= 21 && qr.every((row) => typeof row === "string" && row.length === qr.length && /^[01]+$/.test(row));
+  return text && typeof d.amount === "number" && square ? (d as unknown as TransferDetails) : null;
 }
 
 /**
- * The details of one order. 503 is the account being gone (the block is not
- * drawn); every other failure, a 404 included, is "could not load" — the
+ * The details of one order, asked with the order's token in `X-Order-Token` and
+ * nowhere else (with none held the header is left out and a signed-in customer's
+ * session speaks). A 503 (the account was removed) or a 409 (the order was paid,
+ * cancelled or is no longer a bank transfer) means the block is not drawn; every
+ * other failure, a 404 and a network failure included, is "could not load" — the
  * order page has already shown the order, so "not found" is never this call's.
  */
-export async function readTransfer(number: string, total: number): Promise<TransferRead> {
+export async function readTransfer(id: string, token?: string): Promise<TransferRead> {
   try {
-    const answer = await getTransfer(number, total);
-    if (answer.status === 503) return { state: "gone" };
-    const details = answer.status === 200 ? detailsOf(answer.body) : null;
+    const body = await api.get<unknown>(`orders/${encodeURIComponent(id)}/transfer`, undefined, token ? { "X-Order-Token": token } : undefined);
+    const details = detailsOf(body);
     return details ? { state: "ready", details } : { state: "failed" };
-  } catch {
-    return { state: "failed" };
+  } catch (e) {
+    return e instanceof ApiError && (e.status === 503 || e.status === 409) ? { state: "gone" } : { state: "failed" };
   }
 }
 
 /** The bank-transfer details of an order: `loading` from the first render of an order until the shop has answered for THAT order. */
-export function useTransfer(order: { id: string; number: string; total: number }): TransferRead {
+export function useTransfer(id: string, token?: string): TransferRead {
   const [answered, setAnswered] = useState<{ id: string; read: TransferRead } | null>(null);
   useEffect(() => {
     let live = true;
-    void readTransfer(order.number, order.total).then((read) => {
-      if (live) setAnswered({ id: order.id, read });
+    void readTransfer(id, token).then((read) => {
+      if (live) setAnswered({ id, read });
     });
     return () => {
       live = false;
     };
-  }, [order.id, order.number, order.total]);
-  return answered && answered.id === order.id ? answered.read : { state: "loading" };
+  }, [id, token]);
+  return answered && answered.id === id ? answered.read : { state: "loading" };
 }
 
-/** The picture of a QR payload, as rows of dark and light modules. */
-export function qrModules(payload: string): boolean[][] {
-  return standInModules(payload);
+/** The shop's QR rows as dark (true) and light (false) modules. */
+export function qrRows(qr: string[]): boolean[][] {
+  return qr.map((row) => Array.from(row, (c) => c === "1"));
 }
 
 /** What "Mark as paid" came to: the order's status afterwards, a session that ended, or no answer. */
 export type MarkResult = { ok: true; status: OrderStatus } | { ok: false; kind: "expired" | "failed" };
 
+/** `PUT /v1/orders/{id}` with `{"paid": true}` and nothing else. */
 export async function markPaid(id: string, status: OrderStatus): Promise<MarkResult> {
   try {
-    const answer = await putPaid(id, status);
-    if (answer.status === 200) {
-      const next = (answer.body as { status?: unknown } | undefined)?.status;
-      return { ok: true, status: typeof next === "string" ? (next as OrderStatus) : status };
-    }
-    return { ok: false, kind: answer.status === 401 || answer.status === 403 ? "expired" : "failed" };
-  } catch {
-    return { ok: false, kind: "failed" };
+    const body = await api.put<{ status?: unknown } | undefined>(`orders/${encodeURIComponent(id)}`, { paid: true });
+    const next = body?.status;
+    return { ok: true, status: typeof next === "string" ? (next as OrderStatus) : status };
+  } catch (e) {
+    return { ok: false, kind: e instanceof ApiError && (e.status === 401 || e.status === 403) ? "expired" : "failed" };
   }
 }
-
-/** The order page's order as the address asks to see it (`?mock=bank`); the shop's own order when it asks for none. */
-export const viaDemo = demoWay;
 
 /**
  * What a payment provider's return address says: the order's reference and the

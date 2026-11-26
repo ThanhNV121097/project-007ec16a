@@ -41,6 +41,13 @@ type Config struct {
 	// PublicBaseURL is the shop's own origin for VNPay's return address. Empty means
 	// the origin is read from the request.
 	PublicBaseURL string
+	// MoMo and Bank are the owner's settings for the two extra ways to pay. Neither is
+	// required and neither can stop the server: a way whose settings are missing or
+	// malformed is simply not offered, and Warnings names each key at fault (by name,
+	// never by value) for the server to log once.
+	MoMo     MoMo
+	Bank     Bank
+	Warnings []string
 }
 
 // Load reads the real environment.
@@ -63,6 +70,8 @@ func load(get func(string) string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	momo, momoWarnings := momoFrom(get)
+	bank, bankWarnings := bankFrom(get)
 	return Config{
 		Port:               port,
 		DatabaseURL:        dsn,
@@ -73,6 +82,9 @@ func load(get func(string) string) (Config, error) {
 		VNPayHashSecret:    NewSecret(get("VNPAY_HASH_SECRET")),
 		VNPayPaymentURL:    page,
 		PublicBaseURL:      origin,
+		MoMo:               momo,
+		Bank:               bank,
+		Warnings:           append(momoWarnings, bankWarnings...),
 	}, nil
 }
 
