@@ -587,7 +587,7 @@ Check: fetch_url
 **Scenario**: TC-72 — an unpaid bank order 25 hours old is cancelled whether placed, confirmed or packed, its pairs go back once and the lists agree
 **Given**: RESET; SHELF(`samba-og-w-core-black`, `38`, 2); B1 an FX-BANK order of that shoe size `38` qty 2 (shelf 0), `placed`; B2 an FX-BANK order of `samba-og-w-wonder-quartz` size `38` qty 1 set to `confirmed`; B3 an FX-BANK order of `gazelle-indoor-solar-gold` size `42` qty 1 set to `packed`; each DUE(…, '25 hours'); the companions created.
 **When**: The companions are polled until both are `cancelled`; B1–B3, the shelves and the first shoe's record are read; 70 s later the shelves are read again.
-**Then**: B1–B3 are `cancelled` and `paid` false; the first shoe's size `38` reads 2, the other two shelves rose by 1 each; the first shoe's `sizes_low` holds `38`, `sizes_out` does not, `stock` = its earlier value + 2, and every shoe's `pairs` sum equals its `stock`; the later reading is equal (returned once). Each order's page then shows `This order was cancelled.` and no `[data-testid='transfer-block']`.
+**Then**: B1–B3 are `cancelled` and `paid` false; the first shoe's size `38` reads 2, the other two shelves rose by 1 each; the first shoe's `sizes_low` holds `38`, `sizes_out` does not, `stock` = its earlier value + 2, and every shoe's `pairs` sum equals its `stock`; the later reading is equal (returned once). The page half of a rule-cancelled bank order (the cancelled view and no QR block) is TC-41.
 Traces: SC-31 (PAY-020 AC-7, item 5; PAY-003 AC-11)
 Check: fetch_url
 
