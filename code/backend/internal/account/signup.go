@@ -71,7 +71,7 @@ func (h *handler) signUp(w http.ResponseWriter, r *http.Request) {
 
 	// The hash runs outside any transaction, through the same bounded slots as
 	// sign-in's verification, and it runs whether or not the email is taken.
-	hash, err := auth.HashPassword(in.password)
+	hash, err := auth.HashPasswordContext(ctx, in.password)
 	if err != nil {
 		h.internal(w, r, err)
 		return
