@@ -169,6 +169,11 @@ describe("the pairs and the details", () => {
     await heading();
     expect(second.container.querySelector('a[aria-label="Samba OG Black Crystal"]')).toBeNull();
     expect(second.container.querySelector("[data-product-image]")).toBeNull();
+    // From 1024px both left-hand blocks start at column 1, so the steps stack under the heading
+    // instead of moving up beside it into the space the picture left.
+    const left = [screen.getByTestId("order-status").parentElement, second.container.querySelector("ol, ul[aria-label]")?.closest("div.lg\\:col-span-6")];
+    expect(left[0]).toHaveClass("lg:col-start-1");
+    expect(left[1]).toHaveClass("lg:col-start-1");
   });
 
   it("names the delivery and the way to pay, never their ids and never 0 ₫", async () => {
