@@ -1,6 +1,6 @@
 import { useContent } from "../editable";
 import { useCollection } from "../data";
-import type { PaymentMethod, Product } from "../lib/shop";
+import type { OrderStatus, PaymentMethod, Product } from "../lib/shop";
 import ListPage from "../components/admin/ListPage";
 import { Badge } from "../components/admin/index";
 import { columnsFromFields, fieldsOf, toneOf, type FieldSpec } from "../components/admin/fields";
@@ -23,8 +23,7 @@ export default function AdminOrders() {
       if (c.key === "product") return { ...c, render: (r: Row) => shoes.get(String(r.product)) ?? String(r.product ?? "") };
       if (c.key === "placed_at") return { ...c, render: (r: Row) => formatDateTime(String(r.placed_at ?? "")) };
       if (c.key === "status") {
-        const status = String(r.status);
-        return { ...c, render: (r: Row) => <Badge tone={toneOf(String(r.status))}>{labels[String(r.status) as keyof typeof labels] ?? status}</Badge> };
+        return { ...c, render: (r: Row) => <Badge tone={toneOf(String(r.status))}>{labels[r.status as OrderStatus] ?? String(r.status)}</Badge> };
       }
       return c;
     });
