@@ -34,7 +34,7 @@ export default function OrderSummary({ order }: { order: DealerOrder }) {
         <ul className="grid gap-3">
           {order.items.map((p, i) => (
             <li key={`${p.product}-${p.size}-${i}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-3">
-              <span className="w-12 shrink-0"><ProductImage src={p.image} alt={p.name} aspect="1/1" /></span>
+              <span className="w-12 shrink-0"><ProductImage src={p.image} alt="" aspect="1/1" /></span>
               <span className="min-w-0 flex-1 basis-40 text-sm">
                 <span className="block font-medium text-ink">{p.name}</span>
                 <span className="block text-xs text-ink-soft">{p.colourway}</span>
