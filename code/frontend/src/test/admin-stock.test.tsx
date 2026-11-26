@@ -43,6 +43,8 @@ function open(keys: string[]) {
 const count = (size: string) => screen.getByLabelText(`Pairs in EU ${size}`);
 const change = (el: HTMLElement, value: string) => fireEvent.change(el, { target: { value } });
 const type = (label: string, value: string) => change(screen.getByLabelText(label), value);
+// The price's label also holds its currency, so it is found by how it begins.
+const price = () => screen.getByLabelText(/^Price/);
 
 describe("the Stock tab of a shoe's page", () => {
   const stockTab = ["sizes", "sizes_low", "sizes_out", "stock"];
@@ -117,7 +119,7 @@ describe("the Stock tab of a shoe's page", () => {
   });
 
   it("refuses a size added with no count, beside that size, and sends nothing", () => {
-    open(["sizes", "name"]);
+    open(["sizes"]);
     fireEvent.change(screen.getByLabelText("Add to Sizes (EU)"), { target: { value: "41" } });
     fireEvent.keyDown(screen.getByLabelText("Add to Sizes (EU)"), { key: "Enter" });
     expect(count("41")).toHaveValue(null);
@@ -134,7 +136,7 @@ describe("saving a shoe's page", () => {
   it("sends only the change, then draws what the shop answered and says Saved.", async () => {
     shop.update.mockResolvedValueOnce(reply(200, { ...shoe, price: 3490000 }));
     open(basics);
-    type("Price", "3490000");
+    change(price(), "3490000");
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(await screen.findByText("Saved.")).toBeInTheDocument();
     expect(shop.update).toHaveBeenCalledWith("products", "tc-shoe", { price: 3490000 });
@@ -152,24 +154,24 @@ describe("saving a shoe's page", () => {
   it("keeps the typed price and puts the shop's sentence beside it, announced, with no Saved.", async () => {
     shop.update.mockResolvedValueOnce(reply(422, { error: "invalid", message: "x", errors: { price: "Price cannot be below 0" } }));
     open(basics);
-    type("Price", "-1");
+    change(price(), "-1");
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(await screen.findByText("Price cannot be below 0")).toHaveAttribute("role", "alert");
-    expect(screen.getByLabelText("Price")).toHaveValue(-1);
-    expect(screen.getByLabelText("Price")).toHaveAttribute("aria-invalid", "true");
+    expect(price()).toHaveValue(-1);
+    expect(price()).toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByText("Saved.")).toBeNull();
   });
 
   it("says the session ended, or that the shop could not be reached, above the form", async () => {
     shop.update.mockResolvedValueOnce(reply(401));
     open(basics);
-    type("Price", "1");
+    change(price(), "1");
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(await screen.findByRole("link", { name: "Sign in again." })).toHaveAttribute("href", "/admin/sign-in");
     shop.update.mockResolvedValueOnce(reply(502));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(await screen.findByText("We could not save. Please try again.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Price")).toHaveValue(1);
+    expect(price()).toHaveValue(1);
     expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
   });
 });
