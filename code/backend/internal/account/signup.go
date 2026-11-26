@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -48,7 +49,7 @@ func (h *handler) signUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := withTimeout(r)
+	ctx, cancel := context.WithTimeout(r.Context(), signUpTimeout)
 	defer cancel()
 	wait, err := ratelimit.Hit(ctx, h.db, ratelimit.SignUpAddress,
 		ratelimit.Subject(ratelimit.SignUpAddress, httpx.ClientAddr(r)), signUpLimit, signUpWindow)
@@ -75,9 +76,7 @@ func (h *handler) signUp(w http.ResponseWriter, r *http.Request) {
 		h.internal(w, r, err)
 		return
 	}
-	hashed, cancelHash := withTimeoutFor(r, signUpTimeout)
-	defer cancelHash()
-	token, err := h.auth.RegisterCustomer(hashed, h.db, auth.NewUser{
+	token, err := h.auth.RegisterCustomer(ctx, h.db, auth.NewUser{
 		Email: email, Name: in.name, Phone: in.phone, PasswordHash: hash,
 	})
 	switch {
