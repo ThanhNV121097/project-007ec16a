@@ -123,7 +123,7 @@ func (s *service) fail(w http.ResponseWriter, r *http.Request, id string, err er
 	var refusal *Refusal
 	switch {
 	case errors.Is(err, ErrNotFound):
-		WriteNotFound(w)
+		notFound(w)
 	case errors.As(err, &refusal):
 		httpx.Error(w, http.StatusConflict, "conflict", refusal.Message, nil)
 	case errors.Is(err, ErrPaymentUnavailable):
