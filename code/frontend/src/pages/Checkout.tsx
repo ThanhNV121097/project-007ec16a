@@ -3,12 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { T, useContent } from "../editable";
 import { usePageMeta } from "../seo";
 import { useCollection, useRecord } from "../data";
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-ui
-import { clearCart, lineKey, useCart, type CartLine } from "../lib/cart";
-import { useSavedDetailsFill } from "../lib/customer-accounts-sign-up-sign-in-my-orders";
-=======
 import { clearCart, useCart, type CartLine } from "../lib/cart";
->>>>>>> refs/heads/main
+import { useSavedDetailsFill } from "../lib/customer-accounts-sign-up-sign-in-my-orders";
 import { useDemo } from "../lib/demo";
 import {
   buildRequest, detailProblems, keyKeeper, payAddress, placeOrder, rememberOrder, useCurrentPrices, usePaymentOptions,
@@ -63,21 +59,13 @@ export default function Checkout() {
     unavailable: useContent("pages.checkout.unavailable"),
     headAlt: useContent("pages.checkout.head_alt"),
   };
-<<<<<<< refs/heads/feature/customer-accounts-sign-up-sign-in-my-orders-ui
-  const [delivery, setDelivery] = useState("standard");
-  const [payment, setPayment] = useState("cod");
-  const [form, setForm] = useState({ name: "", phone: "", address: "", city: "", note: "" });
-  useSavedDetailsFill(setForm);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [paying, setPaying] = useState(false);
-=======
   const [form, setForm] = useState<Details>({ name: "", phone: "", address: "", city: "", note: "" });
+  useSavedDetailsFill(setForm);
   const [problems, setProblems] = useState<string[]>([]);
   const [placing, setPlacing] = useState(false);
   const [closed, setClosed] = useState(false);
   const [keyFor] = useState(keyKeeper);
   const sending = useRef(false);
->>>>>>> refs/heads/main
 
   const example: CartLine[] = products.slice(1, 3).map((p) => ({
     id: p.id, name: p.name, price: p.price, image: p.image, variant: `EU ${(p.sizes ?? [])[3] ?? ""}`, qty: 1,
