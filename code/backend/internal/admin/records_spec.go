@@ -252,6 +252,13 @@ func (s *recSpec) read(obj map[string]json.RawMessage, create bool) recInput {
 
 func isNull(raw json.RawMessage) bool { return bytes.Equal(bytes.TrimSpace(raw), []byte("null")) }
 
+// isBlankText says whether a value is text with nothing in it: for stars and a
+// year, "" means what null means, no value.
+func isBlankText(raw json.RawMessage) bool {
+	var v string
+	return json.Unmarshal(raw, &v) == nil && strings.TrimSpace(v) == ""
+}
+
 // judgeValue reads one value of a field. A null clears an optional field and is
 // a fault for a required one, or for one that always holds something.
 func judgeValue(f recField, raw json.RawMessage) (any, string) {
@@ -307,12 +314,18 @@ func judgeValue(f recField, raw json.RawMessage) (any, string) {
 		}
 		return v, ""
 	case recStars:
+		if isBlankText(raw) {
+			return nil, ""
+		}
 		n, ok := wholeNumber(raw)
 		if !ok || n < 1 || n > 5 {
 			return nil, "Stars must be a whole number from 1 to 5."
 		}
 		return n, ""
 	case recYear:
+		if isBlankText(raw) {
+			return nil, ""
+		}
 		n, ok := wholeNumber(raw)
 		if !ok || n < 1 || n > 9999 {
 			return nil, "Enter a year, a whole number above 0."
