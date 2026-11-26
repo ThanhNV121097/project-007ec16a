@@ -9,16 +9,21 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// pgStore is the notice's store over PostgreSQL.
-type pgStore struct{ db DB }
+// pgStore is the notice's store over PostgreSQL. One store serves both providers:
+// it finds only the attempts of its own, so a VNPay reference is never a MoMo
+// notice's and the reverse.
+type pgStore struct {
+	db       DB
+	provider string
+}
 
 const findSQL = `SELECT a.id::text, a.order_id, a.amount, o.number, o.paid
 FROM payment_attempts a JOIN orders o ON o.id = a.order_id
-WHERE a.reference = $1 AND a.provider = 'vnpay'`
+WHERE a.reference = $1 AND a.provider = $2`
 
 func (s pgStore) find(ctx context.Context, reference string) (attemptRow, error) {
 	var a attemptRow
-	err := s.db.QueryRow(ctx, findSQL, reference).Scan(&a.ID, &a.OrderID, &a.Amount, &a.Number, &a.Paid)
+	err := s.db.QueryRow(ctx, findSQL, reference, s.provider).Scan(&a.ID, &a.OrderID, &a.Amount, &a.Number, &a.Paid)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return attemptRow{}, errNoAttempt
 	}
