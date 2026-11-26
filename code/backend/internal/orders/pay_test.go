@@ -69,6 +69,20 @@ func sample(change func(*Ref)) Ref {
 	return r
 }
 
+// sampleNow is ten minutes after the sample order was placed: inside the 30
+// minutes the shop gives to pay, so a refusal in these tests is always the one the
+// case names and never "the time to pay has run out".
+var sampleNow = time.Date(2026, 11, 25, 3, 10, 0, 0, time.UTC)
+
+// mountPay mounts the order's routes on the clock of sampleNow, unless the test
+// brings its own.
+func mountPay(db DB, opts Options) http.Handler {
+	if opts.Now == nil {
+		opts.Now = func() time.Time { return sampleNow }
+	}
+	return mount(db, opts)
+}
+
 func callPay(h http.Handler, id, token, body string) *httptest.ResponseRecorder {
 	var r io.Reader
 	if body != "" {
@@ -111,7 +125,7 @@ func TestDecideAnswersEveryCombination(t *testing.T) {
 					"none": nil, "closed": {way: closed}, "available": {way: available},
 				} {
 					ref := sample(func(r *Ref) { r.Status, r.Paid, r.Payment = status, paid, way })
-					p, err := decide(ref, providers)
+					p, err := decide(ref, providers, sampleNow)
 					var refusal *Refusal
 					case_ := fmt.Sprintf("%s paid=%v %s provider=%s", status, paid, way, name)
 					switch {
@@ -158,7 +172,7 @@ func TestDecideAnswersEveryCombination(t *testing.T) {
 // and GET answers the same bytes for the same.
 func TestPayStrangersGetOneBody(t *testing.T) {
 	db := &orderDB{order: sample(nil), token: ownToken}
-	h := mount(db, Options{})
+	h := mountPay(db, Options{})
 	unformed := []struct{ id, token string }{
 		{"doi-24818", ""}, {"doi-24818", "has a space"}, {"doi-24818", strings.Repeat("a", 129)}, {"doi-24818", "a/b"},
 		{"DOI-24818", ownToken}, {strings.Repeat("a", 101), ownToken}, {"-x", ownToken},
@@ -216,7 +230,7 @@ func TestPayRefusesByTheOrdersStateAndWritesNothing(t *testing.T) {
 		{"a placed order paid by VNPay with no provider", nil, msgNotYet},
 	} {
 		db := &orderDB{order: sample(c.change), token: ownToken}
-		h := mount(db, Options{})
+		h := mountPay(db, Options{})
 		// A second and a third press answer what the first did.
 		for i := 0; i < 3; i++ {
 			rec := callPay(h, "doi-24818", ownToken, "")
@@ -240,7 +254,7 @@ func TestPayRefusesByTheOrdersStateAndWritesNothing(t *testing.T) {
 // SC-6: a body is a 400 after access and before state; nothing of it is read
 // further; a stranger who sends one learns nothing but the 404.
 func TestPayTakesNoBody(t *testing.T) {
-	h := mount(&orderDB{order: sample(func(r *Ref) { r.Paid = true }), token: ownToken}, Options{})
+	h := mountPay(&orderDB{order: sample(func(r *Ref) { r.Paid = true }), token: ownToken}, Options{})
 	for _, body := range []string{"{}", "x", `{"a":1}`, "null"} {
 		rec := callPay(h, "doi-24818", ownToken, body)
 		e := envelopeOf(t, rec)
@@ -265,7 +279,7 @@ func (brokenBody) Read([]byte) (int, error) { return 0, errors.New("connection r
 func (brokenBody) Close() error             { return nil }
 
 func TestABodyThatCannotBeReadIsABody(t *testing.T) {
-	h := mount(&orderDB{order: sample(nil), token: ownToken}, Options{})
+	h := mountPay(&orderDB{order: sample(nil), token: ownToken}, Options{})
 	req := httptest.NewRequest(http.MethodPost, "/v1/orders/doi-24818/payment", nil)
 	req.Body = brokenBody{}
 	req.Header.Set("X-Order-Token", ownToken)
@@ -283,7 +297,7 @@ func TestAFailingDatabaseIsAGeneric500OnBothRoutes(t *testing.T) {
 		"the access statement fails": &orderDB{order: sample(nil), token: ownToken, fails: errors.New(`ERROR: relation "orders" does not exist: SELECT o.id FROM orders o`)},
 		"no transaction can open":    &fakeDB{},
 	} {
-		h := mount(db, Options{})
+		h := mountPay(db, Options{})
 		get := httptest.NewRequest(http.MethodGet, "/v1/orders/doi-24818", nil)
 		get.Header.Set("X-Order-Token", ownToken)
 		got := httptest.NewRecorder()
@@ -329,7 +343,7 @@ func TestAProviderPlugsIntoTheRouteWithoutChangingIt(t *testing.T) {
 	} {
 		asked := 0
 		c.provider.asked = &asked
-		h := mount(&orderDB{order: sample(c.change), token: ownToken}, Options{Providers: map[string]Provider{"vnpay": c.provider, "cod": c.provider}})
+		h := mountPay(&orderDB{order: sample(c.change), token: ownToken}, Options{Providers: map[string]Provider{"vnpay": c.provider, "cod": c.provider}})
 		rec := callPay(h, "doi-24818", ownToken, "")
 		if rec.Code != c.status || asked != c.wantAsked {
 			t.Errorf("%s: %d %s, asked %d", c.name, rec.Code, rec.Body, asked)
