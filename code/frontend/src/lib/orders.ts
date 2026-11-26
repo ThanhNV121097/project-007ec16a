@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 import { api, apiBase } from "./api";
 import type { CartLine } from "./cart";
 import { digitsOf } from "./shop";
@@ -15,6 +16,25 @@ import { digitsOf } from "./shop";
  *
  * The request never carries a price, a delivery fee or a total: the shop reads
  * its own prices and the browser's numbers are not trusted.
+=======
+import type { CartLine } from "./cart";
+import { getPaymentOptions, postOrder } from "./mock/checkout-and-placing-an-order";
+import { digitsOf } from "./shop";
+
+/**
+ * PLACING AN ORDER, FROM THE BROWSER'S SIDE (docs/architecture/services.md
+ * §3.5, §3.10): the request the shop is sent, the Idempotency-Key that makes
+ * a repeated send safe, what each answer means to the page, and the store of
+ * orders this browser has placed.
+ *
+ * This is the one file Checkout reads orders through. Today the transport
+ * (`postOrder`, `getPaymentOptions`) is the mock shop; the backend step swaps
+ * those two imports for src/lib/api.ts and deletes the mock — nothing else
+ * here, and no component, changes.
+ *
+ * The request never carries a price, a delivery fee or a total: the shop
+ * reads its own prices and the browser's numbers are not trusted.
+>>>>>>> refs/heads/main
  */
 export interface OrderRequest {
   items: { product: string; size: string; qty: number }[];
@@ -149,6 +169,7 @@ function interpret({ status, body }: Wire): PlaceResult {
 
 const offline = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 const TIMEOUT_MS = 15_000;
 
 /** POST /v1/orders with the key as a header. One try, abandoned after 15 seconds; never retried. */
@@ -170,6 +191,8 @@ async function postOrder(request: OrderRequest, key: string): Promise<Wire> {
   }
 }
 
+=======
+>>>>>>> refs/heads/main
 /** Sends the order. Never throws: every way it can go wrong is a `PlaceResult`. */
 export async function placeOrder(request: OrderRequest, key: string): Promise<PlaceResult> {
   if (offline()) return { ok: false, kind: "offline", problems: [] };
@@ -180,6 +203,7 @@ export async function placeOrder(request: OrderRequest, key: string): Promise<Pl
   }
 }
 
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
 /** The address to send the browser to, only when it is an https: address. */
 export function payAddress(url: string): string | null {
   try {
@@ -194,13 +218,21 @@ export function payAddress(url: string): string | null {
  * read has finished, and then whatever it gave — an empty list when it failed,
  * which Checkout draws as the unavailable state.
  */
+=======
+/** The ways to pay the shop offers (GET /v1/payment-options); none until it answers. */
+>>>>>>> refs/heads/main
 export function usePaymentOptions(): { items: PaymentOption[]; loading: boolean } {
   const [state, setState] = useState<{ items: PaymentOption[]; loading: boolean }>({ items: [], loading: true });
   useEffect(() => {
     let live = true;
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
     api
       .get<{ items: PaymentOption[] }>("payment-options")
       .then((r) => live && setState({ items: Array.isArray(r.items) ? r.items : [], loading: false }))
+=======
+    getPaymentOptions()
+      .then((r) => live && setState({ items: r.items, loading: false }))
+>>>>>>> refs/heads/main
       .catch(() => live && setState({ items: [], loading: false }));
     return () => {
       live = false;
@@ -210,6 +242,7 @@ export function usePaymentOptions(): { items: PaymentOption[]; loading: boolean 
 }
 
 /**
+<<<<<<< refs/heads/feature/checkout-and-placing-an-order-be-v2
  * The shop's price today for each shoe in the bag (GET /v1/products/{id}, one per
  * distinct shoe — a bag holds a few). A shoe the shop does not answer for keeps
  * the price its bag line saved; the shop's answer to placing is the authority.
@@ -236,6 +269,9 @@ export function useCurrentPrices(ids: string[]): Map<string, number> {
 
 /**
  * The orders this browser has placed, kept under a key of its own — never
+=======
+ * The orders this browser has placed, kept under a key of their own — never
+>>>>>>> refs/heads/main
  * the design's "doi:orders" — as the order's id, number, placed time and
  * token and nothing else about it. A browser that refuses storage keeps them
  * for this page load.
