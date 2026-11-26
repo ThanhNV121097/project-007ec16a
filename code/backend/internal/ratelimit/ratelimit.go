@@ -18,8 +18,11 @@ import (
 
 // Scopes of rate_limits.scope (ck_rate_limits_scope).
 const (
-	SignInEmail   = "sign_in_email"
-	SignInAddress = "sign_in_address"
+	SignInEmail        = "sign_in_email"
+	SignInAddress      = "sign_in_address"
+	SignUpAddress      = "sign_up_address"
+	OrderLookupNumber  = "order_lookup_number"
+	OrderLookupAddress = "order_lookup_address"
 )
 
 // Querier is the slice of a pool or a transaction the counters need.
