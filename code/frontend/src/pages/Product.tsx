@@ -6,6 +6,7 @@ import { useCollection, useRecord } from "../data";
 import { addToCart } from "../lib/cart";
 import { openBag } from "../lib/bag";
 import { formatDate, formatPrice } from "../lib/format";
+import { usePaymentOptions } from "../lib/orders";
 import { fill, picturesOf, sizesInStock, type Category, type Line, type PaymentMethod, type Product as Item, type Review, type ShopTerms } from "../lib/shop";
 import Bleed from "../components/Bleed";
 import ColourDots from "../components/ColourDots";
@@ -220,7 +221,8 @@ export default function Product() {
   const line = useRecord<Line>("lines", item?.line).item;
   const cat = useRecord<Category>("categories", item?.category).item;
   const terms = useRecord<ShopTerms>("shop", "shop").item;
-  const vnpay = useRecord<PaymentMethod>("payments", "vnpay").item;
+  // The ways the shop can complete right now, in its order: the same list checkout draws.
+  const payments = usePaymentOptions().items;
   const reviews = useCollection<Review>("reviews", { where: { product: id ?? "", status: "live" }, sort: "-date", pageSize: 3 }).items;
   const w = useWords();
 
@@ -250,7 +252,7 @@ export default function Product() {
             <Icon name="back" size={14} /><T k="pages.product.back" />
           </Link>
           <BuyBox key={item.id} item={item} meta={meta} siblings={siblings} cutoff={terms?.dispatch_cutoff ?? ""} w={w} />
-          <DetailRows item={item} line={line} cat={cat} terms={terms} payments={vnpay ? [vnpay] : []} w={w} />
+          <DetailRows item={item} line={line} cat={cat} terms={terms} payments={payments} w={w} />
         </div>
         <div className="order-first lg:order-none lg:w-7/12">
           <Bleed side="right">

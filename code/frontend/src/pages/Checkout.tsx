@@ -10,12 +10,14 @@ import {
   buildRequest, detailProblems, keyKeeper, payAddress, placeOrder, rememberOrder, useCurrentPrices, usePaymentOptions,
   type Details, type PlaceResult,
 } from "../lib/orders";
+import { chosenWay, waysOf } from "../lib/more-ways-to-pay-vietqr-transfer-and-momo";
 import type { DeliveryOption, Product } from "../lib/shop";
 import HeadPicture from "../components/HeadPicture";
-import Icon, { type IconName } from "../components/Icon";
+import Icon from "../components/Icon";
 import CheckoutRow from "../components/CheckoutRow";
 import CheckoutSummary from "../components/CheckoutSummary";
 import EmptyBag from "../components/EmptyBag";
+import PaymentRows from "../components/PaymentRows";
 import Rule from "../components/Rule";
 
 const FIELD = "w-full appearance-none rounded-sm border border-field bg-ground px-3 py-3 text-base text-ink outline-none placeholder:text-ink-soft focus:border-ink sm:text-sm";
@@ -36,8 +38,8 @@ function Step({ n, k }: { n: number; k: string }) {
  * numbered groups because they are a sequence — with the pairs, their
  * pictures and the total kept in view beside them, and what happens after
  * "Place order" said before it is pressed. The shop reads its own prices and
- * sets the pairs aside; this page sends what was typed and the pairs, never
- * an amount (src/lib/orders.ts).
+ * sets the pairs aside; this page sends what was typed, the pairs and the way
+ * to pay chosen among those the shop lists, never an amount (src/lib/orders.ts).
  */
 export default function Checkout() {
   usePageMeta("pages.checkout.title", "pages.checkout.description");
@@ -47,7 +49,6 @@ export default function Checkout() {
   const products = useCollection<Product>("products", { where: { status: "live" }, pageSize: 3 }).items;
   const standard = useRecord<DeliveryOption>("delivery", "standard").item;
   const options = usePaymentOptions();
-  const option = options.items.find((o) => o.id === "vnpay");
   const current = useCurrentPrices(real.map((l) => l.id));
   const words = {
     free: useContent("pages.cart.free"),
@@ -63,7 +64,8 @@ export default function Checkout() {
   useSavedDetailsFill(setForm);
   const [problems, setProblems] = useState<string[]>([]);
   const [placing, setPlacing] = useState(false);
-  const [closed, setClosed] = useState(false);
+  const [picked, setPicked] = useState("");
+  const [closedWays, setClosedWays] = useState<string[]>([]);
   const [keyFor] = useState(keyKeeper);
   const sending = useRef(false);
 
@@ -75,9 +77,13 @@ export default function Checkout() {
   // answer for keeps its saved price here and is refused by name when ordered.
   const lines = (showingExample ? example : real).map((l) => ({ ...l, price: showingExample ? l.price : current.get(l.id) ?? l.price }));
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  // The one way to pay is closed when the shop says so, and when the read of what
-  // it offers has finished without VNPay in it (it failed, or it is not listed).
-  const blocked = closed || option?.is_available === false || (!options.loading && !option);
+  // The ways the shop lists, in its order; one it refused to place an order with is closed.
+  // The first open one is chosen until the visitor chooses another, and Place order is off
+  // only when none is open (or the read of what it offers failed, and the page says so).
+  const ways = waysOf(options.items, closedWays);
+  const chosen = chosenWay(ways, picked);
+  const nothing = !options.loading && ways.length === 0;
+  const blocked = !chosen;
   const set = (k: keyof Details) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   if (lines.length === 0) return <EmptyBag heading="pages.checkout.empty" />;
@@ -90,17 +96,17 @@ export default function Checkout() {
 
   const place = async (e: FormEvent) => {
     e.preventDefault();
-    if (sending.current || blocked) return;
+    if (sending.current || !chosen) return;
     const wrong = detailProblems(form).map((p) => (p === "missing" ? words.missing : words.phoneBad));
     setProblems(wrong);
     if (wrong.length > 0) return;
     sending.current = true;
     setPlacing(true);
-    const request = buildRequest(lines, form);
+    const request = buildRequest(lines, form, chosen.id);
     const result = await placeOrder(request, keyFor(request));
     if (!result.ok) {
       setProblems(stopped(result));
-      setClosed(result.kind === "unavailable");
+      if (result.kind === "unavailable") setClosedWays((c) => [...c, chosen.id]);
       sending.current = false;
       setPlacing(false);
       return;
@@ -155,17 +161,15 @@ export default function Checkout() {
           <Rule />
           <fieldset>
             <Step n={3} k="pages.checkout.step_payment" />
-            <div className="border-t border-line">
-              {option && <CheckoutRow testid="pay-vnpay" icon={(option.icon || "card") as IconName} title={option.name} note={option.note} />}
-            </div>
-            {blocked && (
+            <PaymentRows options={ways} chosen={chosen?.id ?? ""} onChoose={setPicked} />
+            {nothing && (
               <p role="alert" className="mt-3 flex items-center gap-2 text-xs text-danger">
                 <Icon name="alert" size={14} className="shrink-0" />{words.unavailable}
               </p>
             )}
           </fieldset>
         </div>
-        <CheckoutSummary lines={lines} subtotal={subtotal} method={option?.name} problems={problems} placing={placing} blocked={blocked} />
+        <CheckoutSummary lines={lines} subtotal={subtotal} method={(chosen ?? ways[0])?.name} problems={problems} placing={placing} blocked={blocked} />
       </form>
     </>
   );

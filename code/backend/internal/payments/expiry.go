@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/orders"
@@ -21,16 +22,46 @@ const (
 )
 
 // thirtyMinuteWays are the ways to pay whose unpaid orders the 30-minute rule
-// gives up. It is code, as the offered list is: a bank transfer is never in it
-// (its 24-hour rule is a later story's).
-var thirtyMinuteWays = []string{"vnpay"}
+// gives up, and transferWays those the 24-hour rule gives up. Both are code, as the
+// offered list is, and a rule applies by the order's way, not by today's settings:
+// an unpaid MoMo or bank order is still given up after the owner removes its
+// settings, so its pairs never stay held for ever.
+var (
+	thirtyMinuteWays = []string{"vnpay", "momo"}
+	transferWays     = []string{"bank"}
+)
 
 // dueSQL repeats the partial index's predicate literally so idx_orders_unpaid_open
-// serves it. A sample order (the 14 that came with the design) is never due.
-const dueSQL = `SELECT id FROM orders
+// serves it, and returns each order's way so the rule for it can be chosen. The
+// shortest window bounds every rule ($1), so the index range is tight; a bank
+// order must also be past its own, longer one ($4). A sample order (the 14 that
+// came with the design) is never due.
+const dueSQL = `SELECT id, payment_method_id FROM orders
 WHERE NOT paid AND NOT is_sample AND status IN ('placed', 'confirmed', 'packed')
-  AND payment_method_id = ANY($1) AND placed_at <= $2
+  AND placed_at <= $1
+  AND (payment_method_id = ANY($2) OR (payment_method_id = ANY($3) AND placed_at <= $4))
 ORDER BY placed_at LIMIT 100`
+
+// dueOrder is an order a rule may give up, with the way that chooses the rule.
+type dueOrder struct{ ID, Way string }
+
+func (o dueOrder) transfer() bool { return slices.Contains(transferWays, o.Way) }
+
+// rule is the name the log line carries.
+func (o dueOrder) rule() string {
+	if o.transfer() {
+		return "24h"
+	}
+	return "30m"
+}
+
+// cancelRule is what the cancel judges again under the order's row lock.
+func (o dueOrder) cancelRule(now time.Time) orders.CancelRule {
+	if o.transfer() {
+		return orders.CancelRule{PlacedBefore: now.Add(-orders.TransferWindow), Ways: transferWays}
+	}
+	return orders.CancelRule{PlacedBefore: now.Add(-orders.PayWindow), Ways: thirtyMinuteWays}
+}
 
 // RunExpiry gives up an unpaid online order after 30 minutes: once at start-up
 // (an order that fell due while the server was down is cancelled at boot), then
@@ -71,18 +102,18 @@ func runExpiry(ctx context.Context, db DB, log *slog.Logger, now func() time.Tim
 			return
 		}
 		given := 0
-		for _, id := range ids {
+		for _, o := range ids {
 			if budget.Err() != nil {
 				return
 			}
-			changed, err := giveUp(budget, db, id, now)
+			changed, err := giveUp(budget, db, o, now)
 			if err != nil {
-				log.Error("the expiry could not give up an order", "order", id, "error", err)
+				log.Error("the expiry could not give up an order", "order", o.ID, "rule", o.rule(), "error", err)
 				continue
 			}
 			if changed {
 				given++
-				log.Info("gave up an unpaid order", "order", id)
+				log.Info("gave up an unpaid order", "order", o.ID, "rule", o.rule())
 			}
 		}
 		// Repeat only while a query is full and the last one made progress.
@@ -92,28 +123,28 @@ func runExpiry(ctx context.Context, db DB, log *slog.Logger, now func() time.Tim
 	}
 }
 
-func due(ctx context.Context, db DB, now time.Time) ([]string, error) {
-	rows, err := db.Query(ctx, dueSQL, thirtyMinuteWays, now.Add(-orders.PayWindow))
+func due(ctx context.Context, db DB, now time.Time) ([]dueOrder, error) {
+	rows, err := db.Query(ctx, dueSQL, now.Add(-orders.PayWindow), thirtyMinuteWays, transferWays, now.Add(-orders.TransferWindow))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var ids []string
+	var list []dueOrder
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var o dueOrder
+		if err := rows.Scan(&o.ID, &o.Way); err != nil {
 			return nil, err
 		}
-		ids = append(ids, id)
+		list = append(list, o)
 	}
-	return ids, rows.Err()
+	return list, rows.Err()
 }
 
 // giveUp is one transaction for one order. The list was read without a lock, so
 // the conditions are judged again under the row lock by Cancel's own UPDATE: an
 // order paid, cancelled by the dealer, shipped or moved by anyone since is left
 // exactly as it is and its pairs are not touched.
-func giveUp(ctx context.Context, db DB, id string, now func() time.Time) (bool, error) {
+func giveUp(ctx context.Context, db DB, o dueOrder, now func() time.Time) (bool, error) {
 	var changed bool
 	err := retryDeadlock(func() error {
 		tx, err := db.BeginTx(ctx, pgx.TxOptions{})
@@ -124,7 +155,7 @@ func giveUp(ctx context.Context, db DB, id string, now func() time.Time) (bool, 
 		if _, err := tx.Exec(ctx, "SET LOCAL lock_timeout = '3s'"); err != nil {
 			return fmt.Errorf("set lock timeout: %w", err)
 		}
-		changed, err = orders.Cancel(ctx, tx, id, orders.CancelRule{PlacedBefore: now().Add(-orders.PayWindow), Ways: thirtyMinuteWays})
+		changed, err = orders.Cancel(ctx, tx, o.ID, o.cancelRule(now()))
 		if err != nil {
 			return err
 		}

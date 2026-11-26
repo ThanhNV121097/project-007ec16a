@@ -27,8 +27,13 @@ func TestCheckPayableAppliesTheRulesInOrder(t *testing.T) {
 		{"confirmed and packed are payable", PayState{"packed", "vnpay", false, settledAt}, fresh, ""},
 		{"cancelled beats everything", PayState{"cancelled", "cod", true, settledAt}, over, msgCancelled},
 		{"paid beats a way that is not online", PayState{"placed", "cod", true, settledAt}, over, msgPaid},
-		{"not online beats the clock", PayState{"placed", "bank", false, settledAt}, over, msgNotOnline},
-		{"momo is not offered yet", PayState{"placed", "momo", false, settledAt}, fresh, msgNotOnline},
+		{"not online beats the clock", PayState{"placed", "cod", false, settledAt}, over, msgNotOnline},
+		{"a bank transfer is paid by its QR code, not on a page", PayState{"placed", "bank", false, settledAt}, fresh, msgBankOrder},
+		{"a bank transfer beats the clock", PayState{"placed", "bank", false, settledAt}, over, msgBankOrder},
+		{"an unknown way is not online", PayState{"placed", "barter", false, settledAt}, fresh, msgNotOnline},
+		{"momo is payable on its provider's page", PayState{"placed", "momo", false, settledAt}, fresh, ""},
+		{"momo's 30 minutes run out like VNPay's", PayState{"placed", "momo", false, settledAt}, over, MsgRunOut},
+		{"a paid bank order says paid", PayState{"placed", "bank", true, settledAt}, fresh, msgPaid},
 		{"a shipped unpaid order past its window", PayState{"shipped", "vnpay", false, settledAt}, over, MsgRunOut},
 	} {
 		got := CheckPayable(c.in, c.now)
@@ -39,8 +44,8 @@ func TestCheckPayableAppliesTheRulesInOrder(t *testing.T) {
 			t.Errorf("%s: got %v, want %q", c.name, got, c.want)
 		}
 	}
-	messages := map[string]bool{msgCancelled: true, msgPaid: true, msgNotOnline: true, msgNotYet: true, MsgRunOut: true}
-	if len(messages) != 5 || MsgRunOut != "The time to pay this order has run out." {
+	messages := map[string]bool{msgCancelled: true, msgPaid: true, msgNotOnline: true, msgNotYet: true, MsgRunOut: true, msgBankOrder: true, msgNotBank: true}
+	if len(messages) != 7 || MsgRunOut != "The time to pay this order has run out." {
 		t.Error("the sentences must differ and the new one must be exactly as the contract words it")
 	}
 }

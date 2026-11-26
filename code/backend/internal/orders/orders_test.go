@@ -155,7 +155,7 @@ func TestEveryFieldRuleNamesItsField(t *testing.T) {
 		req := goodRequest()
 		c.change(&req)
 		req.clean()
-		got := req.validate()
+		got := req.validate(defaultOffered)
 		if c.field == "" {
 			if len(got) != 0 {
 				t.Errorf("%s: refused: %v", c.name, got)
@@ -172,7 +172,7 @@ func TestNameAndAddressOfOnlySpacesAreEmpty(t *testing.T) {
 	req := goodRequest()
 	req.Customer, req.Address, req.City = "   ", "\t", "  "
 	req.clean()
-	got := req.validate()
+	got := req.validate(defaultOffered)
 	if got["customer"] == "" || got["address"] == "" || got["city"] == "" {
 		t.Errorf("got %v", got)
 	}
@@ -182,7 +182,7 @@ func TestEveryFaultIsReportedAtOnce(t *testing.T) {
 	req := goodRequest()
 	req.Address, req.Phone, req.Delivery = "", "12", "express"
 	req.clean()
-	if got := req.validate(); len(got) != 3 {
+	if got := req.validate(defaultOffered); len(got) != 3 {
 		t.Errorf("got %v", got)
 	}
 }
@@ -325,8 +325,8 @@ func TestThePublicViewSelectsNoPrivateColumn(t *testing.T) {
 
 // ORD-006: the shop never lists cod, bank or momo; what is offered is code.
 func TestOnlyVNPayIsOffered(t *testing.T) {
-	if len(offered) != 1 || offered[0] != "vnpay" {
-		t.Errorf("offered: %v", offered)
+	if len(defaultOffered) != 1 || defaultOffered[0] != "vnpay" {
+		t.Errorf("offered: %v", defaultOffered)
 	}
 }
 

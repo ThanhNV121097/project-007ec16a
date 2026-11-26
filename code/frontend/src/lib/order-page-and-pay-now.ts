@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { OrderStatus } from "./shop";
+import { BANK } from "./more-ways-to-pay-vietqr-transfer-and-momo";
 import { getOrder, postPayment } from "./mock/order-page-and-pay-now";
 
 /**
@@ -87,9 +88,13 @@ export function useOrder(id: string | undefined): OrderRead & { reload: () => vo
   return { ...read, reload };
 }
 
-/** "Pay now" is offered for an order that is unpaid and not cancelled. */
-export function canPay(order: Pick<PublicOrder, "paid" | "status">): boolean {
-  return !order.paid && order.status !== "cancelled";
+/**
+ * "Pay now" is offered for an order that is unpaid and not cancelled, and that
+ * has a payment page to go to: a bank-transfer order is paid by the QR code on
+ * this page, and the shop would refuse the button (409), so it is not drawn.
+ */
+export function canPay(order: Pick<PublicOrder, "paid" | "status" | "payment">): boolean {
+  return !order.paid && order.status !== "cancelled" && order.payment !== BANK;
 }
 
 /**

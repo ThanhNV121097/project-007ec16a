@@ -34,7 +34,7 @@ func newWorld(t *testing.T) world {
 	pool := dbtest.Migrated(t)
 	v := NewVNPay(VNPayConfig{TmnCode: "TMN123", HashSecret: config.NewSecret(secret), PaymentURL: config.DefaultVNPayPage}, pool, quiet(), nil)
 	mux := http.NewServeMux()
-	Register(mux, v)
+	Register(mux, v, nil)
 	return world{pool: pool, v: v, h: mux}
 }
 

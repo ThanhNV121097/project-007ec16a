@@ -37,7 +37,7 @@ func (s *service) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	faults := req.validate()
+	faults := req.validate(s.offered)
 	if err := s.checkSizes(r.Context(), req, faults); err != nil {
 		s.internal(w, r, "read the sizes of the named shoes", err)
 		return

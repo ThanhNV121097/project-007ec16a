@@ -131,7 +131,7 @@ func digitsOf(s string) string {
 // validate checks every field at once and returns one sentence per fault, each
 // naming its limit where a limit is the fault. The page applies the same rules;
 // the shop repeats them because a request can skip the page.
-func (r *orderRequest) validate() fieldErrors {
+func (r *orderRequest) validate(offered []string) fieldErrors {
 	f := fieldErrors{}
 	switch n := len(r.Items); {
 	case n == 0:

@@ -77,7 +77,7 @@ func TestAListOverTheLimitStillReachesValidation(t *testing.T) {
 	if len(faults) != 0 {
 		t.Fatalf("refused: %v", faults)
 	}
-	if got := req.validate()["items"]; !strings.Contains(got, "at most 50") {
+	if got := req.validate(defaultOffered)["items"]; !strings.Contains(got, "at most 50") {
 		t.Errorf("items: %q (read %d pairs)", got, len(req.Items))
 	}
 }
