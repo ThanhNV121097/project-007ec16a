@@ -40,7 +40,7 @@ func NewVNPay(cfg VNPayConfig, db DB, log *slog.Logger, now func() time.Time) *V
 	if cfg.PaymentURL == "" {
 		cfg.PaymentURL = config.DefaultVNPayPage
 	}
-	v := &VNPay{cfg: cfg, db: db, store: pgStore{db: db}, log: log, now: now}
+	v := &VNPay{cfg: cfg, db: db, store: pgStore{db: db, provider: "vnpay"}, log: log, now: now}
 	if cfg.TmnCode == "" {
 		log.Warn("VNPAY_TMN_CODE is not set; online payment is unavailable")
 	}
