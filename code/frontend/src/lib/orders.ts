@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, apiBase } from "./api";
 import type { CartLine } from "./cart";
+import { readPaymentOptions } from "./more-ways-to-pay-vietqr-transfer-and-momo";
 import { digitsOf } from "./shop";
 
 /**
@@ -19,7 +20,8 @@ import { digitsOf } from "./shop";
 export interface OrderRequest {
   items: { product: string; size: string; qty: number }[];
   delivery: "standard";
-  payment: "vnpay";
+  /** The id of one of the ways `GET /v1/payment-options` lists. */
+  payment: string;
   customer: string;
   phone: string;
   address: string;
@@ -79,11 +81,11 @@ export function sizeOfVariant(variant?: string): string {
   return (variant ?? "").replace(/^EU\s+/i, "").trim();
 }
 
-export function buildRequest(lines: CartLine[], d: Details): OrderRequest {
+export function buildRequest(lines: CartLine[], d: Details, payment: string): OrderRequest {
   return {
     items: lines.map((l) => ({ product: l.id, size: sizeOfVariant(l.variant), qty: l.qty })),
     delivery: "standard",
-    payment: "vnpay",
+    payment,
     customer: d.name.trim(),
     phone: d.phone.trim(),
     address: d.address.trim(),
@@ -190,17 +192,17 @@ export function payAddress(url: string): string | null {
 }
 
 /**
- * The ways to pay the shop offers (GET /v1/payment-options): `loading` until the
- * read has finished, and then whatever it gave — an empty list when it failed,
- * which Checkout draws as the unavailable state.
+ * The ways to pay the shop offers (GET /v1/payment-options, read through
+ * ./more-ways-to-pay-vietqr-transfer-and-momo): `loading` until the read has
+ * finished, and then whatever it gave — an empty list when it failed, which
+ * Checkout draws as the unavailable state.
  */
 export function usePaymentOptions(): { items: PaymentOption[]; loading: boolean } {
   const [state, setState] = useState<{ items: PaymentOption[]; loading: boolean }>({ items: [], loading: true });
   useEffect(() => {
     let live = true;
-    api
-      .get<{ items: PaymentOption[] }>("payment-options")
-      .then((r) => live && setState({ items: Array.isArray(r.items) ? r.items : [], loading: false }))
+    readPaymentOptions()
+      .then((items) => live && setState({ items, loading: false }))
       .catch(() => live && setState({ items: [], loading: false }));
     return () => {
       live = false;

@@ -27,6 +27,8 @@ export interface OrderState {
   number: string;
   status: string;
   paid: boolean;
+  /** The order's way to pay, as the shop says it ("" when it does not): which provider's words the page uses. */
+  payment?: string;
 }
 
 /** What the transport hands back: the HTTP status (0 when no answer came) and the JSON body. */
@@ -95,7 +97,10 @@ function orderOf(body: unknown): OrderState | null {
   if (typeof body !== "object" || body === null) return null;
   const o = body as Record<string, unknown>;
   if (typeof o.id !== "string" || typeof o.status !== "string" || typeof o.paid !== "boolean") return null;
-  return { id: o.id, number: typeof o.number === "string" ? o.number : "", status: o.status, paid: o.paid };
+  return {
+    id: o.id, number: typeof o.number === "string" ? o.number : "", status: o.status, paid: o.paid,
+    payment: typeof o.payment === "string" ? o.payment : "",
+  };
 }
 
 /** A call that never throws: no answer is status 0. */
@@ -182,6 +187,8 @@ export interface PaymentReturn {
   state: PaymentState | "loading";
   /** The order this browser holds a token for, when the reference is of one. */
   order: { id: string; number: string } | null;
+  /** The way to pay the shop says the order uses, "" until it has said. */
+  way: string;
   trying: boolean;
   /** "Try again" could not open the payment page. */
   tryFailed: boolean;
@@ -238,5 +245,6 @@ export function usePaymentReturn(reference: string | null, code: string | null):
 
   // When the shop says it knows nothing of the token, nothing about any order is drawn.
   const order = held && phase.kind !== "no-match" ? { id: held.id, number: held.number } : null;
-  return { state: stateOf(phase, code, timedOut), order, trying, tryFailed, again };
+  const way = phase.kind === "order" ? phase.order.payment ?? "" : "";
+  return { state: stateOf(phase, code, timedOut), order, way, trying, tryFailed, again };
 }

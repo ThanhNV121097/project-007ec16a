@@ -27,10 +27,14 @@ afterEach(() => {
 
 describe("the order request", () => {
   it("names the pairs and the details and carries no price, fee or total", () => {
-    const r = buildRequest([line], details);
+    const r = buildRequest([line], details, "vnpay");
     expect(r.items).toEqual([{ product: "samba-og-w-crystal-white", size: "36 2/3", qty: 2 }]);
     expect(r).toMatchObject({ delivery: "standard", payment: "vnpay", customer: "Lan Nguyen", phone: "0912 345 678", note: "" });
     expect(JSON.stringify(r)).not.toMatch(/price|fee|total/i);
+  });
+
+  it("sends the way to pay it is given, never one of its own", () => {
+    for (const way of ["vnpay", "bank", "momo"]) expect(buildRequest([line], details, way).payment).toBe(way);
   });
 
   it("reads a size out of a bag line's variant", () => {
@@ -41,7 +45,7 @@ describe("the order request", () => {
 
   it("is one POST to /v1/orders with the key as a header, once, with the cookie", async () => {
     answer(201, placed());
-    const request = buildRequest([line], details);
+    const request = buildRequest([line], details, "vnpay");
     await placeOrder(request, "tc-key-0001");
     expect(send).toHaveBeenCalledTimes(1);
     const [url, init] = send.mock.calls[0] as [string, RequestInit];
@@ -77,43 +81,43 @@ describe("the details the shop would refuse", () => {
 describe("the idempotency key", () => {
   it("is one key for one bag with one set of details, and a new one when either changes", () => {
     const keyFor = keyKeeper();
-    const key = keyFor(buildRequest([line], details));
+    const key = keyFor(buildRequest([line], details, "vnpay"));
     expect(key).toMatch(/^[A-Za-z0-9._-]{8,100}$/);
-    expect(keyFor(buildRequest([line], details))).toBe(key);
-    const other = keyFor(buildRequest([line], { ...details, phone: "0912 345 679" }));
+    expect(keyFor(buildRequest([line], details, "vnpay"))).toBe(key);
+    const other = keyFor(buildRequest([line], { ...details, phone: "0912 345 679" }, "vnpay"));
     expect(other).not.toBe(key);
-    expect(keyFor(buildRequest([{ ...line, qty: 3 }], { ...details, phone: "0912 345 679" }))).not.toBe(other);
+    expect(keyFor(buildRequest([{ ...line, qty: 3 }], { ...details, phone: "0912 345 679" }, "vnpay"))).not.toBe(other);
   });
 });
 
 describe("what an answer means", () => {
   it("201 is the placed order with its token, and an empty payment address stays empty", async () => {
     answer(201, placed());
-    expect(await placeOrder(buildRequest([line], details), "tc-key-0001")).toEqual({ ok: true, placed: placed() });
+    expect(await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0001")).toEqual({ ok: true, placed: placed() });
   });
 
   it("a replay (200) is the same order again", async () => {
     answer(200, placed());
-    expect((await placeOrder(buildRequest([line], details), "tc-key-0001")).ok).toBe(true);
+    expect((await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0001")).ok).toBe(true);
   });
 
   it("carries the payment address the shop gives", async () => {
     answer(201, placed("https://pay.example.test/x"));
-    const r = await placeOrder(buildRequest([line], details), "tc-key-0002");
+    const r = await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0002");
     expect(r.ok && r.placed.payment_url).toBe("https://pay.example.test/x");
   });
 
   it("409 stock_conflict names every pair, in the order of the bag", async () => {
     answer(409, { error: "stock_conflict", message: "x", errors: { "items.10": "B · EU 38 — sold out in your size.", "items.2": "A · EU 40 — only 2 left in your size." } });
-    const r = await placeOrder(buildRequest([line], details), "tc-key-0003");
+    const r = await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0003");
     expect(r).toEqual({ ok: false, kind: "refused", problems: ["A · EU 40 — only 2 left in your size.", "B · EU 38 — sold out in your size."] });
   });
 
   it("422 is invalid, 503 payment_unavailable is unavailable", async () => {
     answer(422, { error: "invalid", message: "x", errors: { address: "Enter the street address." } });
-    expect(await placeOrder(buildRequest([line], details), "tc-key-0004")).toEqual({ ok: false, kind: "invalid", problems: ["Enter the street address."] });
+    expect(await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0004")).toEqual({ ok: false, kind: "invalid", problems: ["Enter the street address."] });
     answer(503, { error: "payment_unavailable", message: "x" });
-    expect(await placeOrder(buildRequest([line], details), "tc-key-0004")).toEqual({ ok: false, kind: "unavailable", problems: [] });
+    expect(await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0004")).toEqual({ ok: false, kind: "unavailable", problems: [] });
   });
 
   it("500, another 409, an answer with no order and a network failure are all a failed send", async () => {
@@ -122,18 +126,18 @@ describe("what an answer means", () => {
     answer(201, {});
     send.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     for (let i = 0; i < 4; i++) {
-      expect(await placeOrder(buildRequest([line], details), "tc-key-0005")).toEqual({ ok: false, kind: "failed", problems: [] });
+      expect(await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0005")).toEqual({ ok: false, kind: "failed", problems: [] });
     }
   });
 
   it("an answer that is not JSON is a failed send", async () => {
     send.mockResolvedValueOnce({ status: 502, json: () => Promise.reject(new SyntaxError("Unexpected token <")) });
-    expect(await placeOrder(buildRequest([line], details), "tc-key-0005")).toEqual({ ok: false, kind: "failed", problems: [] });
+    expect(await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0005")).toEqual({ ok: false, kind: "failed", problems: [] });
   });
 
   it("an offline browser says so and sends nothing", async () => {
     vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(false);
-    expect(await placeOrder(buildRequest([line], details), "tc-key-0006")).toEqual({ ok: false, kind: "offline", problems: [] });
+    expect(await placeOrder(buildRequest([line], details, "vnpay"), "tc-key-0006")).toEqual({ ok: false, kind: "offline", problems: [] });
     expect(send).not.toHaveBeenCalled();
   });
 });
