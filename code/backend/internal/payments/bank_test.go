@@ -1,6 +1,7 @@
 package payments
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -43,7 +44,7 @@ func TestTheBankWithNoAccountIsUnavailableAndGivesNothing(t *testing.T) {
 
 // A bank order has no payment address and writes no attempt.
 func TestTheBankHasNoPaymentAddress(t *testing.T) {
-	url, err := NewBank(shopAccount).PaymentURL(nil, orders.Payable{}, orders.Client{}) //nolint:staticcheck // the bank never reads its context
+	url, err := NewBank(shopAccount).PaymentURL(context.Background(), orders.Payable{}, orders.Client{})
 	if url != "" || err != nil {
 		t.Errorf("%q %v", url, err)
 	}
