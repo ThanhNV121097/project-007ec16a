@@ -359,7 +359,7 @@ Behaviour:
 Behaviour:
 
 1. Checkout lists "Bank transfer (VietQR)" and "MoMo wallet" when each is configured (PAY-020, PAY-021), in the order of the records, after VNPay; it lists neither when neither is.
-2. No page of the Checkout story is edited: the offer comes from the shop's answer about which ways to pay it can complete (ORD-006).
+2. No page holds a list of ways to pay: checkout, the shoe page's "Payment options" and the order page draw what the shop's answer says it can complete (ORD-006). As built after the VNPay story, `Checkout.tsx`, `src/lib/orders.ts` and `Product.tsx` name VNPay alone, so this story edits them, only where they named VNPay (and the order page only where it decides "Pay now"); it edits nothing else of those pages.
 
 **Acceptance criteria**
 
@@ -367,7 +367,7 @@ Behaviour:
 |---|---|---|---|
 | AC-1 | VNPay, VietQR and MoMo are all configured | `/checkout` loads | Three rows: VNPay first, then bank transfer, then MoMo; no cash on delivery |
 | AC-2 | Only VietQR is configured of the two | `/checkout` loads | VNPay is listed first, bank transfer after it, and MoMo is not listed |
-| AC-3 | The change set of this story | It is listed | It edits no file of the Checkout story's page |
+| AC-3 | The change set of this story | It is listed | No page names a way to pay in code (the ids come from the shop's answer); `Checkout.tsx`, `Product.tsx` and the order page's parts are edited only where they named VNPay alone or decided "Pay now" |
 
 **Failure, boundary and permission behaviour**
 
