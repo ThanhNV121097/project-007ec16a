@@ -70,15 +70,15 @@ async function send(url: string, signal: AbortSignal): Promise<unknown> {
   return body;
 }
 
-/** Runs one request and abandons it after 15 seconds. The abort counts as a failure. */
-async function timed<T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+/** Runs one request and abandons it after `ms` (15 seconds unless said). The abort counts as a failure. */
+async function timed<T>(run: (signal: AbortSignal) => Promise<T>, ms: number = TIMEOUT_MS): Promise<T> {
   const abort = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timedOut = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       abort.abort();
       reject(new ApiError(0, "network", "The server took too long to answer."));
-    }, TIMEOUT_MS);
+    }, ms);
   });
   try {
     return await Promise.race([run(abort.signal), timedOut]);
@@ -124,16 +124,19 @@ async function get<T>(path: string, params?: Params): Promise<T> {
   });
 }
 
-type Write = "POST" | "PUT" | "DELETE";
+type Write = "POST" | "PUT" | "PATCH" | "DELETE";
+
+/** A form is sent as it is, so the browser writes its own multipart Content-Type and boundary. */
+const isForm = (body: unknown): body is FormData => typeof FormData !== "undefined" && body instanceof FormData;
 
 async function sendWrite(method: Write, url: string, body: unknown, signal: AbortSignal): Promise<unknown> {
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined && !isForm(body)) headers["Content-Type"] = "application/json";
   let res: Response;
   try {
     res = await fetch(url, {
       method, credentials: "include", signal, headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm(body) ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, "network", "The server cannot be reached.");
@@ -146,9 +149,9 @@ async function sendWrite(method: Write, url: string, body: unknown, signal: Abor
   return parsed;
 }
 
-async function write<T>(method: Write, path: string, body?: unknown): Promise<T> {
+async function write<T>(method: Write, path: string, body?: unknown, ms: number = TIMEOUT_MS): Promise<T> {
   const url = `${apiBase()}/v1/${path.replace(/^\/+/, "")}`;
-  return (await timed((signal) => sendWrite(method, url, body, signal))) as T;
+  return (await timed((signal) => sendWrite(method, url, body, signal), ms)) as T;
 }
 
 /**
@@ -170,4 +173,20 @@ async function del(path: string): Promise<void> {
   return write<void>("DELETE", path);
 }
 
-export const api = { get, post, put, delete: del };
+/** PATCH `${base}/v1/<path>` with a JSON body. Never tried again; failures as post. */
+async function patch<T = void>(path: string, body?: unknown): Promise<T> {
+  return write<T>("PATCH", path, body);
+}
+
+/** A picture is slower than a record: its POST is given 30 seconds, not 15. */
+const UPLOAD_TIMEOUT_MS = 30_000;
+
+/**
+ * POST a form (a file) to `${base}/v1/<path>`. Never tried again; failures as
+ * post, and the 30 seconds an upload on a phone's connection may need.
+ */
+async function upload<T = void>(path: string, form: FormData): Promise<T> {
+  return write<T>("POST", path, form, UPLOAD_TIMEOUT_MS);
+}
+
+export const api = { get, post, put, patch, delete: del, upload };
