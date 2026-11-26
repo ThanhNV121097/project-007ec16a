@@ -223,3 +223,91 @@ func TestTheDealerViewCarriesWhatTheTokenViewNeverDoes(t *testing.T) {
 		t.Error("a dealer was not told an order is missing")
 	}
 }
+
+// SC-19, SC-30: the dealer reads the transaction number of the order's one
+// success notice, in the single read and in the list; an unpaid order and an
+// order whose only notice failed read none. SC-21, SC-22: a delete takes a
+// cancelled, unpaid order's attempts and their failed notices with it, and a
+// paid order keeps its payment records.
+func TestTheDealerReadsTheTransactionNumberOfTheSuccessNotice(t *testing.T) {
+	h, pool := shop(t, Options{})
+	addShoe(t, pool, "tc-f", "Shoe F", 1000000, map[string]int{"40": 9})
+	paid := placeFor(t, h, "txn-key-0001", item("tc-f", "40", 1))
+	unpaid := placeFor(t, h, "txn-key-0002", item("tc-f", "40", 1))
+	failed := placeFor(t, h, "txn-key-0003", item("tc-f", "40", 1))
+	attempt := func(id, reference string) {
+		exec(t, pool, `INSERT INTO payment_attempts (order_id, provider, reference, amount, expires_at) VALUES ($1, 'vnpay', $2, 1000000, now())`, id, reference)
+	}
+	notice := func(reference, transaction, code string, success bool) {
+		exec(t, pool, `INSERT INTO payment_notices (attempt_id, transaction_no, amount, response_code, transaction_status, is_success)
+			SELECT id, $2, amount, $3, $3, $4 FROM payment_attempts WHERE reference = $1`, reference, transaction, code, success)
+	}
+	attempt(paid, "TC-TXN-1")
+	notice("TC-TXN-1", "14123456", "00", true)
+	exec(t, pool, "UPDATE orders SET paid = true WHERE id = $1", paid)
+	attempt(failed, "TC-TXN-3")
+	notice("TC-TXN-3", "14123999", "24", false)
+
+	single := func(id string) any {
+		rec := getAs(h, auth.Admin, "/v1/orders/"+id)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", id, rec.Code, rec.Body)
+		}
+		var view map[string]any
+		decodeInto(t, rec.Body.Bytes(), &view)
+		return view["transaction_no"]
+	}
+	rec := getAs(h, auth.Staff, "/v1/orders?limit=100")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list: %d %s", rec.Code, rec.Body)
+	}
+	var page struct {
+		Items []map[string]any `json:"items"`
+	}
+	decodeInto(t, rec.Body.Bytes(), &page)
+	listed := map[string]any{}
+	for _, o := range page.Items {
+		listed[o["id"].(string)] = o["transaction_no"]
+	}
+	for id, want := range map[string]string{paid: "14123456", unpaid: "", failed: ""} {
+		if got := single(id); got != want {
+			t.Errorf("%s: the single read has transaction_no %v, want %q", id, got, want)
+		}
+		if got := listed[id]; got != want {
+			t.Errorf("%s: the list has transaction_no %v, want %q", id, got, want)
+		}
+	}
+
+	ctx := context.Background()
+	remove := func(id string) error {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+		if err := Delete(ctx, tx, id); err != nil {
+			return err
+		}
+		return tx.Commit(ctx)
+	}
+	cancel(t, pool, failed)
+	if err := remove(failed); err != nil {
+		t.Fatalf("a cancelled, unpaid order with a failed notice: %v", err)
+	}
+	if n := scalar[int](t, pool, "SELECT count(*) FROM payment_attempts WHERE order_id = $1", failed); n != 0 {
+		t.Errorf("%d payment attempts of the deleted order are left", n)
+	}
+	if n := scalar[int](t, pool, "SELECT count(*) FROM payment_notices WHERE transaction_no = '14123999'"); n != 0 {
+		t.Errorf("%d payment notices of the deleted order are left", n)
+	}
+	cancel(t, pool, paid)
+	if err := remove(paid); !errors.Is(err, ErrPaid) {
+		t.Fatalf("a cancelled, paid order: %v", err)
+	}
+	if n := scalar[int](t, pool, "SELECT count(*) FROM payment_notices WHERE transaction_no = '14123456'"); n != 1 {
+		t.Errorf("the paid order's notice: %d rows, want 1", n)
+	}
+	if got := single(paid); got != "14123456" {
+		t.Errorf("a cancelled, paid order reads transaction_no %v", got)
+	}
+}
