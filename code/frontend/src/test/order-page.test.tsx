@@ -14,6 +14,7 @@ vi.mock("../lib/order-page-and-pay-now", async (original) => ({
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Order from "../pages/Order";
+import { setCollection } from "../data";
 import { openPayment, requestPayment, vietnamTime, type PublicOrder } from "../lib/order-page-and-pay-now";
 import { getOrder, postPayment } from "../lib/mock/order-page-and-pay-now";
 
@@ -39,7 +40,10 @@ function show(path = "/orders/doi-24818") {
 
 const heading = async () => (await screen.findByTestId("order-status")).textContent;
 
+// The names the page reads from the shop's delivery and payments records (served by the API in the running site).
 beforeEach(() => {
+  setCollection("delivery", [{ id: "standard", name: "Standard", days: "2–4 working days", fee: 0, note: "" }]);
+  setCollection("payments", [{ id: "vnpay", name: "VNPay — ATM, Visa, Mastercard", note: "", online: true }]);
   vi.mocked(getOrder).mockReset();
   vi.mocked(postPayment).mockReset();
   vi.mocked(openPayment).mockReset();
