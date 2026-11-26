@@ -19,10 +19,14 @@ import (
 const (
 	recEnterPairs = "Enter the pairs in this size"
 	recWholePairs = "Use a whole number, 0 or more"
+	recManyPairs  = "Use a whole number up to 1,000,000"
 	recBadSize    = "Use a size such as 38, 36 2/3 or 35.5."
 	recTwice      = "This size is listed twice."
 	recTaken      = "Pairs were just taken by an order. Check the number and save again."
-	recMaxPairs   = 2147483647
+	// recMaxPairs is the most pairs one size may hold. It keeps the sum of a
+	// shoe's sizes (the view product_stock's integer) far from overflowing, which
+	// would make every read that selects the shoe fail.
+	recMaxPairs = 1_000_000
 )
 
 // stockSize is one size: as it is written and listed, its value as a number (the
@@ -135,8 +139,11 @@ func readCount(raw json.RawMessage, asking bool) (int, string) {
 		return 0, recEnterPairs
 	}
 	n, ok := wholeNumber(raw)
-	if !ok || n < 0 || n > recMaxPairs {
+	if !ok || n < 0 {
 		return 0, recWholePairs
+	}
+	if n > recMaxPairs {
+		return 0, recManyPairs
 	}
 	return int(n), ""
 }
