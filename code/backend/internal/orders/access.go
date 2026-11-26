@@ -47,19 +47,31 @@ type Ref struct {
 // token, a token that opens another order, an order that does not exist.
 var ErrNotFound = errors.New("order not found")
 
-// accessSQL finds the order by its id AND either by the hash of a token it holds
-// or by the customer account it is linked to. $2 is NULL without a valid token and
-// $3 is NULL without a customer session, so "no token", "wrong token", "another
-// order's token", "another customer's order" and "no such order" run the same
-// statement and find nothing alike. Its column list is fixed here: no code that
-// runs after it can return a private column. It is the one read statement in this
-// package that names order_tokens.
-const accessSQL = `SELECT o.id, o.number, o.placed_at, o.status, o.paid, o.total, o.delivery_fee,
+// The access statement finds the order by its id AND by a way in. Its column list
+// is fixed in accessHead: no code that runs after it can return a private column.
+// holdsToken is the one text in this package's read statements that names
+// order_tokens.
+const (
+	accessHead = `SELECT o.id, o.number, o.placed_at, o.status, o.paid, o.total, o.delivery_fee,
        o.delivery_option_id, o.payment_method_id, o.carrier, o.tracking, o.eta,
        o.customer, o.city
 FROM orders o
 WHERE o.id = $1
-  AND (EXISTS (SELECT 1 FROM order_tokens t WHERE t.order_id = o.id AND t.token_hash = $2)
+  AND `
+	holdsToken = `EXISTS (SELECT 1 FROM order_tokens t WHERE t.order_id = o.id AND t.token_hash = $2)`
+)
+
+// accessSQL is the statement of a caller who holds a token and no customer
+// session: the order and the hash of its token, two parameters, as the order page
+// was built.
+const accessSQL = accessHead + holdsToken
+
+// accessAccountSQL is the statement of a signed-in customer: the same, with the
+// third way in, the customer account the order is linked to. $2 is NULL without a
+// valid token, so "no token", "wrong token", "another order's token", "another
+// customer's order" and "no such order" run the same statement and find nothing
+// alike.
+const accessAccountSQL = accessHead + `(` + holdsToken + `
        OR (o.account_id IS NOT NULL AND o.account_id = $3::uuid))`
 
 // couldOpen says whether this id and this access can possibly name an order: the
@@ -83,15 +95,19 @@ func authorize(ctx context.Context, q querier, id string, a Access, _ mode) (Ref
 	if !a.couldOpen(id) {
 		return Ref{}, ErrNotFound
 	}
-	var token, account any
-	if a.hasToken() {
-		token = hashToken(a.Token)
-	}
+	var row pgx.Row
 	if a.hasAccount() {
-		account = a.AccountID
+		var token any
+		if a.hasToken() {
+			token = hashToken(a.Token)
+		}
+		row = q.QueryRow(ctx, accessAccountSQL, id, token, a.AccountID)
+	} else {
+		// couldOpen held, so a caller with no account holds a well-formed token.
+		row = q.QueryRow(ctx, accessSQL, id, hashToken(a.Token))
 	}
 	var r Ref
-	err := q.QueryRow(ctx, accessSQL, id, token, account).Scan(
+	err := row.Scan(
 		&r.ID, &r.Number, &r.PlacedAt, &r.Status, &r.Paid, &r.Total, &r.DeliveryFee,
 		&r.Delivery, &r.Payment, &r.Carrier, &r.Tracking, &r.ETA, &r.Customer, &r.City)
 	if errors.Is(err, pgx.ErrNoRows) {
