@@ -434,8 +434,8 @@ Check: fetch_url
 
 **Scenario**: TC-52 — no session, a forged session, a customer (even the order's own) and the order's token alone cannot mark an order paid
 **Given**: RESET; an unpaid bank order OB placed by CUSTOMER with the cookie (so it is linked to that account; token T1); `FORGED`.
-**When**: `PUT /api/v1/orders/<OB>` `{"paid":true}` is sent with (a) no cookie, (b) `FORGED`, (c) the CUSTOMER cookie, (d) no cookie and `X-Order-Token: T1`; and `PUT /api/v1/orders/doi-99999` `{"paid":true}` with no cookie.
-**Then**: (a), (b), (d) and the unknown id answer 401 `{"error":"unauthenticated","message":<non-empty>}` with no `errors` key (an unknown id is 401, not 404, to a visitor); (c) answers 403 `{"error":"forbidden",…}`; after each the order is unpaid and `placed`.
+**When**: `PUT /api/v1/orders/<OB>` `{"paid":true}` is sent with (a) no cookie, (b) `FORGED`, (c) the CUSTOMER cookie, (d) no cookie and `X-Order-Token: T1`; (e) an expired session — STAFF's cookie after `UPDATE sessions SET created_at = now() - interval '8 days', expires_at = now() - interval '1 day' WHERE user_id = (SELECT id FROM users WHERE email = 'tc-sa@example.com')`; and `PUT /api/v1/orders/doi-99999` `{"paid":true}` with no cookie.
+**Then**: (a), (b), (d), (e) and the unknown id answer 401 `{"error":"unauthenticated","message":<non-empty>}` with no `errors` key (an unknown id is 401, not 404, to a visitor); (c) answers 403 `{"error":"forbidden",…}`; after each the order is unpaid and `placed`.
 Traces: SC-20 (ADMIN-004 AC-6, AC-7; PAY-020 permission row)
 Check: fetch_url
 
