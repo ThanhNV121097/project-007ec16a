@@ -37,11 +37,8 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	svc := auth.New(pool, log)
 	svc.Register(mux)
 	admin.RegisterStaff(mux, pool, log)
-<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
 	admin.RegisterRecords(mux, pool, log)
-=======
 	admin.RegisterOverview(mux, pool, log, time.Now)
->>>>>>> refs/heads/main
 	data.Register(mux, pool, log)
 	catalogue.Register(mux, pool, log)
 	orders.Register(mux, pool, log, orders.Options{})
