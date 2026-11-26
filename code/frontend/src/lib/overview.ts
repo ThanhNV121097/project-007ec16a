@@ -86,7 +86,8 @@ function hasLists(v: Partial<Overview>): boolean {
 /** An answer that is not the overview's shape is a failed read, never a page of zeros. */
 function isOverview(answer: unknown): answer is Overview {
   if (typeof answer !== "object" || answer === null) return false;
-  return hasFigures(answer) && hasLists(answer);
+  const v = answer as Partial<Overview>;
+  return hasFigures(v) && hasLists(v);
 }
 
 /**
