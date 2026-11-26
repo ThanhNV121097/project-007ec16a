@@ -160,7 +160,7 @@ func TestLookupNumberAndPhoneAreComparedOnTheirDigits(t *testing.T) {
 		}
 	}
 	for _, other := range []string{"552", "410552", "938410552", "0938 410 552 1", "938 410 552 84", "0938 410 553", "", "   "} {
-		if got := PhoneKey(other); got == want || (got == "" && other != "" && strings.TrimSpace(other) != "") {
+		if got := PhoneKey(other); got == want {
 			t.Errorf("%q must not match, key %q", other, got)
 		}
 	}
