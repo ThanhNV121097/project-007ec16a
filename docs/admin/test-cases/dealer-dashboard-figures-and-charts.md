@@ -407,7 +407,7 @@ Check: interact_page
 **Scenario**: SC-21a — 14 columns, one per day of the answer, labelled with the shop's day of the month, each carrying its amount
 **Given**: FX-ANS-A is substituted.
 **When**: The run opens `/admin` and reads the panel "Sales, last 14 days".
-**Then**: The panel's heading reads "Sales, last 14 days". The chart has exactly 14 columns, in the answer's order; the day labels under them read, left to right, `12 13 14 15 16 17 18 19 20 21 22 23 24 25`; the column of `14` carries `14: 3.090000…` in the shop's format, that is `3.090.000 ₫`, the column of `24` carries `5.890.000 ₫`, the columns of `16` and `20` carry `0 ₫` (each as the column's `title` or visible text, with its day).
+**Then**: The panel's heading reads "Sales, last 14 days". The chart has exactly 14 columns, in the answer's order; the day labels under them read, left to right, `12 13 14 15 16 17 18 19 20 21 22 23 24 25`; the column of `14` carries `3.090.000 ₫`, the column of `24` carries `5.890.000 ₫`, the column of `12` carries `2.790.000 ₫`, and the columns of `16` and `20` carry `0 ₫` (each amount in the shop's money format, as the column's `title` of the form `<day>: <amount>` or as visible text, together with its day).
 Traces: SC-21 (ADMIN-021 AC-7, item 2; story decision 1)
 Check: interact_page
 
