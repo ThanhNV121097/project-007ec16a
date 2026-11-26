@@ -36,7 +36,7 @@ var dealerList = &data.Collection{
 		private("phone"), private("email"), private("address"),
 		plain("city", data.Text),
 		private("note"),
-		{Name: "transaction_no", Kind: data.Text, Select: transactionNoExpr, Access: data.Private},
+		{Name: "transaction_no", Kind: data.Text, Select: transactionNoOfListRow, Access: data.Private},
 		{Name: "_source", Kind: data.Text, Select: "t.source", Access: data.Bookkeeping},
 		{Name: "_invented", Kind: data.List, Select: "t.invented", Access: data.Bookkeeping},
 	},
