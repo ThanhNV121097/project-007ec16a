@@ -126,7 +126,7 @@ describe("the charts", () => {
   it("draws 14 columns in the answer's order, labelled with the shop's day of the month", async () => {
     read.mockResolvedValue(sampleOverview);
     const { container } = open();
-    await screen.findByText("Sales, last 14 days");
+    await screen.findByText("Sales this month");
     const chart = panel(container, "Sales, last 14 days").querySelector("figure") as HTMLElement;
     const columns = Array.from(chart.querySelectorAll("[title]"));
     expect(columns).toHaveLength(14);
@@ -152,7 +152,7 @@ describe("the charts", () => {
   it("draws one row per line in the answer's order, its bar in proportion to the largest", async () => {
     read.mockResolvedValue({ ...sampleOverview, pairs_by_line: [...sampleOverview.pairs_by_line, { line: "terrex", name: "Terrex", pairs: 0 }] });
     const { container } = open();
-    await screen.findByText("Pairs sold by line");
+    await screen.findByText("Sales this month");
     const rows = Array.from(panel(container, "Pairs sold by line").querySelectorAll("li"));
     expect(rows.map((r) => r.textContent)).toEqual(["Samba8", "Gazelle2", "Megaride2", "Handball Spezial1", "Adizero1", "Terrex0"]);
     expect(rows.map((r) => (r.querySelector("[style]") as HTMLElement).style.width)).toEqual(["100%", "25%", "25%", "12.5%", "12.5%", "0%"]);
