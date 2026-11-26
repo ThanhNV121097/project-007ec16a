@@ -67,6 +67,18 @@ function withShelf(row: Row, shelf: Shelf): Row {
   };
 }
 
+type SchemaField = (typeof schema.collections)[string]["fields"][number];
+
+/** What is wrong with one typed value, if anything. */
+function valueProblem(collection: string, f: SchemaField, v: unknown): string | undefined {
+  const numeric = f.type === "price" || f.type === "number";
+  if (numeric && !Number.isInteger(Number(v))) return "Enter a whole number";
+  if (f.type === "price" && Number(v) < 0) return "Price cannot be below 0";
+  if (collection === "reviews" && f.key === "rating" && (Number(v) < 1 || Number(v) > 5)) return "Stars must be 1 to 5";
+  if (f.options && !f.options.some((o) => (typeof o === "string" ? o : o[0]) === v)) return "Choose one of the choices";
+  return undefined;
+}
+
 function fieldRefusals(collection: string, body: Body, partial: boolean): Record<string, string> {
   const out: Record<string, string> = {};
   const fields = schema.collections[collection]?.fields ?? [];
@@ -74,12 +86,9 @@ function fieldRefusals(collection: string, body: Body, partial: boolean): Record
   for (const key of Object.keys(body)) if (!known.has(key) && key !== "pairs" && key !== "seen_pairs") out[key] = "This field is not part of the record";
   for (const f of fields) {
     const v = body[f.key];
-    if (f.required && (!partial || f.key in body) && blank(v)) out[f.key] = `${f.label ?? f.key} is needed`;
-    if (blank(v)) continue;
-    if ((f.type === "price" || f.type === "number") && !Number.isInteger(Number(v))) out[f.key] = "Enter a whole number";
-    else if (f.type === "price" && Number(v) < 0) out[f.key] = "Price cannot be below 0";
-    else if (collection === "reviews" && f.key === "rating" && (Number(v) < 1 || Number(v) > 5)) out[f.key] = "Stars must be 1 to 5";
-    if (f.options && !f.options.some((o) => (typeof o === "string" ? o : o[0]) === v)) out[f.key] = "Choose one of the choices";
+    const problem = blank(v) ? undefined : valueProblem(collection, f, v);
+    if (problem) out[f.key] = problem;
+    else if (f.required && (!partial || f.key in body) && blank(v)) out[f.key] = `${f.label ?? f.key} is needed`;
   }
   return out;
 }
