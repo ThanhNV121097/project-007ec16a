@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import Choice from "./admin/Choice";
 import { toneOf } from "./admin/fields";
-import { Badge, Field, Input, Sections, Textarea } from "./admin/index";
+import { Badge, Input, Sections, Textarea } from "./admin/index";
 import OrderFacts from "./OrderFacts";
+import OrderField from "./OrderField";
+import OrderStatusSelect from "./OrderStatusSelect";
 import {
   FIELD, isLocked, movesFrom, type DealerOrder, type EditableKey, type OrderValues,
 } from "../lib/dealer-handles-orders-status-courier-payment";
@@ -31,27 +32,24 @@ function Plain({ label, value, wide }: { label: string; value: string; wide?: bo
 /** One of the dealer's text fields, or its value as text once the order is delivered or cancelled. */
 function Typed({ k, p, hint, type, wide }: { k: EditableKey; p: Props; hint?: string; type?: string; wide?: boolean }) {
   if (isLocked(p.order.status)) return <Plain label={FIELD[k].label} value={p.order[k] ?? ""} wide={wide} />;
-  const error = p.errors[k];
   return (
-    <div className={wide ? "md:col-span-2" : undefined}>
-      <Field label={FIELD[k].label} hint={hint} error={error}>
-        <Input type={type ?? "text"} value={p.values[k]} aria-invalid={error ? true : undefined}
+    <OrderField label={FIELD[k].label} hint={hint} error={p.errors[k]} className={wide ? "md:col-span-2" : undefined}>
+      {(described) => (
+        <Input type={type ?? "text"} value={p.values[k]} {...described}
           onChange={(e) => p.onChange(k, e.target.value)} />
-      </Field>
-    </div>
+      )}
+    </OrderField>
   );
 }
 
 /** The note is the one field that stays open on every order. */
 function Note({ p }: { p: Props }) {
-  const error = p.errors.note;
   return (
-    <div className="md:col-span-2">
-      <Field label={FIELD.note.label} error={error}>
-        <Textarea value={p.values.note} aria-invalid={error ? true : undefined}
-          onChange={(e) => p.onChange("note", e.target.value)} />
-      </Field>
-    </div>
+    <OrderField label={FIELD.note.label} error={p.errors.note} className="md:col-span-2">
+      {(described) => (
+        <Textarea value={p.values.note} {...described} onChange={(e) => p.onChange("note", e.target.value)} />
+      )}
+    </OrderField>
   );
 }
 
@@ -68,10 +66,8 @@ function StatusControl({ p }: { p: Props }) {
   }
   const options = [order.status, ...movesFrom(order.status)].map((s) => ({ value: s, label: labels[s] }));
   return (
-    <Field label={FIELD.status.label} error={p.errors.status}>
-      <Choice value={p.values.status} onChange={(v) => p.onChange("status", v)} aria-label={FIELD.status.label}
-        options={options} />
-    </Field>
+    <OrderStatusSelect label={FIELD.status.label} value={p.values.status} options={options} error={p.errors.status}
+      onChange={(v) => p.onChange("status", v)} />
   );
 }
 
