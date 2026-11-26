@@ -93,7 +93,8 @@ function pairRefusals(pairs: unknown): Record<string, string> {
 }
 
 function slug(name: string): string {
-  return name.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const plain = name.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d");
+  return plain.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function idFor(collection: string, name: string, rows: Row[]): string {
