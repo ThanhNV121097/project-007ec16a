@@ -1494,3 +1494,1091 @@ None blocks the story.
 | 1 | The seed is generated from JSON that "Free delivery on every order, wording to match" (PR #24) rewrites. At the time of this design that PR is open and the files on `main` still hold two delivery rows, a fee of 30,000 and three express orders with the old totals | The seed follows SC-7 whatever the files hold; if the three totals are still 5940000 / 3340000 / 3140000 when Dev reaches the seed, the assertion fails and Dev stops and tells PM rather than editing them | PM (merge order) |
 | 2 | `shop_terms.rating` and `review_count` (4.8 / 181) and each shoe's `rating` / `review_count` are the first design's placeholders and do not equal the 36 seeded reviews | Stored as the file has them (SC-2); the admin story recalculates them on the first review event (ADMIN-013) | PM |
 
+
+<!-- story 4: Search, filters and sorting served by the API -->
+# ERD — Search, filters and sorting served by the API (plan item 4, "S4")
+
+Module `catalogue` · Requirements CAT-001, CAT-002 (the options read), CAT-003 items 1–5 (the request side) · Story `docs/catalogue/stories/search-filters-and-sorting-served-by-the-api.md` · UI PR #38 · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+This file defines **the one column this story adds and the queries it runs**, and nothing else: no table, no index, no constraint, no change to a table another story owns. The project ERD (§8) listed this story as "queries only"; §3 below changes that to *queries and one derived column*, with the reason (decision E1). The endpoints and the query language are in `docs/architecture/services/search-filters-and-sorting-served-by-the-api.md`.
+
+Project decisions this story builds on: **D1** (text slug ids), **D3** (a shoe's `sizes`, `sizes_low`, `sizes_out`, `stock` are plain columns until S5 moves them to `product_sizes` / `product_stock`), **D6** (accent folding by the one SQL function `doi_fold`, words matched with `strpos`, no extension) — D6 is **amended** by E1. The conventions of the S3 file §2 apply (`NOT NULL` by default, named constraints, no extensions, no `pg enum`).
+
+## 1. What this story creates
+
+| # | Migration (file-name part) | Creates or changes |
+|---|---|---|
+| 7 | `products_search_text` | column `products.search_text` (stored, generated, never served) |
+
+Nothing else. Every other table, index and function this story reads exists already: `products`, `lines`, `categories`, `reviews`, `orders`, `order_items` and `doi_fold(text)` (S3 migrations 1–2), and — once S5 has merged — `product_sizes`, `idx_product_sizes_size_in_stock` and the view `product_stock` (S5 migration 4).
+
+```mermaid
+erDiagram
+    products {
+        text id PK
+        text name
+        text model
+        text colourway
+        text code
+        text description
+        text search_text "generated, stored, never served"
+    }
+```
+
+## 2. Entity change
+
+### 2.1 `products.search_text`
+
+**Purpose** — the folded text a shop search looks in, kept by the database itself so a search costs one `strpos` per word per shoe instead of a Unicode normalisation per shoe per word. **Traces to** — CAT-001 items 1–2, SC-1 to SC-4, SC-19.
+
+| Column | Type | Null | Default | Unique | Description |
+|---|---|---|---|---|---|
+| `search_text` | `text` | no | `GENERATED ALWAYS AS (…) STORED` | | `doi_fold(name \|\| ' ' \|\| model \|\| ' ' \|\| colourway \|\| ' ' \|\| code \|\| ' ' \|\| description)`. The five searched own fields of CAT-001 item 2, one space between them so a word can never straddle two fields (a word holds no space). Every input is `NOT NULL`, so the value is never NULL; `NOT NULL` is stated on the column anyway |
+
+The expression is written with `||`, not `concat_ws`: `concat_ws` is `STABLE` and a generated column needs an `IMMUTABLE` expression. `doi_fold` is `IMMUTABLE` (S3 file §5.2); the migration fails loudly with PostgreSQL's own "generation expression is not immutable" if the merged function is not, and Dev then stops and reports it rather than re-declaring the function.
+
+**Nullable columns** — none. **Foreign keys** — none. **Constraints** — `NOT NULL`; the generation clause is the only rule.
+
+**Indexes** — none. A btree cannot serve a substring match, and the one structure that can (`pg_trgm` GIN) is an extension the project's database role may not be allowed to create (D6, S3 file §2). The scan is over one narrow text column of at most ~10,000 shoes (§4).
+
+**What it holds, and what it must never hold** — only public shoe fields (`name`, `model`, `colourway`, `code`, `description`), so it is not a private or bookkeeping value even if it were ever selected; it is nevertheless **never selected**: it is not a registry column (S3 services §4), not in a `SELECT` list, not in `schema.json`, and `TestPublicSQLNamesNoPrivateColumn` is extended to assert no read statement names it in a select list. It cannot be written: `GENERATED ALWAYS` refuses an `INSERT` or `UPDATE` that names the column, so a handler that lists its columns (every one does) cannot forget or corrupt it.
+
+**Lifecycle** — recomputed by PostgreSQL on every `INSERT` of a shoe and on every `UPDATE` of one, in the same statement; there is nothing to keep in step and nothing to backfill. It disappears with the row. **A change to the body of `doi_fold` does not recompute stored values** (a generated column is not recomputed by `CREATE OR REPLACE FUNCTION`): such a change ships with its own migration that drops and re-adds this column (§5), and the S3 `TestTheHelpersExist` assertions (`Cửa Lò` → `cua lo`, `Đại` → `dai`, `100%` → `100%`) are the tripwire.
+
+**Not stored here, on purpose** — the line's and the category's name (CAT-001 item 2). They are matched live (E3): a stored copy would go stale the moment the dealer renames a line, which is exactly what D6 set out to prevent.
+
+## 3. Decisions and conflicts with merged decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| **E1** | **D6 says "no stored search column" and that a scan with `doi_fold` is fine to ~20,000 shoes. SC-19 asks 500 ms at p95 for 10,000 shoes with a two-word `q`, one `category` and a sort.** This is a conflict with a merged decision. | **Amend D6 for the shoe's own five fields only**: a generated, stored `search_text` (§2.1). The folding of the *typed words* stays in SQL (`doi_fold`, once per request — services file §3.5); line and category names stay live (E3); `orders`, `reviews` and the small collections keep D6's scan. Why D6's figure does not hold: it assumed "microseconds" per shoe, but the merged `doi_fold` is `normalize(…, NFD)` followed by a regular-expression replace, and a shoe's folded text is 300–500 characters. At an *estimated* 50–100 µs per shoe (this role cannot run SQL, so this is a model, not a measurement) a 10,000-shoe scan is 0.5–1 s, and the list statement reads the table twice (the count and the page). With the column the same scan is one `strpos` per word per shoe, an estimated 1–3 µs, so the list is tens of milliseconds. The owner's plan item also says "Indexed so a search on the full catalogue stays fast". **SC-19 stays the measurement that decides whether this is enough** (§6); the design does not wait for it to find out | Keep D6 and let SC-19 decide: a failed verification then costs a rework round and the same migration, written under pressure. A `pg_trgm` GIN index: needs `CREATE EXTENSION`, which D6 ruled out for good reason. An expression index on `doi_fold(...)`: it cannot serve a substring search. Folding in Go and sending folded text to SQL: two fold implementations that must agree on every character forever |
+| **E2** | One column for the five fields, or one per field | One column. The searched fields are always matched together ("every word in at least one of them"), never singly, so a per-field column would only add storage and a bigger `OR` | Five columns: five times the storage and no query that could use any of them alone |
+| **E3** | Line and category names | Matched live: `t.line_id IN (SELECT l.id FROM lines l WHERE strpos(doi_fold(l.name), <word>) > 0)`, and the same for categories. Each is an uncorrelated subquery over 5 and 3 rows, evaluated once per statement, not per shoe | Folding them into `search_text`: needs a trigger on `lines` and `categories` to rewrite every shoe on a rename, and a missed trigger is a silent stale search |
+| **E4** | The `size=` condition before and after S5 | One meaning, two spellings, written in the services file §3.7. Before S5 it reads the S3 columns `sizes` and `sizes_out`; after S5 it reads `product_sizes` and is served by S5's `idx_product_sizes_size_in_stock`. **Whichever of the two stories merges second rewrites the clause** (S5's services file §5 `data` item 3 already says so). No migration of this story depends on either form | Waiting for S5: it would hold this story's backend for a story that only changes where the same two facts are read from |
+| **E5** | `GET /v1/product-filters` | Computed from the live shoes on every request, no cache and no summary table. Before S5: distinct values of `products.colour` and `unnest(products.sizes)`; after: of `products.colour` and `product_sizes.size` | A materialised list or a cache: the dealer's edit must show on the next read (ADMIN-010 item 9), and the cost at 10,000 shoes is one pass over a few hundred thousand array elements — tens of milliseconds |
+| **E6** | A shoe with no rating comes last, whichever way `rating` is sorted (CAT-001 item 5, AC-18) | `products.rating` is `NOT NULL DEFAULT 0` ("0 when none", project ERD §3.4), so "no rating" is `0`. The sort key of that one column is `NULLIF(t.rating, 0)` with `NULLS LAST`; a real average is 1.0–5.0 and is never 0. No column or default changes | Making `rating` nullable: a migration on a populated table, a null check in every reader of the shoe, and a changed contract field type (services §2.1 says a field never changes type) |
+
+### Conflicts, stated
+
+E1 amends D6 and nothing else. The S3 services file §4.1 ("Search, filters and sorting … inside `query.go`'s parameter loop … Adds no table") stays true: this story adds a column, not a table, and the loop is where the grammar goes. The S5 files' instruction to **remove** the `orders` collection from the `data` registry is refined, not contradicted: the orders search and sort definition must **move** with the collection to `internal/orders`, not be deleted (services file §5, "orders seam").
+
+## 4. Access patterns
+
+The queries that drove E1 to E6. "Form A" is the shape while the S3 columns `sizes`, `sizes_low`, `sizes_out` exist on `products`; "Form B" is the shape once S5's migration 4 has dropped them (services file §3.7 gives both spellings). Frequency and budget: the project's lists budget is p95 ≤ 300 ms (services `_base.md` §6); SC-19 allows 500 ms.
+
+| # | Pattern | Frequency | Index or scan, and the estimated cost at 10,000 shoes |
+|---|---|---|---|
+| S4-1 | **The shop list**: `status = 'live'`, any-of `category` / `line` / `colour`, price ranges, `size`, every word of `q` found, `ORDER BY` one field then `seq`, twelve rows and the true count | Very high | Planner choice among `idx_products_status_released_seq`, `idx_products_category_id`, `idx_products_line_id` and a sequential scan. The structured conditions run first (cheapest quals first), so `strpos` runs only on the shoes that survive them. Words cost one `strpos` over `search_text` each. Estimate: a few ms per scan, two scans (count and page), so tens of ms in all |
+| S4-2 | The shop's default order, no `q`: `status = 'live' ORDER BY released DESC, seq` | Very high | `idx_products_status_released_seq`, walked in order and stopped at the limit. The sort emits **no** `NULLS` clause for a `NOT NULL` column, so the index order matches (`released DESC` means `NULLS FIRST` in an index; an explicit `NULLS LAST` would break the match). One value in an any-of list is written as plain `=`, not `= ANY(array)`, for the same reason |
+| S4-3 | `size=a,b` | High | Form A: `EXISTS` over the two arrays of the shoe, a few elements each, inside the S4-1 scan. Form B: `EXISTS` on `product_sizes (size, product_id) WHERE pairs > 0` — S5's `idx_product_sizes_size_in_stock` |
+| S4-4 | `GET /v1/product-filters`: distinct colours and sizes of the live shoes | High (every shop view) | Scan of `products` and its size arrays (A) or `product_sizes` (B), `DISTINCT`. Estimate: tens of ms at 10,000 shoes, under 1 ms at the launch size |
+| S4-5 | `q` on `orders` (number, customer) | Dealer only | Scan with `doi_fold` on ~30 characters per row, once per word. Estimate: ≤ 100 ms at 10,000 orders. No SLO is attached to it; if one is, the same generated-column step applies |
+| S4-6 | `q` on `reviews` (customer, text, the shoe's name) | Dealer and, by `product=`, the shoe page | Scan with `doi_fold`. The shoe's name is matched by one uncorrelated subquery over `products`, evaluated once per word |
+| S4-7 | `q` on `lines`, `categories`, `faqs`, `sizes`, `delivery`, `payments`, `shop` | Rare | Tables of under 20 rows |
+| S4-8 | Any other filter, range or sort on a collection | Medium | Existing indexes where they exist (`idx_orders_placed_at`, `idx_orders_status_placed_at`, `idx_reviews_product_id_date`, the `seq` unique keys); otherwise a scan and a top-N sort of at most 10,000 narrow rows. Text sorts fold the first 100 characters (services §3.6) and are a dealer-only path |
+
+No new index is added by this story. The ERD §6 volume table is unchanged except that `products` is now tested at 10,000 rows by SC-19 (a test fixture, not a planning figure; the planning figure stays "a few hundred").
+
+## 5. Migration plan
+
+File `code/backend/migrations/<UTC timestamp>_products_search_text.up.sql` and `.down.sql`, **stamped later than S3's `…seed_collections` (`20261125100200`)**; suggested `20261125130000_products_search_text`. Applied on boot, before the server listens, one transaction with its `schema_migrations` row. It touches no object S5's three migrations touch (S5 drops `sizes`, `sizes_low`, `sizes_out`, `stock`; this one reads none of them), so the two stories' files apply in either order; the runner applies whatever is pending by name.
+
+| # | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| 7 `products_search_text` | `ALTER TABLE products ADD COLUMN search_text text NOT NULL GENERATED ALWAYS AS (doi_fold(name \|\| ' ' \|\| model \|\| ' ' \|\| colourway \|\| ' ' \|\| code \|\| ' ' \|\| description)) STORED;` — plain `ADD COLUMN` (no `IF NOT EXISTS`: a column that already exists is a surprise the file must not hide). Then a `DO` block that asserts, in the migration itself, `doi_fold('Cửa Lò') = 'cua lo'`, `doi_fold('Đại') = 'dai'`, `doi_fold('100%') = '100%'`, and that no row has an empty `search_text` while its `name` is not empty | `ALTER TABLE products DROP COLUMN search_text;` — lossless: the column is derived, nothing else refers to it. The backward file is for local resets and review, as for every migration (the server never runs one) | **Rewrites the table** under `ACCESS EXCLUSIVE`, computing `doi_fold` once per row: ≈ 1 s at 10,000 shoes on the estimate above, milliseconds at the launch size of 12 and at a few hundred. It is safe because the migration runs **before the server listens** and the runner holds an advisory lock, so no request is waiting on `products` while it runs and no second instance can start it. Nothing is lost on failure: the transaction rolls back and the server does not start. At 100,000 shoes the rewrite would take ~10 s and would deserve a two-step (nullable column, batched fill, trigger) — outside every planning figure here |
+| *(if `doi_fold` ever changes)* | A new file: `DROP COLUMN search_text`, then the forward statement again | — | Same rewrite; its own file, so a merged file is never edited |
+
+Nothing is irreversible. A file with `CONCURRENTLY` is not needed: no index is created.
+
+## 6. Verification hooks (what a test can read)
+
+All DB tests read `TEST_DATABASE_URL`, build their rows with plain SQL in a schema of their own, and skip without it (as S3's do).
+
+| Criterion | Read from |
+|---|---|
+| SC-1 to SC-4 — words, accents, `đ`, `%` and `_` | Shoes inserted by the test (a "Cửa Lò" description, an "Đại" name, a `100%` description, an `_` name); the list endpoint asked with `q=…`. A direct assertion that `search_text` of the "Cửa Lò" shoe contains `cua lo` and that an `UPDATE` of its description changes `search_text` in the same statement |
+| SC-3 — line and category names are live | Rename a line with `UPDATE lines SET name = …` and ask again: the shoes follow with no write to `products` |
+| SC-9, SC-10, SC-30 — the size condition | Fixtures through **one helper** (`insertShoe`) that knows which form is on `main`: Form A writes the three S3 arrays, Form B writes `product_sizes` rows (3 pairs, 1 pair in a last-pairs size, 0 in a sold-out size). The tests above the helper do not change when S5 lands |
+| SC-12 — 30 matches, page 2 | 30 live shoes inserted by the test; `total` 30, 12 items |
+| SC-19 — p95 | `generate_series(1, 10000)` inserts 10,000 shoes in one statement (`search_text` fills itself); 200 sequential requests of the SC-19 shape (two words, one `category`, `sort`) through the real handler on the real pool; the test prints p50 and p95 and fails above 500 ms. A run without `TEST_DATABASE_URL` skips, and the same run against the running API (`run_project`) is Verify's |
+| Migration safety | `migrations_test.go` (pairs and ordering) passes with the new pair; a DB test runs the whole set on an empty schema and again on a schema holding 10,000 shoes made by the earlier files, and checks the forward file leaves `count(*)` unchanged |
+
+## 7. Privacy and integrity notes
+
+- **Personal data** — none is added. The orders search reads `number` and `customer` only; the statement for `orders?q=…` names none of `phone`, `email`, `address`, `note` (the existing SQL-capture test is extended with `q`, `sort` and `size` parameters for every collection).
+- **Enforced by the database** — `search_text` cannot be written and cannot be NULL. **Enforced by the application** — which fields a collection's `q` reads (a registry value, services §3.5), which columns may be filtered or sorted (the registry's public columns), and that no request text reaches SQL except as a bound value.
+- **Retention** — unchanged.
+
+## 8. Open questions
+
+None blocks the story.
+
+| # | Question | Default used | Owner |
+|---|---|---|---|
+| 1 | Is the `search_text` column enough for SC-19 on the machine Verify uses? | It should be by two orders of magnitude on the estimate; the SC-19 test (§6) is the measurement. If it fails the cause is something else (a plan that ignores an index, a `doi_fold` evaluated per row), and the fix is a rewritten statement, not a new migration | TL, at Verify |
+| 2 | After S5 the orders list is a 401 stub until the sign-in story, so SC-13 cannot be read over HTTP | SC-13 is proven by a DB test on the orders definition (services §5, "orders seam") and, over HTTP, only while the S3 reader still serves orders | TL |
+
+
+<!-- story 5: Checkout and placing an order -->
+# ERD — Checkout and placing an order (plan item 5, "S5")
+
+Module `orders` · Requirements ORD-003, ORD-004, ORD-005, ORD-008, ORD-010 (and the stored side of ORD-006) · Story `docs/orders/stories/checkout-and-placing-an-order.md` · UI PR #32 · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+This file defines **the entities this story creates or changes, and nothing else**: the per-size stock (`product_sizes`, the view `product_stock`), the order's access tokens (`order_tokens`), the order-number counter (`counters`) and one column of `orders` (`idempotency_key`). The ten collection tables, `order_items`, `rate_limits` and the two helper functions are `erd/site-data-from-the-database.md`'s; `payment_attempts`, `users`, `sessions`, `uploads` and `orders.account_id` belong to later stories' files.
+
+Project decisions this story builds on, unchanged: **D1** (text slug ids for collections, `uuid` elsewhere), **D3** (one count of pairs per shoe and size; the four stock fields are derived), **D4** (an order's pairs live in `order_items`), **D5** (many hashed tokens per order), **D7** (order numbers from a one-row counter). The conventions of the S3 file §2 apply (`NOT NULL` by default, named constraints, explicit `ON DELETE`, no extensions, no `pg enum`).
+
+## 1. What this story creates
+
+| # | Migration (file-name part) | Creates or changes |
+|---|---|---|
+| 4 | `stock_per_size` | table `product_sizes` + `idx_product_sizes_size_in_stock` + trigger; view `product_stock`; backfill of every shoe's counts from the four S3 columns; an assertion that the view reproduces the seeded lists; **drops** `products.sizes`, `products.sizes_low`, `products.sizes_out`, `products.stock` |
+| 5 | `order_checkout` | tables `order_tokens` and `counters`; `counters` seeded with the highest seeded order number; column `orders.idempotency_key` + check; assertions on the shop terms the order's expected date reads |
+| 6 | `orders_idempotency_index` | `uq_orders_idempotency_key` built `CONCURRENTLY` |
+
+Not created here: the `order_items` rows of the 14 seeded orders. S3's seed already writes exactly one per order (`line_no` 1, `unit_price = total / qty`); this story only **proves** it (SC-19, §7). No row of any collection table is added, edited or deleted except the four dropped columns.
+
+```mermaid
+erDiagram
+    products ||--o{ product_sizes : "counted per EU size"
+    products ||--o{ order_items : "sold as (S3)"
+    orders ||--|{ order_items : "contains (S3)"
+    orders ||--o{ order_tokens : "opened by"
+
+    product_sizes {
+        text product_id PK
+        text size PK
+        numeric size_value
+        integer pairs
+    }
+    order_tokens {
+        uuid id PK
+        text order_id FK
+        bytea token_hash UK
+    }
+    counters {
+        text name PK
+        bigint value
+    }
+    orders {
+        text idempotency_key UK "added by migration 5"
+    }
+```
+
+`counters` has no relation: it is read and bumped by name.
+
+## 2. Entities
+
+### 2.1 `product_sizes` — the one count of pairs per shoe and EU size
+
+**Purpose** — what is on the shelf, by size (D3). The only place a pair is counted: a shoe's `sizes`, `sizes_low`, `sizes_out` and `stock` are derived from it (§2.2), so no list or total can disagree with the counts (ORD-005 item 1: "there is no second copy"). **Traces to** — ORD-004, ORD-005, DATA-001 AC-2.
+
+| Column | Type | Null | Default | Unique | Description |
+|---|---|---|---|---|---|
+| `product_id` | `text` | no | — | PK (1/2) | FK `products`. API field: the shoe's `id` |
+| `size` | `text` | no | — | PK (2/2) | The EU size **exactly as the shoe lists it** and as the bag sends it: `38`, `36 2/3`, `35 1/2`. `CHECK ck_product_sizes_size_not_blank`: `btrim(size) <> '' AND length(size) <= 20`. Compared as written (`36 2/3` is not `36.67`): the order's pair must name a size the shoe lists |
+| `size_value` | `numeric(5,2)` | no | — | | The size as a number: the ordering key for "growing order" in a shoe's `sizes` list. `38` → 38.00, `36 2/3` → 36.67, `35 1/2` → 35.50. Written by the migration's backfill (§4) and later by the staff screens; a size that cannot be read as a number is refused with 422 there. `CHECK ck_product_sizes_size_value_positive`: `size_value > 0` |
+| `pairs` | `integer` | no | `0` | | Pairs on the shelf. `CHECK ck_product_sizes_pairs_not_negative`: `pairs >= 0` — the database floor under "never a count below 0" (ORD-004 item 2): even a handler bug cannot sell a pair twice |
+| `created_at`, `updated_at` | `timestamptz` | no | `now()` | | `updated_at` moved by `trg_product_sizes_updated_at` (`set_updated_at()`, S3 migration 1) |
+
+**Key** — composite primary key `(product_id, size)`. The row has no identity beyond "this shoe, this size", nothing references it, and it goes with either parent; a surrogate uuid nobody uses would add an index for nothing.
+
+**Nullable columns** — none.
+
+**Foreign keys**
+
+| Column | References | On delete | On update | Why |
+|---|---|---|---|---|
+| `product_id` | `products(id)` | `CASCADE` | `NO ACTION` | Counts have no meaning without the shoe (ADMIN-014 item 2). Blast radius: only the dealer can delete a shoe and only one no order refers to (`order_items.product_id` is `RESTRICT`), so a cascade here never removes the count of a shoe that has been sold. There is **no** foreign key from `order_items` to this table: taking a size off a shoe deletes its count (ADMIN-015 item 3) and must not be blocked by old orders |
+
+**Indexes**
+
+| Name | Columns | Type | Query it serves |
+|---|---|---|---|
+| *(primary key)* | `(product_id, size)` | btree | Placement's `SELECT … FOR UPDATE` of the pairs an order names and the conditional `UPDATE … SET pairs = pairs - $q WHERE product_id = $1 AND size = $2 AND pairs >= $q` (ORD-004); a shoe's sizes (`WHERE product_id = $1`, the view's join); the staff count change and cancel's `pairs = pairs + $q` (later stories) |
+| `idx_product_sizes_size_in_stock` | `(size, product_id) WHERE pairs > 0` | btree, partial | The shop filter `size=a,b` — "at least one given size is listed **and** has a pair" — answered as `EXISTS (… WHERE size = ANY($n) AND pairs > 0)` (CAT-001 item 6, search story) |
+
+**Lifecycle** — rows are created by the migration's backfill and by the staff screens ("add a size", admin story); the order only ever lowers `pairs`. A row is deleted when staff take the size off the shoe or the shoe is deleted. A cancelled order whose size was taken off the shoe meanwhile changes zero rows when its pairs go back; that is correct (the size no longer exists).
+
+### 2.2 `product_stock` — the derived view
+
+**Purpose** — the only source of a shoe's `sizes`, `sizes_low`, `sizes_out` and `stock` (the API's field names). 0 pairs is sold out; 1 or 2 is "last pairs"; 3 or more is in neither list (ORD-005 item 1). Exactly the view of the project ERD §3.11:
+
+```sql
+CREATE VIEW product_stock AS
+SELECT p.id AS product_id,
+       coalesce(array_agg(s.size ORDER BY s.size_value, s.size)
+                FILTER (WHERE s.size IS NOT NULL), '{}'::text[])        AS sizes,
+       coalesce(array_agg(s.size ORDER BY s.size_value, s.size)
+                FILTER (WHERE s.pairs BETWEEN 1 AND 2), '{}'::text[])   AS sizes_low,
+       coalesce(array_agg(s.size ORDER BY s.size_value, s.size)
+                FILTER (WHERE s.pairs = 0), '{}'::text[])               AS sizes_out,
+       coalesce(sum(s.pairs), 0)::integer                               AS stock
+FROM products p
+LEFT JOIN product_sizes s ON s.product_id = p.id
+GROUP BY p.id;
+```
+
+One row for **every** shoe (a shoe with no sizes has empty lists and `stock` 0), so `products JOIN product_stock` never drops a shoe. A view, not a materialised view: a list that is stale by one refresh is exactly what ORD-005 AC-1 to AC-3 forbid ("the moment an order is saved"). The view reads every `product_sizes` row (about 100 today, a few thousand at the planned volume); a join by shoe id is pushed into the group by the planner, and a 12-shoe page costs one pass over a few hundred rows.
+
+**What reads it** — the `data` registry's four expressions for `products` (`ps.sizes`, `ps.sizes_low`, `ps.sizes_out`, `ps.stock`; S3 services §4.1), the shoe-page availability, the dealer's overview "running low" (later).
+
+### 2.3 `order_tokens`
+
+**Purpose** — the unguessable tokens that let one browser read one order (ORD-008, D5). An order has many: one at placement, a fresh one for every replay of the same key (ORD-010 item 3) and for every successful lookup (track story). **Traces to** — ORD-003 items 6–7, ORD-008 items 2–4, ORD-010 item 3.
+
+| Column | Type | Null | Default | Unique | Description |
+|---|---|---|---|---|---|
+| `id` | `uuid` | no | `gen_random_uuid()` | PK | Not exposed |
+| `order_id` | `text` | no | — | | FK `orders` |
+| `token_hash` | `bytea` | no | — | `uq_order_tokens_token_hash` | SHA-256 of the token (32 bytes). `CHECK ck_order_tokens_hash_length`: `octet_length(token_hash) = 32`. The token itself — 24 bytes from `crypto/rand`, base64url without padding, 32 characters, 192 bits — exists only in the answer and in the customer's browser: never in the database, a log, an address or a message (ORD-008 item 4) |
+| `created_at` | `timestamptz` | no | `now()` | | Append-only: no `updated_at`, no trigger |
+
+**Nullable columns** — none. **Foreign keys** — `order_id` → `orders(id)` `ON DELETE CASCADE`, `ON UPDATE NO ACTION`: a token has no meaning without its order (an order is deletable only when cancelled and unpaid, so the cascade removes access to nothing the customer still needs).
+
+| Name | Columns | Type | Query it serves |
+|---|---|---|---|
+| `uq_order_tokens_token_hash` | `(token_hash)` | unique | "Read this order with this token": `WHERE o.id = $1 AND EXISTS (SELECT 1 FROM order_tokens t WHERE t.order_id = o.id AND t.token_hash = $2)`. The lookup is **by hash**, so no comparison of the secret itself ever runs (no timing signal), and the unique index makes a hash collision impossible to store silently |
+| `idx_order_tokens_order_id` | `(order_id)` | btree | Cascading an order's delete; an order's tokens |
+
+**Lifecycle** — insert only; deleted with the order. A token never expires (the order page must keep working after a refresh, a week later); revoking one is not a requirement.
+
+### 2.4 `counters` — the order-number counter
+
+**Purpose** — "one more than the highest number held, never repeating" (ORD-003 item 3, D7). A `SEQUENCE` is not rolled back, so a refused order would burn a number and leave a gap; the counter row is bumped inside the order's transaction and rolls back with it.
+
+| Column | Type | Null | Default | Unique | Description |
+|---|---|---|---|---|---|
+| `name` | `text` | no | — | PK | `order_number`. `CHECK ck_counters_name_not_blank`: `btrim(name) <> ''` |
+| `value` | `bigint` | no | `0` | | The highest number issued. `CHECK ck_counters_value_not_negative`: `value >= 0`. Seeded by migration 5 with the highest number the orders hold (24817 today), **computed from the data, not written in the file** |
+| `updated_at` | `timestamptz` | no | `now()` | | `trg_counters_updated_at` |
+
+No surrogate `id` and no `created_at`: the name is the identity of a counter. **Nullable columns** — none. **Foreign keys** — none. **Indexes** — the key. **Lifecycle** — never deleted, never decremented: deleting the newest cancelled order (ADMIN-014 item 5) cannot make a number come back. `UPDATE … SET value = value + 1 … RETURNING value` locks the row until commit, so two simultaneous orders get different numbers (ORD-003 AC-2). The lock is the one point where placement serialises; the update is therefore the **last** statement before the inserts (services file §3.1 lock order), so it is held for a few milliseconds.
+
+`orders.number` is unique (`uq_orders_number`, S3) and is the backstop: no code path other than `orders.Place` may insert an order. A test or a script that inserts one by hand must also move the counter.
+
+### 2.5 `orders.idempotency_key` (the one column this story adds to `orders`)
+
+| Column | Type | Null | Default | Unique | Description |
+|---|---|---|---|---|---|
+| `idempotency_key` | `text` | **yes** | — | `uq_orders_idempotency_key` | The client's key for one submission (ORD-010 item 3): a random UUID the browser makes once per bag and set of details. `CHECK ck_orders_idempotency_key_length`: `idempotency_key IS NULL OR length(idempotency_key) BETWEEN 8 AND 100`. The API also holds the key to `[A-Za-z0-9._-]` (services file) — the database checks only what a hand-run insert could break |
+
+**Why nullable** — the 14 seeded orders were never submitted by a client, and `''` would collide with itself under a unique index; NULLs are distinct. **Why a column and not a table** — one key belongs to one order for ever, so a key table would be a second row to keep in step. **Retention** — for ever: it is a column of the order. A key is a bearer secret for the replay, so the replay also demands the same phone digits (services file §3.1); the key is never logged and never returned.
+
+| Name | Columns | Type | Query it serves |
+|---|---|---|---|
+| `uq_orders_idempotency_key` | `(idempotency_key)` | unique (NULLs distinct) | "The same key again returns the first order" (ORD-010 AC-4): `SELECT … FROM orders WHERE idempotency_key = $1`; and the backstop under the advisory lock that makes two tabs with one key make one order (services file §3.1 step 0). Built by migration 6, `CONCURRENTLY` |
+
+## 3. Access patterns this story adds
+
+| # | Pattern | Frequency | Index used |
+|---|---|---|---|
+| 1 | Place an order: replay check by key; lock the named shoes (`FOR SHARE`) and sizes (`FOR UPDATE`); conditional decrement; counter bump; inserts into `orders`, `order_items`, `order_tokens` | Medium (every sale), p95 ≤ 1.5 s over 100 sequential orders (SC-22); about ten statements, each by key | `uq_orders_idempotency_key`; `products` PK; `product_sizes` PK; `counters` PK; `uq_order_items_order_id_line_no` |
+| 2 | Read one order with a token (and its pairs, with each shoe's live name, colourway and picture) | High (every order page, refresh and poll) | `orders` PK; `uq_order_tokens_token_hash`; `uq_order_items_order_id_line_no`; `products` PK |
+| 3 | A shoe list or record with its sizes, last-pairs, sold-out and stock | Very high (every shop view) | `product_sizes` PK through the view; `idx_product_sizes_size_in_stock` for `size=` |
+| 4 | The shop's payment options | Medium | `payment_methods` PK (`WHERE id = ANY($1)`, one row) |
+
+Nothing here needs another index: every statement of placement is by primary or unique key, and the views scan a few hundred rows.
+
+## 4. Placeholder stock backfill (migration 4)
+
+The 12 sample shoes carry lists and a total, not counts (ORD-005 item 4 leaves the fill to this design). For each shoe, for each size in its seeded `sizes` list:
+
+| The size is in | Pairs written |
+|---|---|
+| `sizes_out` | 0 |
+| `sizes_low` | 1 |
+| neither | 3 |
+
+The derived lists therefore equal the seeded lists exactly, every size that is not sold out can be ordered (SC-29), and a "last pairs" size can be bought once (SC-24 needs a one-pair size; the seeded last-pairs sizes are that, and the 3-pair sizes serve SC-27's 3 → 2 → 1 → 0 walk).
+
+**This departs from the project ERD §8**, which also spread the seeded `stock` surplus over the sizes one pair at a time. Dropped: the surplus is a round-robin over arrays, the one part of the backfill that could not be written as three plain statements, in a project whose seed SQL has never yet run on a real Postgres before CI (the seed's own risk note); and the figure it protects is an `_invented` placeholder that no criterion pins (SC-29, project Q1). Cost: a sample shoe reads `2×1 + n×3` pairs, which may be a little more or less than the old figure (`samba-og-w-core-black`: 20, seeded 18; a shoe seeded at 40 with nine sizes reads about 25). The lists, which the shop page shows, are exact.
+
+The size's number is read from its text in SQL, no function needed:
+
+```sql
+round(
+  substring(s.size from '^[0-9]+(?:\.[0-9]+)?')::numeric
+  + coalesce(substring(s.size from ' ([0-9]+)/[0-9]+$')::numeric
+             / nullif(substring(s.size from ' [0-9]+/([0-9]+)$')::numeric, 0), 0),
+  2)
+```
+
+`36 2/3` → 36.67, `35 1/2` → 35.50, `38` → 38.00. A size that does not start with a number gives NULL and the `NOT NULL` column fails the whole file, naming the shoe and the size in PostgreSQL's "failing row" detail; the migration does not guess. The insert is `INSERT INTO product_sizes (product_id, size, size_value, pairs) SELECT p.id, s.size, <expression>, CASE WHEN s.size = ANY(p.sizes_out) THEN 0 WHEN s.size = ANY(p.sizes_low) THEN 1 ELSE 3 END FROM products p CROSS JOIN LATERAL unnest(p.sizes) AS s(size)` — a size listed twice would break the primary key, loudly.
+
+**The assertion that comes before the drop** (a `DO $$ … RAISE EXCEPTION … $$` block, in the same transaction as the drop, so a failure rolls the whole file back): for every shoe, the view's `sizes`, `sizes_low` and `sizes_out` equal the seeded columns **as sets** (compare `ARRAY(SELECT unnest(x) ORDER BY 1)`), and the exception names every shoe that differs. A seeded `sizes_low` or `sizes_out` entry that is not in `sizes` fails here: the data is wrong and Dev tells PM, the migration is not loosened. Order is not compared: the view's order is the defined one (growing size), the seed's order was only convention.
+
+## 5. Decisions, and where this departs from the project design
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| E1 | Is a count per size one row or one array/JSON on `products`? | One row per (shoe, size): `product_sizes` (D3). The conditional decrement, the lock and the `CHECK pairs >= 0` all work on one row | An `integer[]` or `jsonb` on `products`: a concurrent order for another size of the same shoe would lock and rewrite the whole shoe row, and `CHECK` could not say "never below 0" per size |
+| E2 | Backfill rule | 0 / 1 / 3 without the surplus (§4) | The project ERD's surplus spread: closer totals, no visible benefit, one more risk in a seed file |
+| E3 | How an order and a retry meet when two tabs send one key at once | **A transaction-scoped advisory lock on the key**, taken first in the transaction, then the replay check (services file §3.1 step 0). The unique index stays as the backstop | Relying on the unique index alone, as the project's services text says ("the second waits on the unique index and gets the replay"): the second order would first take stock and the counter, so with the last pair gone it would answer `409 stock_conflict` to a retry of an order that was in fact saved. The index can only fire after the stock step, which is too late. Reserving the order row first (insert, then take stock): the counter would be bumped for an order that may be refused, leaving gaps |
+| E4 | Lock on the shoes during placement | `products` rows `FOR SHARE` (sorted by id), then `product_sizes` rows `FOR UPDATE` (sorted by `(product_id, size)`) | `FOR UPDATE` on `products` as the project's text says: it would make every order of one shoe wait for every other, for a lock whose only job is to hold the shoe's price and `live` status still while the order is saved. `FOR SHARE` gives the same guarantee (a dealer's price or status edit waits a few milliseconds) and lets orders of one shoe run side by side. The stock rows are where they must queue |
+| E5 | Where the order-number counter lives | `counters` (D7), bumped late in the transaction | `SELECT max(number)+1`: two orders read the same maximum. A sequence: gaps from every refused order |
+| E6 | `idempotency_key` as a column, not a table | Column on `orders` | A key table: a second row per order and a join on every replay, for no extra capability |
+| E7 | Token size | 24 random bytes (192 bits), 32 URL-safe characters | 16 bytes / 22 characters, which is the SRS's floor (128 bits): it works, but there is no cost to the margin |
+| E8 | The expected date's source text | `shop_terms.standard_days` ("2–4", the largest number), as the project ERD and services say | `delivery_options.days` ("2–4 working days"), which the SRS's wording ("the longest working days of the `standard` option") could also mean. The two texts hold the same figure and no endpoint writes either (`shop` and `delivery` have no write route), so they cannot drift except by a migration; migration 5 asserts the row and a number are there, so a missing figure fails at boot, not on a customer's order |
+
+### Conflicts with merged decisions
+
+E3 and E4 correct the mechanism the project's services text gives for placement (§3.10 step 1 and §2.6's "waits on the unique index") without changing any outcome it promises; they are written into this story's services file, which wins for placement. E2 changes a rule of the project ERD's §8 that no story has built. Nothing already merged (S3's tables, the free-delivery records) is restructured.
+
+## 6. Migration plan
+
+Files `code/backend/migrations/<UTC timestamp>_<name>.up.sql` and `.down.sql`, in this order, **stamped later than S3's `…seed_collections` (`20261125100200`)**; suggested `20261125120000_stock_per_size`, `20261125120100_order_checkout`, `20261125120200_orders_idempotency_index`. Applied on boot before the server listens; a merged file is never edited (convention `migrations`).
+
+| # | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| 4 `stock_per_size` | `CREATE TABLE product_sizes` + index + trigger; `CREATE VIEW product_stock`; the backfill insert (§4); the assertion (§4); `ALTER TABLE products DROP COLUMN sizes, DROP COLUMN sizes_low, DROP COLUMN sizes_out, DROP COLUMN stock` — plain `DROP COLUMN`, **no `CASCADE`**, so an object that still depends on a column (an index or view a later change added) fails the file instead of vanishing | Re-add the four columns (`text[] NOT NULL DEFAULT '{}'` ×3, `integer NOT NULL DEFAULT 0` with its `>= 0` check), fill them from `product_stock`, drop the view, drop `product_sizes`. Lossless: sold pairs stay sold; a sold-out size stays listed | Expand, migrate and contract in **one** file because the code and the migration ship together and the runner applies before listening. `DROP COLUMN` takes `ACCESS EXCLUSIVE` on `products` for the length of the file (hundreds of rows: milliseconds). **Deployment assumption**: one backend container is replaced, never two versions side by side (services map: one deploy unit); with two versions the old one would query a column that is gone, which is the reason a rolling deploy would need two releases |
+| 5 `order_checkout` | `CREATE TABLE order_tokens` + two indexes; `CREATE TABLE counters` + trigger; `INSERT INTO counters (name, value) SELECT 'order_number', coalesce(max(substring(number from '^DOI-([0-9]+)$')::bigint), 0) FROM orders`; `ALTER TABLE orders ADD COLUMN idempotency_key text NULL` + `ADD CONSTRAINT ck_orders_idempotency_key_length CHECK (…)`; a `DO` block asserting that `counters.order_number` is at least the highest seeded number, that `shop_terms` row `shop` has a digit in `standard_days` and a `HH:MM` `dispatch_cutoff`, and that `delivery_options` holds `standard` | Drop the column, then `counters`, then `order_tokens` (after migration 6's down) | New tables and a nullable column with no default: instant, no rewrite. The `CHECK` scans the 14 existing rows. **Rolling this back after real orders exist deletes every customer's access token and every key**: those customers lose their order pages until they use Track, and a retry could duplicate an order. The backward file is for local resets only, as the project ERD says for every migration |
+| 6 `orders_idempotency_index` | `DROP INDEX CONCURRENTLY IF EXISTS uq_orders_idempotency_key;` then `CREATE UNIQUE INDEX CONCURRENTLY uq_orders_idempotency_key ON orders (idempotency_key)` — two statements, run outside a transaction (a file with `CONCURRENTLY` does). The drop first, because a `CONCURRENTLY` build that fails leaves an **invalid** index of that name, and `IF NOT EXISTS` would then skip it silently | `DROP INDEX CONCURRENTLY IF EXISTS uq_orders_idempotency_key` | Safe at any size: no write lock on `orders`. The file runs again only when it was not recorded as applied, so the leading drop can only remove an index this file itself made or left invalid |
+
+Nothing is irreversible in the sense of losing data the system cannot recreate before real orders exist. After they do, only 5's backward is destructive (above).
+
+## 7. Verification hooks (what a test can read)
+
+| Criterion | Read from |
+|---|---|
+| SC-19 — each of the 14 seeded orders holds exactly one pair; `doi-24817` is one pair of `samba-og-w-crystal-white`, EU `39 1/3` | A backend test with `TEST_DATABASE_URL`: `SELECT count(*) FROM order_items GROUP BY order_id` over `is_sample` orders is 14 rows of 1; the line of `doi-24817` by `line_no = 1`. No dealer session exists to read it any other way |
+| SC-27, SC-28, SC-29 — lists and total follow the counts | `product_stock` after each order; the shoe's public record (`GET /v1/products/{id}`) shows the same lists |
+| SC-23, SC-24 — exact counts, 50 simultaneous orders on a size holding 10 pairs | A backend test sets the count with plain SQL (`UPDATE product_sizes SET pairs = $n …`, or inserts a size on a shoe it creates) because no staff endpoint exists yet; the running-API verification uses the seeded sizes (3 pairs, 1 pair in a last-pairs size, 0 in a sold-out size) |
+| SC-13 — numbering | The test reads `counters.value`; a test that inserts orders by hand moves it |
+
+## 8. Privacy and integrity notes
+
+- **Never stored in clear** — the order token and the idempotency key are bearer secrets: the token only as SHA-256, the key as given (it is useless without the same phone digits) and never logged.
+- **Personal data** — this story writes `orders.customer`, `phone`, `address`, `city`, `note` and reads them back to nobody: the public view omits `phone`, `email`, `address` and `note` by construction (the statements never select them, services file §3.2). Retention is unchanged (project Q5).
+- **Enforced by the database** — `pairs >= 0`; unique order number, unique token hash, unique idempotency key; every foreign key. **Enforced by the application** — `total = Σ unit_price × qty` (one function writes both), the status is `placed` and `paid` is `false` on every new order, `delivery_fee` is the constant 0.
+
+
+<!-- story 6: Order page and Pay now -->
+# ERD — Order page and Pay now (plan item 6, "S6")
+
+Module `orders` · Requirements ORD-007 (all 26 criteria), ORD-006 items 4–6 and AC-12, ORD-009 AC-5 · Story `docs/orders/stories/order-page-and-pay-now.md` · UI PR #41 · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+## 1. Verdict: this story adds nothing to the schema
+
+**No table, column, constraint, index, trigger, view, function or migration is created, changed or dropped by this story.** The story reads one order and its pairs (both built by "Checkout and placing an order", S5) and answers one `POST` that **writes nothing** until "Online payment with VNPay" (S7) exists. Every fact the page and the route need is already stored:
+
+| What the page or the route needs to know | Where the schema already says it |
+|---|---|
+| "This caller holds a token that opens this order" | `order_tokens.token_hash` (`uq_order_tokens_token_hash`, 32 bytes, S5 ERD §2.3) joined to `orders.id` by `order_tokens.order_id` |
+| The order's number, placed time, status, total, way to pay, paid flag, delivery, carrier, tracking, expected date, customer and city | `orders` (`number`, `placed_at`, `status`, `total`, `payment_method_id`, `paid`, `delivery_option_id`, `carrier`, `tracking`, `eta`, `customer`, `city`) — project ERD §3.12 |
+| Every pair: shoe, size, quantity, price as sold | `order_items` (`product_id`, `size`, `qty`, `unit_price`, `line_no`) — project ERD §3.13 |
+| A pair's name, colourway and picture, read **live** | `products` (`name`, `colourway`, `image`) by `order_items.product_id` (`RESTRICT`, so the shoe is always there, even when it is a draft) |
+| The names of the delivery option and of the way to pay | `delivery_options.name/days`, `payment_methods.name` — read by the page through `GET /v1/delivery` and `GET /v1/payments` (S3), **not** joined into the order |
+| "Cancelled", "paid" | `orders.status = 'cancelled'` (`ck_orders_status`), `orders.paid` (`NOT NULL DEFAULT false`) |
+| "Its way to pay is not an online one the shop completes" | **Not stored.** It is code: the ordered list of ways to pay the shop offers (`["vnpay"]`, `orders` package, S5 services §3.4). See decision E2 |
+| "No payment page was ever asked for" | Nothing is stored for a press of "Pay now". `payment_attempts` is S7's table and does not exist yet |
+
+## 2. Entities this story touches — none changed
+
+| Entity (defined elsewhere) | Read by this story | Written by this story |
+|---|---|---|
+| `orders` | `id`, `number`, `placed_at`, `status`, `paid`, `total`, `delivery_fee`, `delivery_option_id`, `payment_method_id`, `carrier`, `tracking`, `eta`, `customer`, `city` — by the one access statement (services §4). **Never** `phone`, `email`, `address`, `note`, `is_sample`, `idempotency_key`, `account_id` | Nothing |
+| `order_tokens` | `token_hash`, `order_id` (the `EXISTS` of the access statement) | Nothing. Only S5's placement, a replay and the track story insert rows |
+| `order_items` | `line_no`, `product_id`, `size`, `qty`, `unit_price` (S5's `Read`, unchanged) | Nothing |
+| `products` | `name`, `colourway`, `image` (S5's `Read`, unchanged) | Nothing |
+| `payment_methods` | **Not read by the API** for this story. `payment_methods.online` is *not* the test of "an online one the shop completes" (E2) | Nothing |
+| `payment_attempts`, `payment_notices` | Do not exist yet (S7's migration) | Nothing — no row, no table |
+
+`POST /v1/orders/{id}/payment` is a **read-only call** in this story: no `UPDATE`, no `INSERT`, no lock, no transaction. An order is exactly as it was after any number of presses (SC-2 to SC-5: "nothing changes"; SC-5: "still unpaid, no `payment_attempts` row").
+
+## 3. Access patterns
+
+| # | Pattern | Frequency | Index used |
+|---|---|---|---|
+| 1 | **Authorise and read the order's row**: `SELECT <public columns> FROM orders o WHERE o.id = $1 AND EXISTS (SELECT 1 FROM order_tokens t WHERE t.order_id = o.id AND t.token_hash = $2)` — one statement, one row or none. Used by `GET /v1/orders/{id}` (as its first step) and by `POST /v1/orders/{id}/payment` (as its only statement) | High (every order page, refresh and "Pay now") | `orders` primary key; `uq_order_tokens_token_hash` (a lookup by hash — no comparison of the secret itself runs). The row is read by id, so the planner never scans |
+| 2 | The order's pairs with each shoe's live name, colourway and picture (`GET` only; S5 ERD §3 pattern 2, unchanged) | High | `uq_order_items_order_id_line_no`; `products` primary key |
+
+Nothing here needs another index: both statements are by primary or unique key. **No index is added**, and none is dropped.
+
+## 4. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| E1 | Should pressing "Pay now" leave a row (an audit of requests, a counter of attempts, a timestamp on the order) so the dealer can see who tried to pay? | **No.** This story's call writes nothing. S7 inserts one `payment_attempts` row per call because VNPay needs a unique reference; that row, not a second one, is the record of an attempt | A `pay_requests` table or `orders.last_pay_pressed_at`: a write on a path whose only job before S7 is to refuse, with no requirement that reads it (no criterion asks the dealer to see presses), and a second record that S7's attempts would then contradict |
+| E2 | How does the shop know that an order's way to pay is "not an online one the shop completes" (SC-4: `cod`, `bank`, `momo`)? | **Code, not data**: `id` of the order's way to pay is in the ordered list of ways the shop offers (`["vnpay"]`, shared with `GET /v1/payment-options`). The seed's `payment_methods.online` is **not** used: `bank` and `momo` are `online = true` there ("pay online" describes the method, not that the shop can complete it), so reading the column would send a `bank` or `momo` order to "not available yet" and fail SC-4. The project ERD §3.7 already says whether a method is offered "is not stored: it is code plus the owner's settings" | Reading `payment_methods.online`: wrong for two of the three methods SC-4 names. A new column `payment_methods.completed`: a stored copy of a rule that depends on the owner's keys and on which provider code exists, which would drift the day "More ways to pay" ships a provider |
+| E3 | Does "unpaid and cancelled", "paid and cancelled" or "expired" need a status value or a column? | **No.** `status = 'cancelled'` and `paid` already say it; the two can both be true (an order cancelled after payment, refunded in VNPay's portal) and the route's answer for that case is the cancelled sentence (services §5 and decision P3). Expiry (S7, 30 minutes) is `placed_at + interval '30 minutes'`, computed, never stored on the order | `orders.payable boolean` or `orders.expires_at`: a derived value stored beside the values it derives from |
+| E4 | Index the token lookup further (`order_tokens (order_id, token_hash)`)? | **No.** `uq_order_tokens_token_hash` finds the one row by the hash; the other column is checked on that row. A composite index would double the write cost of every token insert (placement, replay, every lookup of the track story) to speed a read that is already a single index probe | A composite or covering index: no measurable gain on a table that holds a few thousand rows per thousand orders |
+| E5 | Which lock does a future attempt take, so S7 and the cancel story do not deadlock with each other and with placement? | Nothing is locked here. For **S7**: the attempt's transaction takes the **order's row** `FOR UPDATE` first, re-checks `paid` / `status` under it, then inserts the attempt. It follows S5's global lock order (`products` → `product_sizes` → `counters` → inserts) because it never touches the earlier tables, and the cancel story's order (`orders` → `product_sizes`, S5 services §8) because it takes `orders` first | Re-checking without a lock: a notice marking the order paid at the same instant could let an attempt be created for a paid order |
+
+### Conflicts with merged decisions
+
+None. I read `erd/_base.md` §3.7, §3.12–3.14 and decisions D4, D5; `erd/checkout-and-placing-an-order.md` §2.3, §3 and decisions E1–E7; `erd/site-data-from-the-database.md` for the four collections the page reads; and `services/_base.md` §2.2, §3.11, §3.13. Nothing in them is restated or changed.
+
+## 5. Migration plan
+
+| Step | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| This story | **No migration file.** The next free migration number is not consumed; S7 and the later stories stamp theirs as the project ERD says | Revert the backend PR; nothing in any database changes | Not applicable: no statement is added to any migration, no table, row or index is touched. The story is deployable and revertable with the schema exactly as S5 left it |
+
+No merged migration is edited (convention `migrations`).
+
+## 6. Arranging test data (no staff screen or dealer session exists yet)
+
+The story sets an order's state directly in the test database. These are the only statements a test needs; none touches the schema and every one is undone by the case that ran it.
+
+```sql
+-- A token the test knows, for any order (sample or placed). sha256(bytea) is built in since PostgreSQL 11.
+INSERT INTO order_tokens (order_id, token_hash)
+VALUES ('doi-24816', sha256(convert_to('tok-doi-24816-a', 'UTF8')));
+-- A state. The API enforces the allowed steps; the database allows any of the six statuses.
+UPDATE orders SET status = 'shipped', paid = true, carrier = 'GHN', tracking = 'GHN-PT27XM', eta = '2026-11-26' WHERE id = 'doi-24817';
+-- Clean up
+DELETE FROM order_tokens WHERE order_id = 'doi-24816' AND token_hash = sha256(convert_to('tok-doi-24816-a', 'UTF8'));
+```
+
+A token the test makes up must be 1 to 128 characters of `[A-Za-z0-9_-]` (the API treats anything else as no token). The 14 seeded orders have no token until a test inserts one. By way to pay, as seeded: `cod` — DOI-24816 (placed, unpaid), DOI-24814 (packed, unpaid), DOI-24811 (cancelled), DOI-24808 and DOI-24804 (delivered, paid); `bank` — DOI-24812, DOI-24807; `momo` — DOI-24817, DOI-24813, DOI-24809, DOI-24805; `vnpay` — DOI-24815, DOI-24810, DOI-24806. An unpaid `bank` or `momo` order is made by `UPDATE orders SET paid = false WHERE id = …`. A test that only updates and inserts tokens does **not** move `counters`; one that inserts an *order* by hand must (S5 ERD §2.4).
+
+## 7. Hand-over
+
+| Who | What they must know from this design |
+|---|---|
+| Dev, backend step | **No migration.** The whole backend change is one route and one function (services §3–§6). The schema is exactly S5's |
+| Test lead | SC-5's "no `payment_attempts` row exists" cannot count rows of a table that does not exist yet: assert `to_regclass('payment_attempts') IS NULL OR (SELECT count(*) FROM payment_attempts WHERE order_id = $1) = 0`, so the same case stays valid after S7 |
+| "Online payment with VNPay" (S7) | Creates `payment_attempts` and `payment_notices`; takes the order row `FOR UPDATE` before inserting an attempt (E5); adds its expiry refusal as one case in the route's decision (services §5); changes no column of `orders` this story reads |
+| "Customer accounts", "Dealer sign-in" | Extend the one access statement and function (services §4) — add `OR o.account_id = $3` and the dealer branch there, nowhere else; `orders.account_id` is their migration |
+
+## 8. As built (backend PR #65)
+
+The ERD was checked again against the backend PR: its file list and its description show **no file under `code/backend/migrations/`**, and every statement the package now holds for this story is one of access patterns 1 and 2 of §3 — the access statement (`accessSQL`: `orders` by primary key with the `EXISTS` on `order_tokens.token_hash`) and the unchanged pair read (`viewSQL`). The route writes nothing and opens no transaction; `GET` now reads inside one `REPEATABLE READ, READ ONLY` snapshot, which changes no table, index or lock. `pay_db_test.go` arranges data exactly as §6 does (`INSERT INTO order_tokens` with the Go-side SHA-256 of a token the test knows; `UPDATE orders` for status and paid). **§1–§7 stand unchanged**; the as-built rulings on the API and the client are in `services/order-page-and-pay-now.md` §12.
+
+
+<!-- story 7: Track an order by number and phone -->
+# ERD — Track an order by number and phone (plan item 7)
+
+Module `orders` · Requirements ORD-020 to ORD-023 · Story `docs/orders/stories/track-an-order-by-number-and-phone.md` · UI PR #71 · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+## 1. Verdict: this story adds nothing to the schema
+
+**No table, column, constraint, index, trigger, view, function or migration is created, changed or dropped by this story.** It is one route, `POST /v1/order-lookups`, that reads one `orders` row by its number, compares a phone in code, inserts one `order_tokens` row and moves two `rate_limits` counters. Every one of those is already in the schema.
+
+| What the route needs | Where the schema already says it |
+|---|---|
+| Find the order by the typed number's digits | `orders.number` (`DOI-<n>`, `ck_orders_number_format`) read by `uq_orders_number`: `WHERE number = 'DOI-' \|\| $1` with `$1` the typed digits, one row or none (project ERD §3.12) |
+| The stored phone to compare with | `orders.phone` (private, `NOT NULL`). It is read into the transaction's memory, compared by `PhoneKey` (digits, a leading `84` read as `0`, whole phone) and never returned, logged or stored again |
+| The id, number and time of a right order | `orders.id`, `orders.number`, `orders.placed_at` (the answer is those three and the token) |
+| Whether the order is a guest's, another account's or none | `orders.account_id` (**S14's column**, migration `20261125150000_orders_account_id`). The shared matcher reads it for `POST /v1/account/orders`; this route ignores it. It is the one reason this story's backend waits for S14 (services file §4) |
+| A new token for the order | `order_tokens (order_id, token_hash)`: `token_hash` is `bytea`, 32 bytes, unique (`uq_order_tokens_token_hash`); `order_id` is a `CASCADE` foreign key (project ERD §3.14, decision D5: "the lookup mints a new token") |
+| Five failures in 15 minutes per number and per address, a 15-minute lock, a wait to report | `rate_limits` (project ERD §3.21): scopes `order_lookup_number` and `order_lookup_address` are already in `ck_rate_limits_scope` |
+
+## 2. Entities this story touches — none changed
+
+| Entity (defined elsewhere) | Read | Written |
+|---|---|---|
+| `orders` | `id`, `number`, `placed_at`, `phone`, and (through the shared matcher) `status`, `total`, `account_id` — by one statement, by `number` | Nothing. A lookup never changes an order |
+| `order_tokens` | Nothing | **One `INSERT` per right pair** (`order_id`, `token_hash`). Never an update, never a delete; earlier tokens stay valid |
+| `rate_limits` | `locked_until` of two rows (`Check`) | **One upsert per miss and per scope** (`Fail`): `order_lookup_number` (only when the typed number has digits) and `order_lookup_address`. A right pair, a refused try and a request refused before the match write nothing |
+| `order_items`, `products`, `users`, `sessions` | Nothing | Nothing |
+
+### 2.1 Subjects of the two counters
+
+`rate_limits.subject_hash = sha256(scope ‖ ':' ‖ subject)` (`ratelimit.Subject`). For this story:
+
+| Scope | Subject text | Notes |
+|---|---|---|
+| `order_lookup_number` | the **typed number's ASCII digits**, 1 to 18 of them (`24817` for `DOI-24817`, `doi 24817` and `  DOI - 24817 `) | A number that does not exist counts like any other (ORD-022 item 2), which is why the subject is what was typed and never an order id. Leading zeros are kept (`00024817` is another subject and matches no order), so a counter cannot be dodged by padding a number |
+| `order_lookup_address` | `httpx.ClientAddr(r)`, the right-most `X-Forwarded-For` entry | Never the left-most (the client writes it) |
+
+A number with no digits, or with more than 18, counts on the address scope only: a shared bucket for "no digits" would let one visitor lock every other empty try. Nothing here is stored in clear: the table holds neither a number nor an address.
+
+## 3. Access patterns
+
+| # | Pattern | Frequency | Index used |
+|---|---|---|---|
+| 1 | Take the number's lock: `SELECT pg_advisory_xact_lock(hashtextextended('order_lookup:' \|\| $1, 0))` | Once per try that has digits | None (a lock in memory, released at the end of the transaction) |
+| 2 | Is the number or the address locked: `SELECT ceil(extract(epoch FROM locked_until - now()))::int FROM rate_limits WHERE scope = $1 AND subject_hash = $2 AND locked_until > now()` — twice | Every try | `rate_limits` primary key `(scope, subject_hash)`: one row each |
+| 3 | Find the order: `SELECT … FROM orders WHERE number = 'DOI-' \|\| $1` | Every try with digits that is not refused | `uq_orders_number`: one index probe, never a scan |
+| 4 | Count a miss: `ratelimit.Fail` (one `INSERT … ON CONFLICT DO UPDATE` per scope; the SQL is merged and is not restated here) | Every miss | `rate_limits` primary key |
+| 5 | Give the order a token: `INSERT INTO order_tokens (order_id, token_hash) VALUES ($1, $2)` | Every right pair | `order_tokens` primary key; the unique index on `token_hash` is checked on the insert |
+
+All five run in **one transaction at the default isolation (`READ COMMITTED`)** — the transaction `orders.Attempt` opens (services file §4). The number's advisory lock is what serialises tries for one number, and the second of two waiting tries must **see the first one's committed counter**: a `REPEATABLE READ` or `SERIALIZABLE` transaction would take its snapshot before the wait and would count a stale value, which is how a sixth failure would get through. No statement is slow: every one is a probe by key.
+
+**No index is added and none is dropped.** `idx_rate_limits_window_started_at` already serves the hourly purge of the counters this route creates (`auth.RunPurge` calls `ratelimit.Purge`).
+
+## 4. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| E1 | Keep a log of lookups (who looked, from where, when) for the owner? | **No.** The counters are the only record, and they hold hashes | An `order_lookups` table: it would store a phone-and-address trail for a feature that no requirement asks the owner to read, and a second place that must be purged |
+| E2 | Mark a token with the lookup that made it, an expiry or a last-used time? | **No.** A token opens one order and does not expire (SRS; project ERD §3.14 "no expiry is specified"). Marks would be columns nothing reads | `order_tokens.created_via`, `expires_at`: a rule the SRS does not have, and an expiry would silently break "Ordered on this phone", which holds tokens in the browser for good |
+| E3 | Reuse a customer's earlier token instead of minting a new one? | **Cannot.** Only a hash is stored, so an earlier token is unrecoverable; a new one is the only way to hand a token back (project ERD D5) | Storing the token to hand it back: a database leak would then open every order |
+| E4 | Index or generate a column of the stored phone's digits so the phone can be matched in SQL? | **No.** The match is by number first (unique), so exactly one row's phone is compared, in Go, by the one `PhoneKey` function that the account story shares. A second copy of the rule in SQL would be a second implementation that must be kept equal, and a stored digits column is one more copy of a private value | A generated `phone_key` column with an index: faster for a query nobody makes (a lookup by phone alone is out of scope) and a duplicate of `orders.phone` |
+| E5 | Cap the number of tokens an order may hold? | **No** (accepted risk R-1). A cap would have to refuse a right pair, which the contract says always succeeds, or delete a token the customer's other browser holds | A cap of N tokens per order: breaks a device the customer did not touch |
+
+**Accepted risk R-1.** A right pair mints one `order_tokens` row per call and a right pair neither counts nor is limited (ORD-022 items 1 and 5), so a person who already holds a number and its phone can add rows without bound. Each row is 32 bytes of hash plus a uuid and a time, and the rows go with the order (`ON DELETE CASCADE`). The caller must already know the phone, so this is not a way in for a stranger; if the owner ever sees growth, the fix is a per-order cap decided with a product rule, not a schema change made here.
+
+### Conflicts with merged decisions
+
+None. I read `erd/_base.md` §3.12, §3.14, §3.21 and decisions D5, D8; `erd/customer-accounts-sign-up-sign-in-my-orders.md` (the `orders.account_id` column and the matcher's statement A7) and `erd/checkout-and-placing-an-order.md` (the token's insert). Nothing in them is restated or changed.
+
+## 5. Migration plan
+
+| Step | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| This story | **No migration file.** The next free migration number is not consumed | Revert the backend PR; nothing in any database changes. Tokens and counters it made are ordinary rows of existing tables, valid and harmless without the route | Not applicable: no statement is added to any migration; no table, row or index is touched at deploy time |
+
+No merged migration is edited. **Dependency, not a migration:** the shared matcher selects `orders.account_id`, so S14's migrations `20261125150000_orders_account_id` and `20261125150100_orders_account_id_index` must be on `main` before this story's backend merges (services file §4).
+
+## 6. Arranging and reading test data
+
+No dealer session and no test switch exists in this story (project decision S4: no backend switch for delay, failure or lock). These statements are all a test needs; none touches the schema and each is undone by the case that ran it.
+
+```sql
+-- A clean slate for the lookup counters (the limits count per address, so run it before each case that tries a lookup)
+DELETE FROM rate_limits WHERE scope IN ('order_lookup_number', 'order_lookup_address');
+
+-- SC-24 / SC-25: the order's state, set directly
+UPDATE orders SET status = 'shipped', carrier = 'GHN', tracking = 'GHN-PT27XM', eta = '2026-11-26' WHERE id = 'doi-24817';
+UPDATE orders SET status = 'cancelled' WHERE id = 'doi-24817';
+
+-- SC-9: move a lock back in time (14 or 16 minutes) instead of waiting; the database's now() is the only clock
+UPDATE rate_limits
+   SET window_started_at = window_started_at - interval '14 minutes',
+       locked_until      = locked_until      - interval '14 minutes'
+ WHERE scope IN ('order_lookup_number', 'order_lookup_address');
+
+-- SC-10 / SC-8: the stored count for one number (24817)
+SELECT hits, locked_until FROM rate_limits
+ WHERE scope = 'order_lookup_number' AND subject_hash = sha256(convert_to('order_lookup_number:' || '24817', 'UTF8'));
+
+-- SC-4 / SC-5 / SC-6: tokens made for an order (a miss and a refused try make none)
+SELECT count(*) FROM order_tokens WHERE order_id = 'doi-24817';
+-- the token text is in no table: its hash is the row, and the token itself is never equal to it
+SELECT count(*) FROM order_tokens WHERE token_hash = sha256(convert_to($1, 'UTF8'));   -- $1 = the token from the answer: 1
+```
+
+A lock exists for 15 minutes from the fifth failure (`locked_until = now() + 15 minutes` at that moment), so moving both columns back by 14 minutes leaves 1 minute of lock (`Retry-After` 1 to 60) and by 16 minutes ends it: the next miss then counts as the first failure of a new count (`Fail` resets a row whose lock has ended). The 14 sample orders have no token until a test mints one with the route.
+
+## 7. Hand-over
+
+| Who | What they must know from this design |
+|---|---|
+| Dev, backend step | **No migration.** One route, one handler file and one line in `Register`, over the matcher S14 creates (services file §2, §4). Do not write a second matcher |
+| Test lead | The statements of §6 are the whole fixture; subjects are `sha256('<scope>:<digits or address>')` |
+| Customer accounts (S14) | Nothing to change: this story adopts `lookup.go`, `phone.go` and the scope constants as S14 merges them |
+
+
+<!-- story 9: Dealer sign-in and protected admin area -->
+# Database design — Dealer sign-in and protected admin area (plan item 9, "S8")
+
+Module `admin` · Requirements ADMIN-001 to ADMIN-004 · Story `docs/admin/stories/dealer-sign-in-and-protected-admin-area.md` · UI PR #34 · Contracts: `docs/architecture/services/dealer-sign-in-and-protected-admin-area.md`.
+
+This file **extends** `erd/_base.md`. That file already designs `users` (§3.18), `sessions` (§3.19) and `rate_limits` (§3.21), and migration 7 (§8) says this story creates the first two. Nothing in them is redesigned or restated here. This file adds: the exact migration, the four places where I made a choice `_base.md` left open, the queries each index serves, and the write rules for the `users` row the server makes itself. `rate_limits` is **not touched**: S3's migration 1 created it with every scope this story and the later ones use, and its columns, checks and purge index are exactly what the rules below need.
+
+## 1. What this story creates
+
+| Object | From `_base.md` | This story's note |
+|---|---|---|
+| `users` | §3.18 — every column, check and index as written | Creates **all** of `_base.md`'s columns, including `phone`, `address`, `city`. The customer-accounts story (plan item 15) therefore needs no `ALTER TABLE users`; it only writes those columns (this closes the question its story file leaves to this design) |
+| `uq_users_one_admin` | §3.18 / D9 | As written |
+| `sessions` | §3.19 — every column, check, foreign key and index as written | As written |
+| `trg_users_updated_at` | §3.0 | `BEFORE UPDATE … EXECUTE FUNCTION set_updated_at()`; the function is S3's migration 1, which is why this migration is stamped after it. `sessions` has no `updated_at` and no trigger |
+
+No other table, view, function, extension or column changes. `orders.account_id` and `uploads.uploaded_by` (which point at `users`) belong to the stories that need them and are created **after** this migration.
+
+## 2. Choices `_base.md` left open
+
+| # | Choice | Reason, and what it costs |
+|---|---|---|
+| U1 | **`CHECK ck_users_email_ascii`: `email ~ '^[!-~]+$'`** (printable ASCII, no space) in addition to `ck_users_email_lowercase`. | The shared `auth.NormalizeEmail` (services file §3) refuses non-ASCII addresses so two spellings of one letter can never be two accounts; `lower()` in a `CHECK` is locale-dependent for non-ASCII, so the code rule needs a database backstop that does not depend on locale. Cost: an address with an accented letter cannot be an account (the owner's shop sells to people who type ASCII addresses; the staff design already assumes it). A row written by hand that breaks it fails with a constraint error, never silently |
+| U2 | **No cap on rows in `sessions` per user.** | Two sign-ins at once must both succeed (SC-11) and a person has a phone and a laptop. Rows are 100 bytes, live 7 days and are purged hourly (§4). A cap would need a rule for *which* session to drop, which the SRS never asks for |
+| U3 | **The admin row's `name` is `''`.** The displayed name is computed (services file §3.4), never stored. | `_base.md` §3.18 says so; recorded so the start-up code never writes `'Dealer'` into the column and later "fixes" it |
+| U4 | **No `last_sign_in_at`, no failure counter and no address on `users` or `sessions`.** | Failure counting lives only in `rate_limits` (hashed). Storing an address would put a personal datum in a table nothing needs it from; the SRS reads none |
+
+## 3. Migration plan
+
+Files `code/backend/migrations/<UTC timestamp>_users_and_sessions.up.sql` and `.down.sql`, **stamped later than S3's `…seed_collections` (`20261125100200`)** and earlier than any later story that references `users`; suggested `20261125140000_users_and_sessions`. Applied on boot before the server listens (one transaction with its `schema_migrations` row); a merged file is never edited.
+
+**Forward**
+
+```sql
+CREATE TABLE users (
+    id            uuid        NOT NULL DEFAULT gen_random_uuid(),
+    email         text        NOT NULL,
+    name          text        NOT NULL DEFAULT '',
+    phone         text        NOT NULL DEFAULT '',
+    address       text        NOT NULL DEFAULT '',
+    city          text        NOT NULL DEFAULT '',
+    password_hash text        NOT NULL,
+    role          text        NOT NULL,
+    is_active     boolean     NOT NULL DEFAULT true,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    updated_at    timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_users PRIMARY KEY (id),
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT ck_users_email_lowercase CHECK (email = lower(email) AND email <> '' AND length(email) <= 200),
+    CONSTRAINT ck_users_email_ascii CHECK (email ~ '^[!-~]+$'),
+    CONSTRAINT ck_users_password_hash_not_blank CHECK (password_hash <> ''),
+    CONSTRAINT ck_users_role CHECK (role IN ('admin', 'staff', 'customer'))
+);
+CREATE UNIQUE INDEX uq_users_one_admin ON users ((true)) WHERE role = 'admin';
+CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE sessions (
+    id         uuid        NOT NULL DEFAULT gen_random_uuid(),
+    user_id    uuid        NOT NULL,
+    token_hash bytea       NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL,
+    CONSTRAINT pk_sessions PRIMARY KEY (id),
+    CONSTRAINT uq_sessions_token_hash UNIQUE (token_hash),
+    CONSTRAINT ck_sessions_token_hash_length CHECK (octet_length(token_hash) = 32),
+    CONSTRAINT ck_sessions_expiry_after_created CHECK (expires_at > created_at),
+    CONSTRAINT fk_sessions_user_id FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE ON UPDATE NO ACTION
+);
+CREATE INDEX idx_sessions_user_id    ON sessions (user_id);
+CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
+```
+
+**Backward** — `DROP TABLE IF EXISTS sessions; DROP TABLE IF EXISTS users;` (indexes, constraints and the trigger go with the tables; `set_updated_at()` stays, it is S3's). The server never runs it; it exists for a local reset.
+
+**Safety on a populated table.** Both tables are new, so the forward file locks nothing that exists and is safe whatever else is in the database. Rolling it back deletes every account and session, which is why it is a local-reset file: in a deployment a wrong migration is fixed by a new file. The admin row is **not** made by the migration (it needs the owner's settings); the server makes it at start-up (§5), so an empty `users` table after migrating is correct.
+
+**Order against other stories.** Needs only S3's migration 1 (`set_updated_at()`). It touches no object S4's or S5's migrations touch, so the files apply in either order; the runner applies whatever is pending by name.
+
+## 4. Queries, and the index each one uses
+
+All SQL is parameterised; the only strings spliced in are none. "The clock" is always the database's `now()`: the application never compares times itself, so a test moves stored timestamps instead of waiting (story §8).
+
+| # | When | Statement (shape) | Index |
+|---|---|---|---|
+| Q1 | Every `/v1` request that carries a well-formed `session` cookie (`auth.Resolve`) | `SELECT u.id::text, u.email, u.name, u.role FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.expires_at > now() AND u.is_active` | `uq_sessions_token_hash`, then the primary key of `users`. One row or none. A session exactly 7 days old has `expires_at = now()` and is not `>` it, so it is expired (SC-15) |
+| Q2 | Sign-in, after the checks that cost nothing | `SELECT id::text, name, role, is_active, password_hash FROM users WHERE email = $1` | `uq_users_email` |
+| Q3 | Sign-in, after the password verified | `INSERT INTO sessions (user_id, token_hash, expires_at) SELECT u.id, $2, now() + interval '7 days' FROM users u WHERE u.id = $1 AND u.is_active AND u.password_hash = $3 FOR SHARE OF u RETURNING expires_at` | primary key of `users`. Zero rows returned means the account was switched off, deleted or given a new password after Q2 read it: the answer is the generic 401 and **no session exists** (rule R2, §6) |
+| Q4 | Sign-out | `DELETE FROM sessions WHERE token_hash = $1` | `uq_sessions_token_hash` |
+| Q5 | In-process purge, hourly | `DELETE FROM sessions WHERE expires_at < now()` | `idx_sessions_expires_at` |
+| Q6 | Ending every session of one user (switch-off, password reset, `EnsureAdmin` change) — by the later stories' functions and by `EnsureAdmin` | `DELETE FROM sessions WHERE user_id = $1` | `idx_sessions_user_id` |
+| Q7 | Start-up | the `EnsureAdmin` statements of §5 | `uq_users_one_admin` (the `WHERE role = 'admin'` lookup) |
+| Q8 | Sign-in limits | the `rate_limits` statements of the services file §4 | its primary key `(scope, subject_hash)`; the purge uses `idx_rate_limits_window_started_at` |
+
+## 5. Writes to `users` made by the server itself: the admin row
+
+`auth.EnsureAdmin` is the only code that writes the admin row. It runs once after migrations and before the listener starts, in **one transaction**, and never logs the password, the hash or (on a rejected address) the address.
+
+| State found | Action | Sessions |
+|---|---|---|
+| `ADMIN_EMAIL` or `ADMIN_PASSWORD` unset or empty | Nothing. Logged (`admin account not made: settings missing`). **An admin row made by an earlier run stays and keeps working**: removing a setting never locks the owner out; changing the password is how to do that | unchanged |
+| The address is not accepted by `NormalizeEmail`, or the password has fewer than 10 characters (counted in characters, not trimmed) or more than 100 | Nothing. Logged with the reason only (`admin password shorter than 10 characters`) | unchanged |
+| No row with `role = 'admin'` | `INSERT` with the normalised email, `name = ''`, a fresh argon2id hash, `role = 'admin'`, `is_active = true` | — |
+| A row exists, its email equals the setting, the password verifies against the stored hash, `is_active` is true | **Nothing is written** (no new salt, no `updated_at` change) | kept |
+| A row exists and the email differs, **or** the password does not verify, or `is_active` is false | `UPDATE` email, `password_hash` (new hash, new salt) and `is_active = true` (R3, §6); then `DELETE FROM sessions WHERE user_id = $id` | **all ended** (SC-3; the owner's way to lock out someone who has the old password) |
+| The new email is already used by a staff or customer row (`uq_users_email`, SQLSTATE 23505) | Roll back; the existing admin row is left exactly as it was. Logged (`ADMIN_EMAIL belongs to another account`). The server starts | unchanged |
+| Two instances start together and both try to insert | The loser gets 23505 on `uq_users_one_admin`; it re-reads once and takes the "row exists" path | — |
+
+The row is found with `SELECT id::text, email, password_hash, is_active FROM users WHERE role = 'admin' FOR UPDATE`, so a concurrent sign-in or a second instance waits for the decision. The role of a row is never changed by any statement: the admin row never becomes staff and a staff row never becomes admin.
+
+## 6. Invariants every later writer of `users` and `sessions` keeps
+
+These are stated here because the staff, accounts and manage stories are designed in parallel and must not each rediscover them. The BE review of this story checks R1–R3; the later stories' reviews check R4–R6.
+
+| # | Rule |
+|---|---|
+| R1 | **`auth.Resolve` requires `u.is_active`** (Q1). A switched-off account never has a live session, even if a delete failed to run |
+| R2 | **A session row is only ever inserted by Q3's shape** (or its twin for a freshly created account, which passes the hash it just wrote): `INSERT … SELECT … FROM users WHERE id AND is_active AND password_hash = $given … FOR SHARE OF u`. A sign-in racing a switch-off or a password reset therefore either sees the change and inserts nothing, or inserts first and has its session deleted by the writer's `DELETE` (READ COMMITTED: the writer's second statement sees the committed row) |
+| R3 | **`EnsureAdmin` writes `is_active = true`** whenever it updates the row (§5) |
+| R4 | A function that switches an account off, replaces its password, or deletes it ends its sessions **in the same transaction** as the `users` write (Q6). Deleting a user relies on `ON DELETE CASCADE`; switching off and a password reset do the explicit `DELETE` |
+| R5 | Every email written to `users` passes `auth.NormalizeEmail` first; the unique index `uq_users_email` is the arbiter of a race, and its 23505 is translated by the caller (422 on staff creation and sign-up, never 500) |
+| R6 | Hashing happens **before** the transaction opens (`auth.HashPassword`), never inside it: an argon2id hash takes tens of milliseconds and must not hold a row lock |
+
+## 7. What is deliberately not stored
+
+Raw session tokens (only the SHA-256, 32 bytes); the typed email of a failed sign-in (only `sha256('sign_in_email:' ‖ email)` in `rate_limits`); client addresses (only a hash); any role on the session (the role is read from `users` on every request, so a changed role is effective at once, SC-16).
+
+
+<!-- story 13: Product page waits for the shoe before saying it is missing -->
+# ERD — Product page waits for the shoe before saying it is missing (plan item 13)
+
+> **Revision 2 (the design step ran again after "Site data from the database" merged, PR #39):** re-read against the merged `erd/site-data-from-the-database.md` and `internal/data`; the verdict is unchanged, no schema is added, and §5 is brought up to date.
+
+Module `site` · Requirement SITE-014 (with the not-found row of SITE-005; ADMIN-013 item 1 for the draft case) · Story `docs/site/stories/product-page-waits-for-the-shoe-before-saying-it-i.md` · UI PR #27 · Engine PostgreSQL 16.
+
+## 1. Verdict: this story adds nothing to the schema
+
+**No table, column, constraint, index, trigger, function or migration is created, changed or dropped by this story.** It edits one page (`Product.tsx`) and adds one test file. The page decides what to draw from what `GET /v1/products/{id}` answers, and the answers it branches on already exist.
+
+| What the page needs to know | Where the schema already says it |
+|---|---|
+| "A live shoe with this id exists" → the record | `products` row with `status = 'live'` (ERD `_base.md` §3.4; the column list is S3's public view) |
+| "No live shoe has this id" → 404 | No row, **or** a row with `status = 'draft'`. Both answer the same way (see D1). `ck_products_status` allows exactly `live` and `draft` |
+| "The shop could not answer" → neither of the above | Not data: a failed query is `500 internal`, a stopped API is a gateway answer. Nothing is stored for it |
+
+The read this story depends on is a primary-key lookup: `SELECT <public columns> FROM products t WHERE t.id = $1` (S3 services §1.5). The primary key already serves it, so **no index is added**. The later visitor rule (`AND t.status = 'live'`, see services §5) is a filter on that single row and needs no index either.
+
+## 2. Entities this story touches — none changed
+
+| Entity (defined elsewhere) | Effect of this story |
+|---|---|
+| `products` (`erd/_base.md` §3.4; seeded by S3) | Read by id only, through S3's reader. Not changed. `status` is the one column whose value decides 200 or 404 for a visitor (once ADMIN-013's visitor rule lands) |
+| `lines`, `categories`, `shop_terms`, `payment_methods`, `reviews` | Read by the same page through their own S3 requests (`GET /v1/lines/{id}`, `/v1/categories/{id}`, `/v1/shop/shop`, …). Not changed; the page does not wait for them |
+
+## 3. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| D1 | Should the database tell a withdrawn shoe (a draft, or one the dealer deleted) apart from an id that never existed, so the page can say something different? | **No.** A draft and an unknown id answer 404 with one and the same body (`erd/_base.md` §3.4 lifecycle; ADMIN-013 AC-1, AC-11). The page has one missing view and says "That pair is not in the shop any more." for both | A tombstone table, a `deleted_at` column or a `410 Gone` for deleted shoes: it would let any visitor probe which ids ever existed, and tell a stranger that a draft shoe exists before the dealer has published it. The story asks for one missing view, so there is nothing to show for the difference |
+| D2 | Does "waiting" or "unreachable" need a stored state (a status flag, a cache table, a last-seen timestamp)? | **No.** Both are client states of one in-flight or failed request. Nothing is written for them and nothing is read from the database to tell them apart | A server-side "is the shop up" row: the page already learns it from the request itself (a refused connection, a gateway 502, a `500 internal`), and a second source could disagree with the first |
+| D3 | Does the page need a new column so a shoe can be fetched faster (a slug, a denormalised card row)? | **No.** `GET /v1/products/{id}` is one statement over the primary key. The shoe's own record is the only thing the shoe view waits for; the line, category, terms, payments, reviews and related pairs are separate reads by design (story §3) | A single "product page" join returning everything: it would make the shoe wait for its slowest part, which is the opposite of SC-6 |
+
+### Conflicts with merged decisions
+
+None. I read `erd/_base.md` §3.4 and §3.1, `erd/site-data-from-the-database.md` §7 (decision C1), and `services/_base.md` §2.2–2.3. One interaction is recorded in `services/product-page-waits-for-the-shoe-before-saying-it-i.md` §5 (the draft case waits for ADMIN-013's visitor rule); it is an ordering fact, not a change to any table.
+
+## 4. Migration plan
+
+| Step | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| This story | **No migration file.** Nothing runs against any database | Revert the frontend PR (#27) | Not applicable: no table is touched, no statement is added |
+
+No migration is added and none is edited (convention `migrations`: a merged migration is never edited).
+
+## 5. Hand-over
+
+| Story | What it must know from this design |
+|---|---|
+| "Site data from the database" (S3) | Merged (PR #39). Nothing to add to the schema; its `useRecord` meets what this page needs (`services/product-page-waits-for-the-shoe-before-saying-it-i.md` §3.1) |
+| "Manage shoes, lines, categories, reviews and orders" | `products.status = 'draft'` must answer a visitor's `GET /v1/products/{id}` with the same 404 as an unknown id (services §5). No schema change is needed for it |
+| Dev (backend step of this story) | There is no backend work: no table, no endpoint, no migration. The step has nothing to implement |
+
+
+<!-- story 14: Staff accounts managed by the owner -->
+# ERD — Staff accounts managed by the owner (plan item 14, "S13")
+
+Module `admin` · Requirements ADMIN-030, ADMIN-031, ADMIN-004 (account-endpoint half) · Story `docs/admin/stories/staff-accounts-managed-by-the-owner.md` · UI PR #36 · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+## 1. Verdict: this story adds nothing to the schema
+
+**No table, column, constraint, index, trigger, view, function or migration is created, changed or dropped.** The story's story file expected this ("no new table is expected"), and the design confirms it: every fact the four endpoints need is already in `users` and `sessions` (project ERD §3.18, §3.19, created by "Dealer sign-in and protected admin area", migration 7 `users_and_sessions`) or in the one foreign key `uploads.uploaded_by` (§3.20).
+
+| What the endpoints need to know or keep | Where the schema already says it |
+|---|---|
+| An account: name, email, role, switched on or off | `users.name`, `email`, `role` (`ck_users_role`), `is_active` |
+| "Not a second admin", "never without an admin" | `uq_users_one_admin` (at most one admin row). "Never zero" is code: no statement of this story can touch a row whose role is not `staff` (decision S4) |
+| "The email belongs to no account of any role, any case" | `uq_users_email` on the stored lower-case email (`ck_users_email_lowercase`). The unique index is the arbiter of the add race (decision S2) |
+| A password kept as a salted slow hash | `users.password_hash` (argon2id string, `<> ''`) |
+| A switched-off, reset or removed account loses its sessions | `sessions` rows keyed by `user_id`: `idx_sessions_user_id` finds them, `ON DELETE CASCADE` removes them with the user |
+| "Nothing the person saved is removed" when staff are deleted | `uploads.uploaded_by` → `users(id)` `ON DELETE SET NULL` (§3.20); `orders.account_id` → `users(id)` `ON DELETE SET NULL` (§3.12, never set for a team member) |
+| The team list, admin first, then by creation | `users.role`, `users.created_at`, `users.id` (decision S3: no new index) |
+
+## 2. Entities this story touches — none changed
+
+| Entity (defined elsewhere) | Read by this story | Written by this story |
+|---|---|---|
+| `users` | `id`, `name`, `email`, `role`, `is_active`, `created_at` (the list, the target lookup, the answer to a write). **Never** `phone`, `address`, `city`; `password_hash` is read by no statement of this story | `INSERT` (role `staff`, always); `UPDATE name`, `is_active`, `password_hash` of a row whose role is `staff`; `DELETE` of a row whose role is `staff`. Every such statement carries `role = 'staff'` in its `WHERE` |
+| `sessions` | Nothing | `DELETE … WHERE user_id = $1` when an account is switched off or its password is reset, in the same transaction as the `users` update. Rows also leave by `CASCADE` when the user is deleted |
+| `uploads` | Nothing | Nothing. Its `uploaded_by` is cleared by the database when a staff row is deleted (S9's table, if it exists by then) |
+| `orders` | Nothing | Nothing. `account_id` is `NULL` for a team member's order; a staff delete changes no order, shoe, line, category or review (SC-33) |
+| `rate_limits` | Nothing | Nothing. These routes are admin-only and are not limited (decision S12) |
+
+## 3. Access patterns
+
+| # | Pattern | Frequency | Index used |
+|---|---|---|---|
+| 1 | **The team page**: `SELECT id, name, email, role, is_active FROM users WHERE role IN ('admin','staff') ORDER BY (role <> 'admin'), created_at, id LIMIT $1 OFFSET $2`, and `SELECT count(*) FROM users WHERE role IN ('admin','staff')`, both in one `REPEATABLE READ, READ ONLY` transaction so `total` and `items` agree | Rare (admin opens the page; "Try again") | **Scan** of `users`: a handful of team rows among the customers. At 100,000 customers a scan of a narrow table is a few tens of milliseconds, and the page is opened a few times a day. `idx_users_team (role) WHERE role <> 'customer'` is the one ERD §3.18 names for later; it stays unbuilt (decision S3) |
+| 2 | **Who is this id** (before the body is read, and again under a lock): `SELECT … FROM users WHERE id = $1` (`FOR UPDATE` inside a write transaction) | Per `PUT` / `DELETE` | `users` primary key |
+| 3 | **Is this email taken** (so a 422 can name `email` beside the other faulty fields): `SELECT EXISTS (SELECT 1 FROM users WHERE email = $1)` | Per `POST` that passes the shape rules | `uq_users_email` |
+| 4 | **Create**: `INSERT INTO users (name, email, password_hash, role) VALUES ($1,$2,$3,'staff') RETURNING …` | Rare | `uq_users_email` (the constraint is also the race arbiter, S2) |
+| 5 | **Change**: `UPDATE users SET name = $2` / `SET is_active = $2` / `SET password_hash = $2` `WHERE id = $1 AND role = 'staff'` (one statement per field sent, one transaction); then, if the account was switched off or its password reset, `DELETE FROM sessions WHERE user_id = $1` | Rare | `users` primary key; `idx_sessions_user_id` |
+| 6 | **Remove**: `DELETE FROM users WHERE id = $1 AND role = 'staff'` (sessions go by `CASCADE`, `uploads.uploaded_by` and `orders.account_id` by `SET NULL`) | Rare | `users` primary key; `idx_sessions_user_id` for the cascade; `uploads.uploaded_by` has no index (ERD §3.20: a scan of at most a few hundred rows) |
+| 7 | *Relied on, owned by "Dealer sign-in"*: every request's `sessions ⨝ users` read, and sign-in's session insert (§4, rules R1 and R2) | Very high | `uq_sessions_token_hash`; `users` primary key |
+
+Nothing here needs another index: statements 2–6 are by primary or unique key, and 1 is a scan whose size is the customers' count and whose frequency is a few reads a day. **No index is added, none is dropped.**
+
+## 4. Concurrency: what is locked, in which order, and what each race ends as
+
+**Lock order for this story and for sign-in: `users` row first, then `sessions` rows.** `Resolve` takes no lock (a plain `SELECT`, snapshot per statement), so a busy site never waits on a staff change. A statement of this story that deletes `sessions` rows runs **after** the `UPDATE users` of the same transaction has taken the row lock, and in `READ COMMITTED` every statement sees what had committed before it began — so a session that sign-in committed while the update waited is seen and deleted.
+
+| Race | What happens | Ends as |
+|---|---|---|
+| Two `POST`s of one email | Both pass the pre-check (§3 #3); both `INSERT`; the unique index lets one in and the other waits, then fails with `23505` on `uq_users_email` | One `201`; the other `422` naming `email` (the handler maps exactly that constraint name; any other `23505` is `500`). One row (SC-20) |
+| **Sign-in** × **switch-off** | Sign-in creates its session with one statement that locks the user row and re-checks it: `INSERT INTO sessions … SELECT … FROM users u WHERE u.id = $1 AND u.is_active AND u.password_hash = $3 FOR SHARE OF u` (rule R2). `FOR SHARE` conflicts with the `UPDATE` of a switch-off | If the switch-off holds the row first, the insert waits, re-reads the committed row, finds `is_active = false`, inserts **nothing**, and sign-in answers as a wrong password. If sign-in is first, the switch-off's `UPDATE` waits for it, then its `DELETE FROM sessions` sees and removes the new session. **No `sessions` row ever belongs to a switched-off user** — the invariant the test asserts (SC-30) |
+| Sign-in × **password reset** | Same statement; its `u.password_hash = $3` is the hash the sign-in verified | A reset that commits first changes the hash, so the insert adds nothing and sign-in fails; a sign-in that commits first has its session deleted by the reset. The old password never leaves a live session behind |
+| Sign-in × **remove** | `FOR SHARE` conflicts with `DELETE`; the foreign key also takes a key lock | The insert finds no row (or fails the foreign key) and adds nothing; or the delete waits and the cascade removes the session |
+| `PUT` × `PUT`, `PUT` × `DELETE` | Each `PUT` transaction first locks the target (`SELECT … FOR UPDATE`, §3 #2) | Serialised. A `PUT` that waits behind a `DELETE` re-reads, finds no row and answers `404`; two `PUT`s apply in turn, the later value of a field wins |
+| The 10-minute purge of expired sessions × a switch-off | Both delete `sessions` rows; the purge locks them in index order, the switch-off by `user_id` | Rows touched by both can deadlock (`40P01`) once in a long while. PostgreSQL aborts one; the handler retries its transaction **once** (services §5.1) and the purge simply runs again in ten minutes |
+| `EnsureAdmin` at start-up × a staff add | `EnsureAdmin` writes only the row of role `admin` | No shared row; an add of `ADMIN_EMAIL`'s address before start-up is a taken email (`422`) |
+
+Isolation is `READ COMMITTED` everywhere except the team page's read-only snapshot. The password is hashed **before** any transaction opens (hashing takes tens of milliseconds and 19 MiB), so no row lock is held while it runs, and a request that fails validation is never hashed.
+
+## 5. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| S1 | Does the story need a table, column or migration (a `created_by`, an audit log, a "last signed in", a `password_changed_at`)? | **No.** Nothing in the SRS reads one: no log of who added or removed whom, no last-sign-in time, no list of sessions (story §3, out of scope) | `users.created_by` / an audit table: written by every action and read by nothing, with a foreign key that would then make removing the admin's staff harder. Add it with the requirement that reads it |
+| S2 | Who decides that two adds of one email are one add? | **The unique index.** The handler pre-checks the email only so a `422` can name every faulty field at once (a short password and a taken email in one answer, SC-18); the `INSERT` still catches `23505` on `uq_users_email` and gives the same `422` sentence. Any other constraint violation is `500` | An advisory lock or `SERIALIZABLE` around check-then-insert: holds a lock through a hash and still needs the index for a second instance. Mapping the race to `409`: the SRS and `services.md` §3.26 say `422` naming `email` |
+| S3 | Index the team list (`idx_users_team`)? | **No.** The list is read a few times a day, over a table whose size is the customers' count; ERD §3.18 already names the index and the volume at which it would earn its place (≈100,000 customers). Building it now would slow every sign-up for a read nobody waits on | `CREATE INDEX CONCURRENTLY idx_users_team … WHERE role <> 'customer'`: a migration and a write cost per sign-up for no promised volume |
+| S4 | Where does "the shop is never left without an admin" live? | **In every statement and in one pre-check.** The handler answers `409` for any target whose role is `admin` before the body is read; and, whatever that check says, every `UPDATE` and `DELETE` of this story has `role = 'staff'` in its `WHERE`, so a bug in the check still cannot touch the admin row. `uq_users_one_admin` stops a second admin from being made | A trigger refusing `DELETE` or `is_active = false` on an admin row: `EnsureAdmin` legitimately updates that row (email, password), the trigger would need an escape hatch, and it is a second place to keep in step with a rule that is already in every statement |
+| S5 | How does an account end its sessions "at once"? | **Delete the `sessions` rows in the same transaction** as the switch-off or reset (`auth.SetActive(false)` and `auth.SetPassword` do it themselves, so no caller can forget), and let `Resolve` re-read `users.is_active` on every request (rule R1). Switch-on restores nothing: the rows are gone | `users.session_epoch` / `credentials_version` compared on every request: one more column and one more compare on the hottest path, and the old rows would stay in the table until the purge. Relying on `Resolve`'s `is_active` filter alone: a switch-on would bring the old cookies back to life (SC-29 forbids it) |
+| S6 | What does the admin's own row show as its name? | **The same display name `/v1/auth/me` gives**: the stored name, or — when it is empty, as it is for the admin made from settings — the email's local part with its words capitalised (`auth.DisplayName`, services §3.7). Nothing is stored; the list, `POST` and `PUT` answers all apply the same function | Returning the raw `''`: the first row of the table would have an empty name cell (SC-1), and the one rule `/v1/auth/me` already has would be written twice differently. A stored display name written at start-up: a copy that drifts when `ADMIN_EMAIL` changes |
+| S7 | Which emails can be stored? | **ASCII only**, trimmed, lower-cased by an ASCII-only fold (`A`–`Z`), exactly one `@`, a non-empty local part, a domain with a dot that is neither first nor last, no space or control character, ≤ 200 characters (`auth.NormalizeEmail`, shared with sign-in and sign-up). Anything else is "That does not look like an email address." | Go's `strings.ToLower` on any Unicode address: Go and PostgreSQL's `lower()` disagree on some non-ASCII letters, and `lower()` depends on the database's locale (an Alpine image may run in the `C` locale). An address Go lowered but `lower()` would not leaves `ck_users_email_lowercase` failing — a `500` where the person should see a sentence. Relaxing the merged `CHECK`: it is the guarantee that case-insensitive uniqueness holds |
+| S8 | Who may be deleted, and what is kept? | A row whose role is `staff` only. The account and its sessions go; `uploads.uploaded_by` and `orders.account_id` are set to `NULL` by their own foreign keys; nothing else references `users` | Soft delete (`deleted_at`): the project uses it nowhere (ERD §2), and the SRS wants the email free again at once (ADMIN-031 item 4) |
+
+### Conflicts with merged decisions
+
+None. I read `erd/_base.md` §2, §3.12, §3.18–3.20, §5 patterns 15–17, §8 migration 7 and the lock rules; `services/_base.md` §1.1, §2.2, §2.5, §3.7, §3.9, §3.26, §3.27. Two statements are **refinements of silence**, not overrides: S6 (the list's `name` for an account with no stored name) and S7 (what "looks like an email" means for non-ASCII text); neither changes a column or a merged rule.
+
+## 6. Migration plan
+
+| Step | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| This story | **No migration file.** The next free timestamp is not consumed | Revert the backend PR; nothing in any database changes | Not applicable: no statement is added to any migration. Deployable and revertable with the schema exactly as "Dealer sign-in" (migration 7) left it. Rows created through the endpoints are ordinary `users` rows and need no clean-up on a revert |
+
+This story **depends on** migration 7 having made `users` and `sessions` as `erd/_base.md` §3.18–3.19 say. The backend PR therefore ships one test, `TestStaffSchemaAssumptions` (skips without `TEST_DATABASE_URL`), that reads the catalogue and fails loudly if any of these is not true: `uq_users_email` is unique on `email`; `uq_users_one_admin` is a unique partial index `WHERE role = 'admin'`; `ck_users_email_lowercase` and `ck_users_role` exist; `sessions.user_id` references `users` with `ON DELETE CASCADE`; `idx_sessions_user_id` exists; and, when the table `uploads` exists, `uploads.uploaded_by` references `users` with `ON DELETE SET NULL` and `orders.account_id` (when the column exists) the same. No merged migration is edited (convention `migrations`).
+
+**As built (PR #56, merged).** The story shipped **no migration**: `code/backend/migrations/` holds `20261125140000_users_and_sessions` as its last user-table file and nothing named for this story. `TestStaffSchemaAssumptions` is in `internal/admin/staff_db_test.go` and skips without `TEST_DATABASE_URL`. The ERD was checked again against the code: every statement of `internal/auth/accounts.go` is one of access patterns 1–6 of §3 (the list is the `ORDER BY (role <> 'admin'), created_at, id` read; every write carries `role = 'staff'`), so §1–§5 stand unchanged.
+
+## 7. Arranging test data (no customer sign-up exists until "Customer accounts" lands)
+
+No statement below touches the schema; each is undone by the case that ran it.
+
+```sql
+-- A customer row whose hash the backend itself wrote, so it signs in with a password the test knows:
+-- 1) make an account through POST /v1/admin/staff (name, email tc-customer@example.com, password customer-pass-1) as the admin;
+-- 2) turn it into a customer (the sign-in endpoint serves any row of any role):
+UPDATE users SET role = 'customer' WHERE email = 'tc-customer@example.com';
+-- A switched-off staff row that has never had a session:
+UPDATE users SET is_active = false WHERE email = 'tc-sb@example.com';
+-- The invariant of SC-30 (must be 0 after any number of sign-ins racing any number of switch-offs):
+SELECT count(*) FROM sessions s JOIN users u ON u.id = s.user_id WHERE NOT u.is_active;
+-- What a removal must have done (SC-32): both counts 0 for the removed id
+SELECT count(*) FROM users WHERE id = $1;  SELECT count(*) FROM sessions WHERE user_id = $1;
+-- A picture the removed account uploaded, if the uploads table exists (SC-33): afterwards uploaded_by IS NULL and the row remains
+INSERT INTO uploads (name, content_type, size_bytes, data, uploaded_by)
+VALUES (repeat('a',32) || '.png', 'image/png', 1, '\x00'::bytea, (SELECT id FROM users WHERE email = 'tc-sa@example.com'));
+-- Clean up (sessions go by CASCADE)
+DELETE FROM users WHERE email LIKE 'tc-%' OR email IN ('lan@example.com','mai@example.com');
+```
+
+`SELECT password_hash FROM users …` is for the schema test and the "two equal passwords give two different hashes" case only; the answer of no endpoint may contain it, and a test that prints it must not be left in a log.
+
+## 8. Hand-over
+
+| Who | What they must know from this design |
+|---|---|
+| Dev, backend step | **No migration.** Four routes in `internal/admin/staff*.go`, the functions of services §5 in `internal/auth`, the swap of services §7. Two statements of "Dealer sign-in" are checked and, if they are not as rules R1 and R2 say, edited in this PR (services §5.2) |
+| Test lead | The invariant query of §7 is the strongest assertion for SC-27, SC-29, SC-30 and SC-32: no session row may belong to a switched-off or removed user. The race cases are repeated rounds of two requests in the same instant (SC-20, SC-30) and cannot prove absence — the invariant after many rounds, plus the Go race test of services §6, together do |
+| "Dealer sign-in and protected admin area" (item 9) | Its BE review checks rules R1 (`Resolve` requires `u.is_active`), R2 (the session `INSERT … SELECT … FOR SHARE OF u … AND u.password_hash = $3`), R3 (`EnsureAdmin` writes `is_active = true` on the admin row) and the shared `NormalizeEmail` of decision S7 |
+| "Customer accounts" (item 15) | Uses the same `auth.NormalizeEmail` and `auth.HashPassword`; an address staff creation would refuse as non-ASCII is refused at sign-up with the same sentence, so no row can break `ck_users_email_lowercase` from either side. `orders.account_id` is its migration and is never set for a team member |
+| "Manage shoes, lines, categories, reviews and orders" (item 10) | Its `uploads` migration must keep `uploaded_by … ON DELETE SET NULL` exactly as §3.20 says; the schema test above fails if it does not. It also creates the `internal/admin` package or finds this story's `staff.go` there; each registers its own routes (services §1) so neither edits the other's file |
+
+
+<!-- story 15: Customer accounts: sign up, sign in, my orders -->
+# Database design — Customer accounts: sign up, sign in, my orders (plan item 15, "S14")
+
+Module `accounts` · Requirements ACC-001 to ACC-008 · Story `docs/accounts/stories/customer-accounts-sign-up-sign-in-my-orders.md` · UI PR #43 · Contracts: `docs/architecture/services/customer-accounts-sign-up-sign-in-my-orders.md` · Engine PostgreSQL 16, pgx v5, hand-written SQL.
+
+This file **extends** `erd/_base.md`. `users` (§3.18), `sessions` (§3.19), `rate_limits` (§3.21) and `orders` (§3.12, with its `account_id` row) are designed there, and `erd/dealer-sign-in-and-protected-admin-area.md` (merged, PR #47) creates `users`, `sessions` and their constraints. Nothing in them is redesigned or restated here. This file adds the one column and the one index this story creates, answers the question the story left to TL ("which of `users.phone`, `address`, `city` does the sign-in migration already hold"), states the rules that keep `orders.account_id` true, and gives the migration plan.
+
+## 1. What this story creates
+
+| # | Migration (file-name part) | Creates or changes |
+|---|---|---|
+| 11 | `orders_account_id` | column `orders.account_id uuid NULL`; foreign key `fk_orders_account_id` to `users(id)` `ON DELETE SET NULL` |
+| 12 | `orders_account_id_index` | `idx_orders_account_id_placed_at`, built `CONCURRENTLY`, in a file of its own |
+
+**Answer to the story's open question: the sign-in migration holds all three.** `users_and_sessions` (item 9, ERD file §1 and §3) creates `users` with `phone`, `address` and `city` already (`text NOT NULL DEFAULT ''`) and says so in as many words: "the customer-accounts story needs no `ALTER TABLE users`". So this story has **no change to `users`**, none to `sessions`, and none to `rate_limits`: S3's migration 1 already lists `sign_up_address` in `ck_rate_limits_scope`, and the columns the sign-up counter needs (`hits`, `window_started_at`, `locked_until`) are the ones sign-in uses.
+
+```mermaid
+erDiagram
+    users |o--o{ orders : "account_id (customer only)"
+    orders {
+        text id PK
+        bigint seq UK
+        text number UK
+        timestamptz placed_at
+        uuid account_id FK "NULL for a guest or a team order"
+    }
+    users {
+        uuid id PK
+        text email UK
+        text name
+        text phone
+        text address
+        text city
+        text role
+    }
+```
+
+## 2. `orders.account_id`
+
+**Purpose** — the link between an order and the customer account that owns it (ACC-005, ACC-006). It answers three questions: "my orders" (ACC-003), "may this session open this order without a token" (ACC-003 item 4, ACC-008 item 3), and "is this order already someone's" (ACC-006). **Traces to** — ACC-003, ACC-005, ACC-006, ACC-008.
+
+| Column | Type | Null | Default | Unique | Description |
+|---|---|---|---|---|---|
+| `account_id` | `uuid` | **yes** | — | | The `users.id` of the **customer** the order belongs to. NULL for a guest order, for an order placed by a staff or admin session, for every order that existed before this story, and for an order whose customer row was deleted. Never returned by any endpoint, public or dealer (`orders` selects it only to compare it) |
+
+**Why nullable** — a guest order is the normal case, not an exception (ACC-005 item 3), and `''` cannot be a foreign key. NULL is also what the 14 seeded orders and every order placed before this story hold, so the migration needs no backfill.
+
+**Foreign key**
+
+| Column | References | On delete | On update | Why |
+|---|---|---|---|---|
+| `account_id` | `users(id)` | `SET NULL` | `NO ACTION` | The order is history the shop keeps and carries the buyer's own typed details; losing the account must not lose the order or block the delete. No endpoint deletes a customer today (ACC out of scope), so this is a safety net — and it is what lets a future "delete my account" story anonymise the link without touching the order. (`sessions.user_id` is `CASCADE`, so deleting a user also ends their sessions.) |
+
+**Invariants** — what makes the column mean what the SRS says. The first four are enforced in SQL, not only in a handler, so a later handler cannot break them by forgetting a check.
+
+| # | Rule | Enforced by |
+|---|---|---|
+| I1 | Only a user whose `role = 'customer'` and who is `is_active` can be an order's `account_id`. A staff or admin id, a switched-off account and an id that no longer exists are never stored | Placement inserts `account_id` as `(SELECT u.id FROM users u WHERE u.id = $n AND u.role = 'customer' AND u.is_active)`, so a session that ended, or a role that is not customer, becomes NULL — "the order is placed as a guest, never refused" (ACC-005 item 4). The link statement (§4, A8) carries the same predicate in a join |
+| I2 | An order is linked **once**: the link statement is `… WHERE account_id IS NULL`. No endpoint moves an order to another account, unlinks it, or overwrites it | The statement's `WHERE`; there is no other `UPDATE` of this column. `ON DELETE SET NULL` is the only other writer |
+| I3 | Placement sets `account_id` only on the **insert** of a new order. A replay of an `Idempotency-Key` returns the first order and **never** links or relinks it | `orders.Place` writes the column only in the insert statement (services file §6) |
+| I4 | Linking changes nothing else about the order: not `phone`, `customer`, `address`, `city`, `note`, its tokens or its status. The typed details stay what the buyer typed; a customer's saved details are never copied onto an order or back (ACC-005 item 2) | The `UPDATE` sets one column |
+| I5 | A phone, an address or a number typed into "Add an order" is never stored; only a SHA-256 of the typed digits reaches `rate_limits` | The attempt function (services file §3.4) |
+
+**Nullable columns** — this one only; the reason is above. **Lifecycle** — written by placement (insert) or by one successful "Add an order" (I2); read by "My orders", by the order read and by "is it already someone's"; set back to NULL only by the foreign key when a user row is deleted. An order deleted by the dealer (cancelled orders only, ADMIN-014) leaves the account's list one shorter; nothing else references it.
+
+**Rejected: a join table `order_accounts (order_id, account_id, linked_at)`.** It would hold the link's history. The SRS has no unlink, no move, no audit and no screen that shows when an order was added, so the history would be written and never read; every "My orders" read would pay a join; and "is this order already someone's" would need a second unique index to keep one owner. The column gives one owner by construction and a one-index read. If a story ever asks for unlinking or an audit trail, that is a new table with its own migration; the column then becomes its cached copy or is migrated away.
+
+**Rejected: `CHECK`ing the role in the database** (a trigger that reads `users.role` on `orders` writes). A cross-table trigger on the hottest write of the shop to protect a rule that two statements already carry (I1) and that a unit test per statement pins.
+
+## 3. Indexes
+
+| Name | Columns | Type | Query it serves |
+|---|---|---|---|
+| `idx_orders_account_id_placed_at` | `(account_id, placed_at DESC) WHERE account_id IS NOT NULL` | btree, partial | **"My orders", newest first, ten at a time** (A5): `WHERE account_id = $1 ORDER BY placed_at DESC, seq DESC LIMIT 10 OFFSET …` reads the customer's rows already in `placed_at` order, and the `seq DESC` tie-break is an incremental sort over runs of equal `placed_at` (a handful of rows at most). `count(*) WHERE account_id = $1` is an index-only count of that customer's rows. **"Is this order mine"** (A6) starts from the order's primary key and compares the column, so it does not need this index. The **foreign key's own check** — what `ON DELETE SET NULL` runs when a user row is deleted: `… WHERE account_id = $1` — is served by it too, because an equality with a non-null value implies the partial index's predicate. A guest order is never in the index, and guests are nearly all of the history, so the index stays as small as the accounts' orders |
+
+The definition is the project ERD's (§3.12); this story only builds it. `seq DESC` is not added to the index: at the volume a customer reaches (tens of orders) the incremental sort costs nothing, and the index stays the one the merged design and the story's SC-17 name. **No other index is added.** `uq_orders_number` (S3) serves the number lookup (A7); `uq_users_email` serves sign-up's conflict (A1); the primary key of `users` serves every session-based read.
+
+## 4. Access patterns this story adds
+
+All SQL is parameterised; the only strings spliced into a statement are none. "The clock" is always the database's `now()`.
+
+| # | Pattern | Frequency | Statement (shape) | Index |
+|---|---|---|---|---|
+| A1 | Sign-up: make the account | Low (≤ 10 an hour per address) | `INSERT INTO users (email, name, phone, address, city, password_hash, role) VALUES ($1, $2, $3, '', '', $4, 'customer') RETURNING id::text` — through `auth.CreateUser`; SQLSTATE 23505 on `uq_users_email` is `auth.ErrEmailTaken` → 409 | `uq_users_email` (the arbiter of a race) |
+| A2 | Sign-up: the first session | Same | Q3 of the sign-in design, in the **same transaction** as A1, passing the hash just written | primary key of `users` |
+| A3 | `GET /v1/account` | Medium (My account, every checkout of a signed-in customer) | `SELECT name, email, phone, address, city FROM users WHERE id = $1 AND role = 'customer' AND is_active`; no row = the account vanished since `Resolve` → 401 | primary key of `users` |
+| A4 | `PUT /v1/account` | Low | `UPDATE users SET name = COALESCE($2, name), phone = COALESCE($3, phone), address = COALESCE($4, address), city = COALESCE($5, city) WHERE id = $1 AND role = 'customer' AND is_active RETURNING name, email, phone, address, city`. A field left out is bound as NULL and keeps its value; `''` is a value and clears `address` and `city`. `trg_users_updated_at` moves `updated_at`. No row = 401 | primary key of `users` |
+| A5 | `GET /v1/account/orders` | Medium (every My account open and every "Show more") | Inside one `REPEATABLE READ`, read-only transaction so the page and the total agree: `SELECT id, number, placed_at, status, total FROM orders WHERE account_id = $1 ORDER BY placed_at DESC, seq DESC LIMIT $2 OFFSET $3`, then `SELECT count(*) FROM orders WHERE account_id = $1`. Public columns only | `idx_orders_account_id_placed_at` |
+| A6 | Read one order as its linked customer (`GET /v1/orders/{id}`, `GET /v1/account/orders/{id}`, `POST /v1/orders/{id}/payment`) | High | The one statement of `authorize` (order-page design §4) with the third way in: `… WHERE o.id = $1 AND (EXISTS (SELECT 1 FROM order_tokens t WHERE t.order_id = o.id AND t.token_hash = $2) OR (o.account_id IS NOT NULL AND o.account_id = $3::uuid))`. `$2` and `$3` are NULL when the request carries no token / is not a customer's | `orders` primary key; `uq_order_tokens_token_hash` |
+| A7 | Add an order / look an order up: find by number | Low | `SELECT id, number, placed_at, status, total, phone, coalesce(account_id::text, '') FROM orders WHERE number = $1`. The phone is read **only** to be compared in Go (`PhoneKey`) and is never copied into the value the function returns | `uq_orders_number` |
+| A8 | Link a guest order | Low | `UPDATE orders o SET account_id = u.id FROM users u WHERE o.id = $2 AND o.account_id IS NULL AND u.id = $1 AND u.role = 'customer' AND u.is_active RETURNING o.id`. One row = linked; none = it was linked meanwhile or the account is gone (answered as "no match") | `orders` primary key |
+| A9 | Place an order while signed in | Medium | The checkout design's `INSERT INTO orders (…)` gains one column, `account_id`, bound as `(SELECT u.id FROM users u WHERE u.id = $n AND u.role = 'customer' AND u.is_active)` (I1) | none new |
+| A10 | The attempt counters | Low | `ratelimit` statements of the sign-in design §4.1 and, for sign-up, `Hit` (services file §3.3) | `rate_limits` primary key |
+
+Nothing here scans a table: A1, A3, A4, A7, A8 and A9 are by primary or unique key; A5 is a range on one partial index; A6 is one primary-key row plus one unique-index probe. At 100 orders for one customer (SC-17) A5 reads at most ten index entries and ten rows plus an index-only count of 100: a few milliseconds, against the 300 ms budget.
+
+## 5. Migration plan
+
+Files `code/backend/migrations/<UTC timestamp>_<name>.up.sql` and `.down.sql`, in this order, **stamped later than item 9's `20261125140000_users_and_sessions`** (the foreign key needs `users`), later than S5's three files (they change `orders`), and later than S3's `…seed_collections`; suggested `20261125150000_orders_account_id` and `20261125150100_orders_account_id_index`. Applied on boot before the server listens; a merged file is never edited (convention `migrations`). Because the runner applies pending files in name order, a database that somehow held migration 11 without `users` would fail loudly at the constraint, never silently.
+
+### Migration 11 — `orders_account_id` (one transaction)
+
+**Forward**
+
+```sql
+ALTER TABLE orders ADD COLUMN account_id uuid;
+ALTER TABLE orders ADD CONSTRAINT fk_orders_account_id
+    FOREIGN KEY (account_id) REFERENCES users (id) ON DELETE SET NULL ON UPDATE NO ACTION NOT VALID;
+ALTER TABLE orders VALIDATE CONSTRAINT fk_orders_account_id;
+```
+
+**Backward** — `ALTER TABLE orders DROP CONSTRAINT IF EXISTS fk_orders_account_id; ALTER TABLE orders DROP COLUMN IF EXISTS account_id;` (the index of migration 12 goes with the column; its own backward file runs first).
+
+**Safe on a populated table** — yes. Adding a nullable column with no default is a catalog change (no rewrite). `ADD CONSTRAINT … NOT VALID` records the key without scanning; `VALIDATE` then scans `orders` once, and every row is NULL, which satisfies a foreign key trivially. **Correction to the project ERD §8 row 11**, which says the two steps take "only a weak lock": the runner puts this file in one transaction, so the `SHARE ROW EXCLUSIVE` lock of `ADD CONSTRAINT` on `orders` and `users` is held until the commit, and the validation scan runs under it. That blocks *writes* to those two tables (reads continue) for the length of one scan of `orders` — milliseconds at the planned 10,000 orders — and only at the boot that applies the file, before the server listens, when no request is being served. Splitting the validation into a file of its own would buy nothing and add a state (a constraint recorded but not validated) that a failed boot could leave behind. **Rolling back** deletes every link between an order and an account (the orders themselves stay), so the backward file is for a local reset or review only; in a deployment a wrong migration is fixed by a new file.
+
+### Migration 12 — `orders_account_id_index` (no transaction: the file says `CONCURRENTLY`; one statement at a time)
+
+**Forward**
+
+```sql
+DROP INDEX CONCURRENTLY IF EXISTS idx_orders_account_id_placed_at;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_account_id_placed_at
+    ON orders (account_id, placed_at DESC) WHERE account_id IS NOT NULL;
+```
+
+The leading `DROP … IF EXISTS` is deliberate. A `CREATE INDEX CONCURRENTLY` that is interrupted (a crash, a cancelled boot) leaves an **invalid** index behind; the runner records the file only after every statement succeeded, so the next boot re-runs it, and a bare `IF NOT EXISTS` would then see the name, skip the build and keep an index the planner ignores for ever. Dropping first makes the re-run build a valid one. It cannot drop a good index: the file runs to completion once and is then recorded, so the `DROP` only ever finds the leftover of a failed earlier run. (A comment in the file must not contain a `;`: the runner splits on it.) SC-17 checks `indisvalid`.
+
+**Backward** — `DROP INDEX CONCURRENTLY IF EXISTS idx_orders_account_id_placed_at;`
+
+**Safe on a populated table** — yes: `CONCURRENTLY` takes no lock that blocks reads or writes, and the partial predicate means the build indexes only linked orders, so on a database where every order is a guest order it indexes nothing. Because it is in a file of its own, a failure here cannot undo migration 11.
+
+### Order against the other stories
+
+This story needs `orders` with its S5 columns and `users` from item 9, so its backend PR **cannot merge before** both ("Checkout and placing an order" and "Dealer sign-in and protected admin area" backends); the file stamps enforce the same order at boot. It touches no object that the search story (`products_search_text`), the VNPay story (`payments`, `idx_orders_unpaid_open`) or the staff story (no migration) touch, so those apply in either order. The track story (`order_tokens` rows, `rate_limits`) needs no migration.
+
+## 6. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| E1 | Does the story need `ALTER TABLE users`? | No: item 9's migration creates `phone`, `address`, `city`. The story's backend writes them through `auth` functions | A second `ALTER TABLE users … ADD COLUMN IF NOT EXISTS` as insurance: a migration that changes a table another story owns, to guard against a state the merged design rules out |
+| E2 | One owner per order, enforced where | By the column (a single FK) and `WHERE account_id IS NULL` (I2) | A join table (§2): history nobody reads and a second unique index for the same rule |
+| E3 | Who may be an owner | A role-and-active guard inside the two statements that write the column (I1, A8) | Trusting the handler's `Require(Customer)`: the route guard stops a team session reaching `POST /v1/account/orders`, but `orders.Place` is also called by a public route where the role is read from the context; a SQL guard means the rule holds for every caller, including one written later |
+| E4 | `ON DELETE` for the link | `SET NULL` (project ERD) | `CASCADE`: deleting a customer would delete their orders, which are the shop's sales history. `RESTRICT`: a customer row could never be removed once they bought, which a future "delete my account" story must be able to do |
+| E5 | Index definition | The merged one, `(account_id, placed_at DESC) WHERE account_id IS NOT NULL` | Adding `seq DESC` to make the sort fully index-served: a wider index to save a sort over a few rows; the merged ERD and SC-17 name this definition |
+| E6 | A leading `DROP INDEX CONCURRENTLY IF EXISTS` in migration 12 | Yes (§5) | `IF NOT EXISTS` alone, as the project ERD §8 row 12 writes: it can keep an invalid index after an interrupted build |
+| E7 | Lock described for migration 11 | Corrected in place (§5) | Repeating "weak lock": inaccurate for a one-transaction file, harmless at this size, but a design should not carry a false sentence |
+
+## 7. What is deliberately not stored
+
+The password (only its argon2id hash, written by `auth`); the typed number and phone of an "Add an order" try (only a SHA-256 of the typed digits in `rate_limits`); the client address of a sign-up (only a hash, `sign_up_address`); when an order was linked; who linked it; the customer's saved details on an order (the order keeps what was typed at checkout); a second email, a verification flag or a reset token (out of scope, SRS open question 5).
+
+## 8. Notes for the two files and their tests
+
+- **The runner reads the SQL text, not the intent.** It runs a file outside a transaction when the text matches `\bconcurrently\b` anywhere, a comment included (`internal/db/migrate.go`). Migration 11's file must therefore never contain that word, or its three statements would run unwrapped; migration 12's must contain it and no `;` inside a comment, because it is split on `;`.
+- **Tests (backend, `TEST_DATABASE_URL`, skipped without it):** after both files, `information_schema.columns` shows `orders.account_id` as `uuid`, nullable; `pg_constraint` shows `fk_orders_account_id` with `confdeltype = 'n'` (SET NULL) and `convalidated`; `pg_index` shows `idx_orders_account_id_placed_at` with `indisvalid` and a partial predicate; every order that existed before the files has `account_id` NULL; a second `db.Migrate` changes nothing; deleting a customer row (with orders linked to it) succeeds, leaves the orders with `account_id` NULL and removes the customer's sessions; with 100 orders linked to one customer, `EXPLAIN` of A5 names `idx_orders_account_id_placed_at` (SC-17).
+- **Invariant tests (one per statement):** A9 stores NULL for a staff id, an admin id, a switched-off customer and an id that is not a user; A8 changes zero rows for a staff id and for an already-linked order, and one row for a guest order and a customer; A6 returns the order to its linked customer and to nobody else.
+
+
+<!-- story 16: Shop phone filters, Clear all, loading and errors -->
+# ERD — Shop phone filters, Clear all, loading and errors (plan item 16)
+
+Module `catalogue` · Requirements CAT-003 items 6–8, CAT-004 in full · Story `docs/catalogue/stories/shop-phone-filters-clear-all-loading-and-errors.md` · UI PR #40 · Engine PostgreSQL 16.
+
+## 1. Verdict: this story adds nothing to the schema
+
+**No table, column, constraint, index, trigger, function or migration is created, changed or dropped by this story.** It is `/shop` in the browser: it changes how the page reads the address bar (`size` is an EU size, not a page size), how it asks again after a failed read, and what it draws while it waits, when nothing matches and when a read failed. Every row it shows is served by plan item 4 from tables that already exist.
+
+| What the page needs | Where the schema already says it |
+|---|---|
+| Twelve live shoes that match what the visitor set, and the true count | `products` (`erd/_base.md` §3.4) read by the one statement of plan item 4 (`erd/search-filters-and-sorting-served-by-the-api.md` §4, S4-1 and S4-2: `status = 'live'`, any-of `category` / `line` / `colour`, price ranges, `size`, words, `ORDER BY` one field then `seq`). `total` and the page come from one statement, so the count on screen can never disagree with the cards |
+| The colour options and the Size (EU) pills | `GET /v1/product-filters`, computed from the live shoes on every request (same file, S4-4 and decision E5). A catalogue with one colour or one size answers a one-item list; the page, not the database, decides that a group of fewer than two options is not drawn |
+| Category and line names (the heading, the For and Line groups) | `categories` and `lines`, read through S3's reader. Not changed |
+| "No pair matches that." | Not a stored fact: it is `total = 0` in a `200` answer. A filter value that names nothing (`?line=zzz`, `?colour=zzz`, `?size=99`) is an ordinary any-of filter that matches no row, so it is `200` with `items: []`, never an error (S4 services §3.3, §3.7) |
+
+## 2. Entities this story touches — none changed
+
+| Entity (defined elsewhere) | Effect of this story |
+|---|---|
+| `products` | Read, through item 4's list and `product-filters`. Not changed. The index that serves the shop's default list (`idx_products_status_released_seq`) and every other access pattern are item 4's (S4 §4); this story adds no query |
+| `categories`, `lines` | Read by the page for names. Not changed |
+| `product_sizes` / `product_stock` (S5) or the S3 size columns | Read by item 4's `size` condition and `product-filters`, in whichever form is on `main`. This story does not care which |
+
+## 3. Decisions
+
+| # | Question | Decision | Rejected alternative, and why |
+|---|---|---|---|
+| D1 | Does Back need the list to be stored (a "last list" row, a session value, browser storage or history state) so it can return to the same cards? | **No.** The address bar is the whole state (CAT-003 data touched: "nothing stored on the server"). Back re-reads the list from the address and shows the first twelve, which is exactly what CAT-003 item 7 asks. Nothing is written for it | Storing the 24 cards or the scroll position of an earlier "Show more": the SRS asks for the first twelve, the story leaves restoring them out (§5), and a stored list needs a lifetime and a cleanup rule for a promise nobody made |
+| D2 | Do "loading" and "could not load" need a stored state (a status flag, a cache table, a last-read timestamp)? | **No.** Both are client states of one request in flight or one request that failed. Nothing is written and nothing is read from the database to tell them apart; the failed read is told from the empty read by the HTTP answer alone (services file §2) | A server-side "is the shop up" row: the page learns it from the request itself, and a second source could disagree with the first |
+| D3 | The empty state says "ask us, and we will tell you when it comes in". Does that need a "notify me" table? | **No.** It is the owner's wording, and the page has no such feature (story §5). The contact page and the dock are one tap from every page | A `stock_notifications` table: no consent text, no contact policy, no sending of anything exists, and every address collected would be personal data with no purpose the SRS gives |
+| D4 | Is the number in "Filter (n)" or the `<N> matching` line a database figure? | **No.** `n` is counted in the browser from the address (ticked boxes plus pressed size pills); `<N>` is the list answer's `total`. Neither is a column, a view or a second query | A "count of active filters" the API computes: it would be a second reading of what the address already says, and could disagree with the boxes on screen |
+
+### Conflicts with merged decisions
+
+None. I read `erd/_base.md` §3.4, `erd/search-filters-and-sorting-served-by-the-api.md` §1–§5 and `erd/product-page-waits-for-the-shoe-before-saying-it-i.md`. One interaction is recorded in the services file §6: PR #40 and plan item 4's backend PR both edit files of the shop's list; it is an ordering fact between two pull requests, not a change to any table.
+
+## 4. Migration plan
+
+| Step | Forward | Backward | Safe on a populated table |
+|---|---|---|---|
+| This story | **No migration file.** Nothing runs against any database | Revert the frontend PR (#40) | Not applicable: no table is touched and no statement is added |
+
+No migration is added and none is edited (a merged migration is never edited).
+
+## 5. Hand-over
+
+| Who | What they must know |
+|---|---|
+| Dev, backend step of this story | **There is no backend work**: no table, no endpoint, no migration, no mock module of this story's own to delete. The step has nothing to implement; the orchestrator may close it without a pull request. The fault knobs PR #40 adds to item 4's mock, the mock's stand-in reading of the shoes through `api.get` (UI fix 1) and its test `src/test/shop-mock.test.ts` are deleted with that mock in item 4's backend step and the catch-up of #40 (services file §3, §3.1, §5 K6). Still no schema consequence |
+| Test lead | Fixtures (30 live shoes, a one-colour and one-size catalogue, a draft shoe, 60 live shoes for the dealer's page size) are built with SQL in a test database, never the seed. The shoe sizes are written in whichever form `main` holds; no column is added for any fixture |
+| Plan item 4's backend | Nothing to add to its schema. Its statements are the ones this story's states are read from |
+
+## 6. Revision after the catch-up of PR #40 (UI fix 2)
+
+Checked again against `main` after plan item 4's backend (PR #49) merged and #40 was caught up with it: the pull request's twelve files are all under `code/frontend/src/`; none is a migration, a Go file or a SQL statement, and the tables and statements of plan item 4 that this story reads (§1, §2) are unchanged. **Still no schema consequence, still no migration, and still nothing for the Story BE step to build.** The frontend ruling of the same revision is `docs/architecture/services/shop-phone-filters-clear-all-loading-and-errors.md` §3.2.
+

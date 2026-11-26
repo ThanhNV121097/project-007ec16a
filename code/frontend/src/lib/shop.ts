@@ -86,10 +86,7 @@ export interface Order {
 
 export interface ShopTerms {
   id: string;
-  free_delivery_from: number;
   standard_days: string;
-  express_days: string;
-  express_cities: string;
   dispatch_cutoff: string;
   reply_time: string;
   rating: number;

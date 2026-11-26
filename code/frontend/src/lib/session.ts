@@ -1,156 +1,157 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { ApiError, api } from "./api";
 
 /**
- * The design's mock session: who is signed in, on this browser.
+ * WHO IS SIGNED IN, as the shop's server says — and nothing else.
  *
- * For the design only. The design is the frontend on mock data, so a page
- * for a signed-in visitor — an account, a checkout, a booking's confirmation
- * — reads the visitor from here, and the sign-in form calls signIn with what
- * was typed (no password is checked). After approval the backend story
- * replaces this file with real sign-in behind the same three names, so the
- * pages do not change.
+ * The session is the server's: an opaque cookie the browser keeps and this
+ * file never sees. What this file holds is the last answer to `GET
+ * /v1/auth/me`, so a page that asks "who is this?" gets the server's word, not
+ * a note the browser wrote to itself. Nothing is read from or written to
+ * browser storage: a forged entry there opens nothing.
  *
- * Use it; never write another session. A page design/pages.json marks
- * "auth": true is shown in the Studio signed in, as a demo visitor, by
- * writing this key before the page starts (src/canvas-mode.ts in the Studio's
- * frame, the workspace when it draws the pages); a session kept anywhere else
- * is never signed in there, and the owner sees only a sign-in prompt.
+ *   useSession()          the visitor signed in, or null. Null while the first
+ *                         answer is still awaited, too — a page that must tell
+ *                         "still asking" from "nobody" reads useAuth().
+ *   useAuth()             { checking, session }: `checking` is true until the
+ *                         server has answered once. The gate draws nothing and
+ *                         redirects nowhere while it is.
+ *   useRole()             "admin", "staff", "customer", or "" for nobody.
+ *   signIn(email, password)  resolves "ok", "wrong", "limited" or "unreachable".
+ *   signOut()             ends the session on the server and here.
  *
- *   useSession()          the visitor signed in, or null. Every component
- *                         that reads it draws again the moment it changes,
- *                         in this tab or another.
- *   signIn(email, name?)  signs in; the name defaults to the email's first part.
- *   signOut()
- *
- * Kept as JSON — {"email": …, "name": …} — in localStorage under
- * "agentteam:session".
+ * The three calls go to `/v1/auth/*` through src/lib/api.ts, which sends the
+ * session cookie with every request.
  */
+
+/** What an account is: the shop's team is admin and staff. */
+export type Role = "admin" | "staff" | "customer";
 
 export interface Session {
   email: string;
   name: string;
-  /**
-   * Which role this visitor acts as — "buyer", "supplier", "admin", "staff",
-   * whatever the brief names. Absent on a site with one kind of visitor.
-   *
-   * A site with more than one role must gate on it: the pages of one role are
-   * not the pages of another, and a design where every signed-in visitor sees
-   * every page is a design nobody can tell is wrong by looking at it. Gate
-   * with <RequireRole> (src/components/RequireRole.tsx) and say so in
-   * design/pages.json ("roles": ["supplier"]), which is what the walk reads
-   * to open the page as somebody else and check it is refused.
-   */
-  role?: string;
+  /** What the server says this account is. */
+  role: Role;
 }
 
-const KEY = "agentteam:session";
+export type SignInResult = "ok" | "wrong" | "limited" | "unreachable";
 
-/** Where the session is kept when the browser refuses storage: this page only. */
-let memory: string | null = null;
+type Phase = "idle" | "checking" | "ready";
 
-function load(): string | null {
-  try {
-    return localStorage.getItem(KEY);
-  } catch {
-    return memory;
-  }
+interface State {
+  phase: Phase;
+  session: Session | null;
 }
 
-function store(raw: string | null) {
-  memory = raw;
-  try {
-    if (raw === null) localStorage.removeItem(KEY);
-    else localStorage.setItem(KEY, raw);
-  } catch {
-    // Storage refused (a private window, a sandbox): the session lasts this page.
-  }
-}
-
-/** "lan.tran@example.com" → "Lan Tran": a name to greet with when none was given. */
-function nameFrom(email: string): string {
-  const words = email.split("@")[0].split(/[._-]+/).filter(Boolean);
-  return words.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || email;
-}
-
-function parse(raw: string | null): Session | null {
-  if (!raw) return null;
-  try {
-    const v = JSON.parse(raw) as { email?: unknown; name?: unknown; role?: unknown } | null;
-    const email = typeof v?.email === "string" ? v.email.trim() : "";
-    if (!email) return null;
-    const name = typeof v?.name === "string" ? v.name.trim() : "";
-    const session: Session = { email, name: name || nameFrom(email) };
-    const role = typeof v?.role === "string" ? v.role.trim().toLowerCase() : "";
-    if (role) session.role = role;
-    return session;
-  } catch {
-    return null;
-  }
-}
-
-// The session as read last, kept while its text is the same: React asks for
-// it on every render and must get the same object back when nothing changed.
-let lastRaw: string | null | undefined;
-let last: Session | null = null;
-
-function read(): Session | null {
-  const raw = load();
-  if (raw !== lastRaw) {
-    lastRaw = raw;
-    last = parse(raw);
-  }
-  return last;
-}
-
+let state: State = { phase: "idle", session: null };
+// Bumped by every sign-in and sign-out, so a slower "who am I" answer that
+// was asked before one of them can never put the old visitor back.
+let epoch = 0;
 const listeners = new Set<() => void>();
 
-function changed() {
+function set(next: State) {
+  state = next;
   listeners.forEach((l) => l());
 }
 
 function subscribe(onChange: () => void) {
   listeners.add(onChange);
-  // Another tab signing in or out, or the Studio's frame setting the visitor.
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY || e.key === null) onChange();
-  };
-  window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(onChange);
-    window.removeEventListener("storage", onStorage);
   };
+}
+
+function snapshot(): State {
+  return state;
+}
+
+/** The three fields of an answer, or null when the body is not an account. */
+function toSession(body: unknown): Session | null {
+  const v = body as { email?: unknown; name?: unknown; role?: unknown } | null;
+  if (!v || typeof v.email !== "string" || typeof v.name !== "string") return null;
+  if (v.role !== "admin" && v.role !== "staff" && v.role !== "customer") return null;
+  return { email: v.email, name: v.name, role: v.role };
+}
+
+/** Asks the server who is signed in. Any failure, a 401 or an unreachable server, is nobody. */
+async function check(): Promise<void> {
+  const asked = epoch;
+  let found: Session | null = null;
+  try {
+    found = toSession(await api.get<unknown>("auth/me"));
+  } catch {
+    found = null;
+  }
+  if (asked === epoch) set({ phase: "ready", session: found });
+}
+
+function ensureChecked() {
+  if (state.phase !== "idle") return;
+  set({ phase: "checking", session: null });
+  void check();
+}
+
+/**
+ * The visitor and whether the server has answered yet. The first component to
+ * ask starts the one question; every other reads its answer.
+ */
+export function useAuth(): { checking: boolean; session: Session | null } {
+  const s = useSyncExternalStore(subscribe, snapshot, snapshot);
+  useEffect(() => {
+    ensureChecked();
+  }, []);
+  return { checking: s.phase !== "ready", session: s.session };
 }
 
 /** The visitor signed in, or null. */
 export function useSession(): Session | null {
-  return useSyncExternalStore(subscribe, read, () => null);
+  return useAuth().session;
+}
+
+/** The word the form acts on for a sign-in the server refused or could not answer. */
+function verdict(e: unknown): SignInResult {
+  if (e instanceof ApiError) {
+    if (e.status === 429) return "limited";
+    if (e.status === 401 || e.status === 422) return "wrong";
+  }
+  return "unreachable";
 }
 
 /**
- * Signs the visitor in as email — any address: this is the design's mock.
- * `role` is the role they act as on a site that has more than one.
+ * Signs in with what was typed. On success the session is the server's own
+ * answer; on any refusal nothing changes.
  */
-export function signIn(email: string, name?: string, role?: string): void {
-  const address = email.trim();
-  if (!address) return;
-  const session: Session = { email: address, name: name?.trim() || nameFrom(address) };
-  const acting = role?.trim().toLowerCase();
-  if (acting) session.role = acting;
-  store(JSON.stringify(session));
-  changed();
-}
-
-/** Signs the visitor out. */
-export function signOut(): void {
-  store(null);
-  changed();
+export async function signIn(email: string, password: string): Promise<SignInResult> {
+  let body: unknown;
+  try {
+    body = await api.post<unknown>("auth/sign-in", { email: email.trim(), password });
+  } catch (e) {
+    return verdict(e);
+  }
+  const session = toSession(body);
+  if (!session) return "unreachable";
+  epoch += 1;
+  set({ phase: "ready", session });
+  return "ok";
 }
 
 /**
- * The role the visitor acts as, lowercased, or "" when nobody is signed in or
- * the site has one kind of visitor.
+ * Signs the visitor out. The screen leaves the area at once; the server is
+ * told after, and its answer is always 204, so there is nothing to report if
+ * it cannot be reached — the cookie it never heard about ends by itself.
  */
-export function useRole(): string {
+export async function signOut(): Promise<void> {
+  epoch += 1;
+  set({ phase: "ready", session: null });
+  try {
+    await api.post("auth/sign-out");
+  } catch {
+    // Nothing more can be done from here.
+  }
+}
+
+/** The role the visitor acts as, or "" when nobody is signed in. */
+export function useRole(): Role | "" {
   return useSession()?.role ?? "";
 }
 
@@ -158,13 +159,10 @@ export function useRole(): string {
  * Whether the visitor may enter an area open to `roles`.
  *
  * An empty list is open to anyone signed in. Nobody signed in is never
- * allowed: a role check is not a sign-in check, and a page open to
- * ["supplier"] must refuse a visitor with no role exactly as it refuses a
- * buyer.
+ * allowed: a role check is not a sign-in check.
  */
 export function allowed(session: Session | null, roles?: readonly string[]): boolean {
   if (!session) return false;
   if (!roles || roles.length === 0) return true;
-  const role = session.role ?? "";
-  return roles.some((r) => r.trim().toLowerCase() === role);
+  return roles.some((r) => r.trim().toLowerCase() === session.role);
 }

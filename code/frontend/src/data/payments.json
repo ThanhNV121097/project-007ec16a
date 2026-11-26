@@ -1,6 +1,0 @@
-[
-  { "id": "cod", "name": "Cash on delivery", "note": "Pay the courier in cash when the box arrives. You may open it and check the pair first.", "online": false, "icon": "cash", "_source": "assumed" },
-  { "id": "bank", "name": "Bank transfer (VietQR)", "note": "Scan the QR code on the next screen with any banking app. We send the pair as soon as the money lands.", "online": true, "icon": "qr", "_source": "assumed" },
-  { "id": "vnpay", "name": "VNPay — ATM, Visa, Mastercard", "note": "Pay by card or banking app on VNPay's secure page; the order is marked paid at once.", "online": true, "icon": "card", "_source": "assumed" },
-  { "id": "momo", "name": "MoMo wallet", "note": "Confirm the payment in the MoMo app; the order is marked paid at once.", "online": true, "icon": "wallet", "_source": "assumed" }
-]

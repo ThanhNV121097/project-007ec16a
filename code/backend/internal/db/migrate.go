@@ -2,19 +2,26 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // migrationLockKey serialises Migrate across instances that start together:
 // the second one waits, then finds nothing left to apply.
 const migrationLockKey int64 = 7424001
+
+// lockPollInterval is how long an instance that did not get the lock waits
+// before asking again. See takeLock for why it asks rather than waits.
+const lockPollInterval = 100 * time.Millisecond
 
 var (
 	upName       = regexp.MustCompile(`^(\d{14})_[a-z0-9_]+\.up\.sql$`)
@@ -41,7 +48,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS, log *slog.Logg
 	}
 	defer conn.Release()
 
-	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockKey); err != nil {
+	if err := takeLock(ctx, conn); err != nil {
 		return fmt.Errorf("take migration lock: %w", err)
 	}
 	defer func() {
@@ -77,6 +84,32 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS, log *slog.Logg
 	return nil
 }
 
+// takeLock takes the migration lock by asking for it every lockPollInterval
+// until it is free or ctx is done.
+//
+// It does not block in pg_advisory_lock. A blocked pg_advisory_lock is a running
+// statement, so its session holds a snapshot and a virtual transaction id; the
+// holder of the lock, running CREATE INDEX CONCURRENTLY, waits for every such
+// transaction to end — and the waiter waits for the holder. PostgreSQL detects
+// the cycle and fails one of them (SQLSTATE 40P01). pg_try_advisory_lock
+// answers at once, so between two asks the waiter is idle and holds nothing.
+func takeLock(ctx context.Context, conn *pgxpool.Conn) error {
+	for {
+		var got bool
+		if err := conn.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", migrationLockKey).Scan(&got); err != nil {
+			return err
+		}
+		if got {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(lockPollInterval):
+		}
+	}
+}
+
 func appliedVersions(ctx context.Context, conn *pgxpool.Conn) (map[string]bool, error) {
 	rows, err := conn.Query(ctx, "SELECT version FROM schema_migrations")
 	if err != nil {
@@ -102,7 +135,7 @@ func apply(ctx context.Context, conn *pgxpool.Conn, m migration, body string) er
 	if needsNoTransaction(body) {
 		for _, stmt := range splitStatements(body) {
 			if _, err := conn.Exec(ctx, stmt); err != nil {
-				return err
+				return withDetail(err)
 			}
 		}
 		_, err := conn.Exec(ctx, record, m.version, m.name)
@@ -114,7 +147,7 @@ func apply(ctx context.Context, conn *pgxpool.Conn, m migration, body string) er
 	}
 	defer func() { _ = tx.Rollback(ctx) }() // a no-op once committed
 	if _, err := tx.Exec(ctx, body); err != nil {
-		return err
+		return withDetail(err)
 	}
 	if _, err := tx.Exec(ctx, record, m.version, m.name); err != nil {
 		return err
@@ -152,6 +185,18 @@ func listUp(fsys fs.FS) ([]migration, error) {
 }
 
 func needsNoTransaction(body string) bool { return concurrently.MatchString(body) }
+
+// withDetail adds PostgreSQL's DETAIL line to a failed statement's error.
+// pgconn.PgError.Error() leaves it out, and for a duplicate key it is the part
+// that names the id (`Key (id)=(samba) already exists.`): a seed that meets a
+// record already there must say which one.
+func withDetail(err error) error {
+	var pg *pgconn.PgError
+	if errors.As(err, &pg) && pg.Detail != "" {
+		return fmt.Errorf("%w (%s)", err, pg.Detail)
+	}
+	return err
+}
 
 // splitStatements cuts a no-transaction file at its semicolons and drops the
 // pieces that hold nothing but comments. It does not understand $$ bodies,

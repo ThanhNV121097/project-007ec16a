@@ -27,7 +27,8 @@ the built site on `$PORT`.
   `license`, `page`), written by the team's `save_photo` and by the Studio when
   the owner replaces a photo — never by hand — and shown by `<PhotoCredits/>`
   in the footer, which many of the photos' licences (CC BY) ask for.
-- Signed-in pages: `src/lib/session.ts` is the design's mock session
-  (`useSession()`, `signIn(email, name?)`, `signOut()`). A page that
-  `design/pages.json` marks `"auth": true` opens signed in in the Studio; the
-  backend story replaces the file with real sign-in after approval.
+- Signed-in pages: `src/lib/session.ts` is the server's session, read through
+  `GET /v1/auth/me` (`useSession()`, `useRole()`, `signIn(email, password)`,
+  `signOut()`); the cookie is the server's and nothing is kept in browser
+  storage. The `/admin/*` pages sit behind `components/admin/AdminGate.tsx`,
+  which opens them to an admin or staff account only.

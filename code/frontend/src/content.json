@@ -201,7 +201,8 @@
         "overview": "Overview",
         "products": "Shoes",
         "reviews": "Reviews",
-        "sales": "Sales"
+        "sales": "Sales",
+        "staff": "Staff"
       },
       "orders": {
         "cancelled": "Cancelled",
@@ -264,6 +265,65 @@
         ],
         "note": "Accounts are for the dealer and staff. Ask the owner for one.",
         "title": "Đôi — dealer sign-in"
+      },
+      "staff": {
+        "add": "Add staff member",
+        "columns": {
+          "email": "Email",
+          "name": "Name",
+          "role": "Role",
+          "status": "Status"
+        },
+        "confirm": {
+          "off": {
+            "note": "They are signed out at once and cannot sign in until you switch them on.",
+            "title": "Switch off {name}?",
+            "verb": "Switch off"
+          },
+          "remove": {
+            "note": "The account is deleted and cannot be restored. Their work stays.",
+            "title": "Remove {name}?",
+            "verb": "Remove"
+          }
+        },
+        "couldNotSave": "We could not save. Please try again.",
+        "dialog": {
+          "add": {
+            "cancel": "Cancel",
+            "email": "Email",
+            "hint": "At least 10 characters.",
+            "name": "Name",
+            "password": "Starting password",
+            "submit": "Add",
+            "title": "Add staff member"
+          },
+          "reset": {
+            "cancel": "Cancel",
+            "password": "New password",
+            "saved": "Saved.",
+            "submit": "Save",
+            "title": "Reset password for {name}"
+          }
+        },
+        "error": "We could not load the staff.",
+        "loading": "Loading the staff…",
+        "menu": {
+          "off": "Switch off",
+          "on": "Switch on",
+          "remove": "Remove",
+          "reset": "Reset password"
+        },
+        "retry": "Try again",
+        "roles": {
+          "admin": "Admin",
+          "staff": "Staff"
+        },
+        "saving": "Saving…",
+        "status": {
+          "active": "Active",
+          "off": "Switched off"
+        },
+        "title": "Staff"
       }
     },
     "cart": {
@@ -277,7 +337,7 @@
       "head_alt": "Gift boxes ready to wrap",
       "heading": "Your bag",
       "keep": "Keep shopping",
-      "pay_line": "Pay by cash on delivery, bank transfer, VNPay or MoMo at the next step.",
+      "pay_line": "You pay online with VNPay — card, domestic ATM card or QR — at the next step.",
       "remove": "Remove",
       "subtotal": "Subtotal",
       "suggest": "New this month",
@@ -287,16 +347,18 @@
     "checkout": {
       "address": "Street address, ward, district",
       "city": "City or province",
+      "delivery_title": "Free delivery",
       "description": "Your address, delivery and payment for your adidas order.",
       "empty": "Nothing to check out yet.",
+      "failed": "We could not place your order. Nothing was charged. Please try again.",
       "head_alt": "A parcel sealed with packing tape",
       "heading": "Checkout",
       "line": "{variant} · Qty {qty}",
       "missing": "Fill in your name, street address and city.",
       "name": "Full name",
-      "next_cod": "After you press Place order we confirm by text message; you pay the courier in cash when the box arrives.",
-      "next_online": "After you press Place order you pay on the {method} page; the order is marked paid at once and packed today.",
+      "next_online": "After you press Place order you pay on the {method} page; we pack your order after the payment is confirmed.",
       "note": "Note for the courier (optional)",
+      "offline": "You seem to be offline. Check your connection and try again.",
       "paying": "Placing your order…",
       "phone": "Phone",
       "phone_bad": "Check the phone number — we text you when the pair is on its way.",
@@ -307,7 +369,8 @@
       "step_payment": "Payment",
       "summary": "Your order",
       "terms": "By placing the order you accept the delivery information and that exchanges are not accepted.",
-      "title": "Checkout"
+      "title": "Checkout",
+      "unavailable": "Online payment is not available right now. Please try again later."
     },
     "contact": {
       "about": "You are asking about",
@@ -326,7 +389,7 @@
         },
         {
           "href": "/shipping",
-          "label": "Delivery times and fees"
+          "label": "Free delivery and arrival times"
         },
         {
           "href": "/returns",
@@ -367,7 +430,7 @@
       "description": "Where your order is, what is in it and when it arrives.",
       "details": "Delivery and payment",
       "done": "Delivered. If your delivery is wrong or damaged, message us.",
-      "due": "to pay on delivery",
+      "due": "awaiting payment",
       "eta": "Expected by {date}.",
       "headline": {
         "cancelled": "This order was cancelled.",
@@ -493,24 +556,21 @@
     },
     "shipping": {
       "columns": {
-        "fee": "Fee",
+        "cost": "Cost",
         "option": "Option",
         "time": "Arrives",
         "where": "Where"
       },
-      "cutoff": "Orders placed before {cutoff} on a working day leave the same day.",
-      "description": "What delivery costs, how long it takes and where express reaches.",
+      "description": "Delivery is free on every order and takes 2–4 working days anywhere in Vietnam.",
       "faq_heading": "Questions about delivery",
       "figures": {
-        "express": "Working day by express in {cities}.",
-        "free": "Standard delivery on every order over {price} — that is every pair in the shop.",
+        "free": "Delivery on every order, whatever it comes to — that is every pair in the shop.",
         "standard": "Working days by standard delivery, anywhere in Vietnam."
       },
-      "free_from": "Free over {price}",
       "head_alt": "Motorbikes on a city street in the morning",
       "heading": "Delivery",
-      "lead": "Every pair leaves boxed, tagged and tracked. Here is what it costs and how long it takes.",
-      "options_heading": "Options and fees",
+      "lead": "Every pair leaves boxed, tagged and tracked, and delivery is free on every order.",
+      "options_heading": "Delivery options",
       "title": "Delivery",
       "track_cta": "Track an order"
     },
@@ -589,7 +649,7 @@
       "phone": "Phone",
       "placeholder": "DOI-24817",
       "steps": {
-        "confirmed": "Paid, or confirmed by phone for cash on delivery; the pair is set aside for you.",
+        "confirmed": "Paid online; the pair is set aside for you.",
         "delivered": "In your hands. If anything is wrong with the delivery, message us.",
         "packed": "Boxed with its tags and our receipt, waiting for the courier.",
         "placed": "We have the order and are checking the pair against it.",
@@ -602,14 +662,14 @@
     }
   },
   "promises": {
-    "cod_line": "Open the box and check the pair before you pay.",
-    "cod_title": "Cash on delivery",
     "delivery_line": "{days} working days, anywhere in Vietnam.",
     "delivery_title": "Free delivery",
     "exchange_line": "Check the size chart before you order.",
     "exchange_title": "No exchanges",
     "genuine_line": "Every pair boxed, tagged and sent with our receipt.",
-    "genuine_title": "Genuine adidas"
+    "genuine_title": "Genuine adidas",
+    "pay_line": "Card, domestic ATM card or QR, through VNPay.",
+    "pay_title": "Pay online"
   },
   "site": {
     "description": "Đôi is an independent online dealer of genuine adidas shoes for men, women and kids, with free delivery and a size chart.",
