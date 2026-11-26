@@ -28,8 +28,8 @@ export default function OrderDetails({ order, method, option }: { order: PublicO
   const dueText = useContent("pages.order.due");
   return (
     <>
-    {payByTransfer(order) && <TransferBlock order={order} />}
-    <aside className="flex min-w-0 flex-col gap-8 lg:col-span-5 lg:pl-8">
+      {payByTransfer(order) && <TransferBlock order={order} />}
+      <aside className="flex min-w-0 flex-col gap-8 lg:col-span-5 lg:pl-8">
       <div>
         <T k="pages.order.details" as="h2" className="text-lg text-ink" />
         <SpecList className="mt-4" items={[
