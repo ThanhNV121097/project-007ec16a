@@ -315,7 +315,7 @@ func TestAnOrderWithoutItsTokenIsTheSame404(t *testing.T) {
 // columns and does not select a customer's phone, email, address or note.
 func TestThePublicViewSelectsNoPrivateColumn(t *testing.T) {
 	for _, name := range []string{"phone", "email", "address", "note", "is_sample", "source", "invented", "idempotency_key"} {
-		for _, sql := range []string{viewSQL, tokenSQL} {
+		for _, sql := range []string{viewSQL, accessSQL} {
 			if strings.Contains(sql, "o."+name) || strings.Contains(sql, "f."+name) || strings.Contains(sql, "'"+name+"'") {
 				t.Errorf("the public view selects %s", name)
 			}
