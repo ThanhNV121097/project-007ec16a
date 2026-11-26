@@ -188,7 +188,8 @@ func TestADealerMovesCancelsAndDeletesAnOrderAgainstPostgres(t *testing.T) {
 	if rec := e.call(http.MethodGet, "/v1/orders/"+id, "", nil, "X-Order-Token", token); rec.Code != 404 {
 		t.Errorf("the old token: %d", rec.Code)
 	}
-	if e.pairs("tc-order-a", "38") != 5-1 {
+	// Both orders were cancelled, so every pair is back, and no delete moved a count.
+	if e.pairs("tc-order-a", "38") != 5 {
 		t.Errorf("the delete moved the shelf: %d", e.pairs("tc-order-a", "38"))
 	}
 	// SC-23: a missing order is 404 even for a body that would be refused.
