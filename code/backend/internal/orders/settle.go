@@ -129,8 +129,9 @@ WHERE id = $1 AND NOT paid`
 // MarkPaid sets paid, and moves a "placed" order to "confirmed", once: changed is
 // false when the order was already paid. An order that is already cancelled is
 // marked paid and stays cancelled, so the dealer sees it and refunds it. It is the
-// only statement in the project that sets orders.paid for an online order, and
-// only a verified notice from the provider calls it.
+// only statement in the project that sets orders.paid, and it has three callers: a
+// verified VNPay notice, a verified MoMo notice, and the dealer marking a
+// bank-transfer order paid. Nothing else calls it.
 func MarkPaid(ctx context.Context, tx Tx, id string) (changed bool, err error) {
 	tag, err := tx.Exec(ctx, markPaidSQL, id)
 	if err != nil {
