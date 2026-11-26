@@ -1,5 +1,4 @@
-import { T } from "../editable";
-import { useOrderWords } from "../lib/order-words";
+import { T, useContent } from "../editable";
 import Icon from "./Icon";
 import OutlinePill from "./OutlinePill";
 
@@ -31,15 +30,16 @@ export function OrderMissing() {
 
 /** The shop could not be asked or failed: neither the order nor "not found", one line and a way to ask again. */
 export function OrderLoadError({ onRetry }: { onRetry: () => void }) {
-  const words = useOrderWords();
+  const failed = useContent("pages.order.load_failed");
+  const retry = useContent("pages.order.retry");
   return (
     <section className="flex flex-col items-start gap-5 py-16">
       <p role="alert" data-testid="order-load-error" className="flex items-center gap-2 text-sm text-ink">
-        <Icon name="alert" size={16} className="shrink-0 text-danger" />{words.loadFailed}
+        <Icon name="alert" size={16} className="shrink-0 text-danger" />{failed}
       </p>
       <button type="button" onClick={onRetry}
         className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-ink px-4 py-2 text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-ink transition-colors hover:bg-ink hover:text-ground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
-        {words.retry}
+        {retry}
       </button>
     </section>
   );
