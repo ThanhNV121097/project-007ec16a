@@ -19,12 +19,8 @@ function etaLine(order: PublicOrder, eta: string, done: string): string {
  * status (or the thanks, when the address carries `placed`), the line under
  * it and the five steps — and the first pair running off the right edge from
  * 1024px. A first pair with no picture draws no picture and no box, and the
-<<<<<<< refs/heads/feature/order-page-and-pay-now-be
- * two left-hand blocks stack in the first column either way.
-=======
  * two left-hand blocks both start at column 1 so they stack instead of the
  * steps moving up beside the heading into the space the picture left.
->>>>>>> refs/heads/main
  */
 export default function OrderHead({ order, placed }: { order: PublicOrder; placed: boolean }) {
   const headlines = useContent<Record<string, string>>("pages.order.headline");
