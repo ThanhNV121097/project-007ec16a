@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useContent } from "../editable";
 import { BANK, markPaid } from "../lib/more-ways-to-pay-vietqr-transfer-and-momo";
 import type { OrderStatus } from "../lib/shop";
 import { Badge, Button } from "./admin/index";
@@ -31,9 +32,10 @@ export default function AdminOrderPayment({ id, way, paid, status, transactionNo
   onMarked?: (next: { paid: true; status: OrderStatus }) => void;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
-  const [marked, setMarked] = useState(false);
+  const [marked, setMarked] = useState<OrderStatus | null>(null);
+  const steps = useContent<Record<string, string>>("orders.steps");
   const box = useRef<HTMLDivElement>(null);
-  const isPaid = paid || marked;
+  const isPaid = paid || marked !== null;
   const provider = PROVIDER[way];
 
   // The button leaves when the order is paid and is disabled while it waits: keep the keyboard's place.
@@ -49,7 +51,7 @@ export default function AdminOrderPayment({ id, way, paid, status, transactionNo
       setPhase(result.kind);
       return;
     }
-    setMarked(true);
+    setMarked(result.status);
     setPhase("saved");
     onMarked?.({ paid: true, status: result.status });
   };
@@ -66,6 +68,7 @@ export default function AdminOrderPayment({ id, way, paid, status, transactionNo
         )}
       </div>
       {provider && transactionNo !== "" && <p className="text-sm text-ink">{`${provider} transaction ${transactionNo}`}</p>}
+      {marked !== null && <p data-testid="admin-payment-status" className="text-sm text-ink">{`Status: ${steps?.[marked] ?? marked}`}</p>}
       {phase === "saved" && <p role="status" className="text-sm text-ink">Saved.</p>}
       {phase === "failed" && <p role="alert" className="text-sm text-danger">We could not save. Please try again.</p>}
       {phase === "expired" && (
