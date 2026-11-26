@@ -197,7 +197,7 @@ Also traced: ADMIN-011 AC-15's count and the list's Payment filter read the same
 
 **Notes for TL's technical design (not binding where the design finds better)**
 
-1. **Lock order.** `orders.Cancel` locks the order, then the counts it returns (`stock.Lock` in (shoe, size) order), the reverse of nothing in checkout's order (`orders.go`'s package comment): the advisory lock, the shoes, the counts, the counter, the inserts. A cancel must not be able to deadlock with `Place` or with item 10's `SetOne`.
+1. **Lock order.** `orders.Cancel` locks the order row first and then the counts it returns (`stock.Lock`, in (shoe, size) order). Checkout locks the advisory key, the shoes, the counts, the counter, then inserts (`orders.go`'s package comment). TL's design pins the order so that a cancel cannot deadlock with `Place`, with item 10's `SetOne`, or with a second cancel.
 2. **Whole record versus fields.** `RecordPage`'s `saveRow` may send the whole record. The server refuses `total`, `number` and the rest when present (decision 2), so TL names how the page limits the body — the page's `fields` prop already restricts what the form shows, but not what `values` carries.
 3. **Read-only drawing.** `FieldSpec` has no read-only flag and this story may not edit `fields.tsx` or `Form.tsx`. The page therefore passes only the editable fields in `fields` (a locked order passes `note` only) and draws the read-only facts in its own component beside the form.
 4. **The dealer's record read.** `useRecord("orders", id)` reads `GET /v1/orders/{id}`; the answer must carry `items` and the five dealer fields (SC-2). The list's `product` is an id; the "shoe" column resolves its name the way other lists do.
