@@ -594,7 +594,7 @@ Check: interact_page
 **Scenario**: TC-71 — changing the price on a shoe's page shows "Saved."; the list shows it after a reload; the fields are those the shop answered
 **Given**: STAFF is on `/admin/products/tc-shoe`.
 **When**: The run sets Name to `  Tc Shoe  ` (spaces either side) and Price to `3490000`, presses "Save changes"; reads the page; opens `/admin/products` after a reload and searches `Tc Shoe`.
-**Then**: "Saved." shows (announced). The Name field now reads `Tc Shoe` (the shop's trimmed answer, not what was typed). The list row shows `3.490.000 ₫`. `GET /api/v1/products/tc-shoe` as visitor reads `price` 3490000.
+**Then**: "Saved." shows (announced). The Name field now reads `Tc Shoe` (the shop's trimmed answer, not what was typed). The list row shows `3.490.000 ₫`. `GET /api/v1/products/tc-shoe` as visitor reads `price` 3490000. The request log's `PUT /api/v1/products/tc-shoe` carries no `pairs` key and no `sizes` key (no count was touched, so none is sent), and the shoe's counts, lists and total read exactly as before the save.
 Traces: SC-31 (ADMIN-011 AC-7, item 4)
 Check: interact_page
 
