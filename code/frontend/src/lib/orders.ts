@@ -267,10 +267,18 @@ export function storedOrders(): StoredOrder[] {
 
 export function rememberOrder(placed: Placed): void {
   const { id, number, placed_at } = placed.order;
-  const kept: StoredOrder = { id, number, placed_at, token: placed.token };
-  memory = [kept, ...memory.filter((o) => o.id !== id)];
+  keepOrder({ id, number, placed_at, token: placed.token });
+}
+
+/**
+ * The one writer of the store: an order placed at checkout and an order found
+ * again on /track both come through here, so there is one key and one shape.
+ * An order already held is replaced, so it stays one entry with the newest token.
+ */
+export function keepOrder(kept: StoredOrder): void {
+  memory = [kept, ...memory.filter((o) => o.id !== kept.id)];
   try {
-    localStorage.setItem(STORE, JSON.stringify([kept, ...onDisk().filter((o) => o.id !== id)]));
+    localStorage.setItem(STORE, JSON.stringify([kept, ...onDisk().filter((o) => o.id !== kept.id)]));
   } catch {
     /* storage refused: the order is placed and the token lasts this page load */
   }
