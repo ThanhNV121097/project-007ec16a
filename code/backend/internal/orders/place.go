@@ -68,7 +68,7 @@ func addToken(ctx context.Context, tx pgx.Tx, orderID string) (string, error) {
 // pair leaves the shelf again, and the pairs of the repeated request are not
 // compared: the browser makes a new key whenever the bag or a detail changes.
 func replay(ctx context.Context, tx pgx.Tx, k known, req orderRequest) (placed, error) {
-	if digitsOf(k.phone) != digitsOf(req.Phone) {
+	if PhoneDigits(k.phone) != PhoneDigits(req.Phone) {
 		return placed{}, errKeyConflict
 	}
 	token, err := addToken(ctx, tx, k.id)
@@ -154,8 +154,9 @@ func totalOf(items []itemRequest, shoes map[string]shoe) (int64, bool) {
 }
 
 const insertOrderSQL = `INSERT INTO orders (id, number, placed_at, status, payment_method_id, paid, delivery_option_id,
-    delivery_fee, eta, customer, phone, address, city, note, total, is_sample, idempotency_key)
-VALUES ($1, $2, $3, 'placed', $4, false, $5, 0, $6::date, $7, $8, $9, $10, $11, $12, false, $13)`
+    delivery_fee, eta, customer, phone, address, city, note, total, is_sample, idempotency_key, account_id)
+VALUES ($1, $2, $3, 'placed', $4, false, $5, 0, $6::date, $7, $8, $9, $10, $11, $12, false, $13,
+    (SELECT u.id FROM users u WHERE u.id = $14::uuid AND u.role = 'customer' AND u.is_active))`
 
 const insertItemsSQL = `INSERT INTO order_items (order_id, line_no, product_id, size, qty, unit_price)
 SELECT $1, t.n, t.product, t.size, t.qty, t.price
@@ -165,7 +166,7 @@ FROM unnest($2::smallint[], $3::text[], $4::text[], $5::integer[], $6::bigint[])
 // own prices make the total; the delivery fee is the constant 0; the status is
 // placed and paid is false: nothing but a provider's own confirmation will ever
 // mark an order paid. Lock order: key, shoes, counts, counter, inserts.
-func (s *service) place(ctx context.Context, key string, req orderRequest) (placed, error) {
+func (s *service) place(ctx context.Context, key string, req orderRequest, accountID string) (placed, error) {
 	ctx, cancel := context.WithTimeout(ctx, txTimeout)
 	defer cancel()
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
@@ -245,7 +246,7 @@ func (s *service) place(ctx context.Context, key string, req orderRequest) (plac
 	number, id := fmt.Sprintf("DOI-%d", n), fmt.Sprintf("doi-%d", n)
 
 	if _, err := tx.Exec(ctx, insertOrderSQL, id, number, now, req.Payment, standardDelivery, eta.Format("2006-01-02"),
-		req.Customer, req.Phone, req.Address, req.City, req.Note, total, key); err != nil {
+		req.Customer, req.Phone, req.Address, req.City, req.Note, total, key, owner(accountID)); err != nil {
 		return placed{}, err
 	}
 	nums, products, sizes, qtys, prices := make([]int16, len(req.Items)), make([]string, len(req.Items)),

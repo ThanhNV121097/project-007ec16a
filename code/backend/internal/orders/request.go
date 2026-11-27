@@ -106,28 +106,6 @@ func (r *orderRequest) clean() (badInput string) {
 	return badInput
 }
 
-// countDigits is the number of ASCII digits in s: spaces, +, - and brackets are
-// simply not counted.
-func countDigits(s string) int {
-	n := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] >= '0' && s[i] <= '9' {
-			n++
-		}
-	}
-	return n
-}
-
-func digitsOf(s string) string {
-	var b strings.Builder
-	for i := 0; i < len(s); i++ {
-		if s[i] >= '0' && s[i] <= '9' {
-			b.WriteByte(s[i])
-		}
-	}
-	return b.String()
-}
-
 // validate checks every field at once and returns one sentence per fault, each
 // naming its limit where a limit is the fault. The page applies the same rules;
 // the shop repeats them because a request can skip the page.
@@ -169,7 +147,7 @@ func (r *orderRequest) validate() fieldErrors {
 	switch {
 	case utf8.RuneCountInString(r.Phone) > 20:
 		f["phone"] = "Phone can have at most 20 characters."
-	case countDigits(r.Phone) < 9:
+	case len(PhoneDigits(r.Phone)) < minPhoneDigits:
 		f["phone"] = "Check the phone number — we text you when the pair is on its way."
 	}
 	switch n := utf8.RuneCountInString(r.Address); {
