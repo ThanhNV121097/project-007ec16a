@@ -40,10 +40,6 @@ func Register(mux *http.ServeMux, db Querier, log *slog.Logger) {
 // It always serves the public columns, whoever is signed in: the team's view of
 // a collection is the registry's, not this one's.
 func ListHandler(db Querier, log *slog.Logger, c *Collection) http.Handler {
-<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
-	h := &handler{store: store{db: db}, log: log}
-	return h.list(c, true)
-=======
 	return ListHandlerServing(db, log, c)
 }
 
@@ -52,11 +48,11 @@ func ListHandler(db Querier, log *slog.Logger, c *Collection) http.Handler {
 // team's orders list names Public and Private). What a request may filter, sort
 // or search does not change: only Public columns, so a filter on a Private one
 // is a 400 whoever asks. With no class named it serves Public, which is what
-// ListHandler is.
+// ListHandler is. Like ListHandler it is pinned: the session never widens what
+// it serves, so the team's view of a registry collection does not apply to it.
 func ListHandlerServing(db Querier, log *slog.Logger, c *Collection, served ...Access) http.Handler {
 	h := &handler{store: store{db: db}, log: log, served: served}
-	return h.list(c)
->>>>>>> refs/heads/main
+	return h.list(c, true)
 }
 
 type handler struct {
