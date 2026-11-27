@@ -12,9 +12,10 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// This file is what the payments package calls so that it never writes the
-// orders table itself: the order's row, its paid flag and its cancel have one
-// writer each, here. Each function runs inside the caller's transaction.
+// This file is what the payments package and the dealer's writes call so that
+// neither writes the orders table's status or paid flag itself: the order's row,
+// its paid flag and its cancel have one writer each, here. Each function runs
+// inside the caller's transaction.
 
 // PayWindow is how long an unpaid order may wait, counted from placed_at. The
 // route's refusal, payment_attempts.expires_at, the provider's expiry and the
@@ -58,7 +59,8 @@ type Tx interface {
 }
 
 // Locked is an order's row as LockOrder read it, held FOR UPDATE until the
-// transaction ends.
+// transaction ends. It is what the rules of a move, a cancel, a delete and a
+// payment judge, and nothing more.
 type Locked struct {
 	ID, Number, Status, Payment string
 	Paid                        bool
@@ -75,7 +77,8 @@ const lockOrderSQL = `SELECT id, number, status, paid, total, placed_at, payment
 
 // LockOrder reads one order's row FOR UPDATE; ErrNotFound when there is none.
 // Every transaction that touches an order and something else takes the order's
-// row first.
+// row first (before any count of pairs), so a cancel, a save, a delete and a
+// payment notice queue on the row.
 func LockOrder(ctx context.Context, tx Tx, id string) (Locked, error) {
 	var l Locked
 	err := tx.QueryRow(ctx, lockOrderSQL, id).Scan(&l.ID, &l.Number, &l.Status, &l.Paid, &l.Total, &l.PlacedAt, &l.Payment)
@@ -115,15 +118,16 @@ type CancelRule struct {
 
 // The status test is in the UPDATE's own WHERE, so two cancels of one order at the
 // same moment serialise on the row: the second finds it cancelled, changes zero
-// rows and returns no pair.
+// rows and returns no pair. is_sample is read back so that a sample order, which
+// took nothing from the shelf, returns nothing to it.
 const cancelSQL = `UPDATE orders SET status = 'cancelled'
 WHERE id = $1 AND status IN ('placed', 'confirmed', 'packed')
-RETURNING id`
+RETURNING id, is_sample`
 
 const cancelExpirySQL = `UPDATE orders SET status = 'cancelled'
 WHERE id = $1 AND status IN ('placed', 'confirmed', 'packed')
   AND NOT paid AND NOT is_sample AND payment_method_id = ANY($2) AND placed_at <= $3
-RETURNING id`
+RETURNING id, is_sample`
 
 const pairsOfSQL = `SELECT product_id, size, sum(qty)::integer FROM order_items WHERE order_id = $1
 GROUP BY product_id, size ORDER BY product_id, size`
@@ -132,12 +136,19 @@ GROUP BY product_id, size ORDER BY product_id, size`
 // ONCE, in the caller's transaction. changed is false when the order was not in a
 // state this cancel may act on (already cancelled, paid, shipped, a sample, too
 // young, or another run won): nothing was returned then.
+//
+// The 14 sample orders took nothing from the shelf, so cancelling one moves the
+// status and returns no pair. For every other order the counts are locked with
+// stock.Lock (the call checkout makes, in the same (shoe, size) order) before
+// stock.Return adds to them, so a cancel never takes two counts in an order
+// checkout does not.
 func Cancel(ctx context.Context, tx Tx, id string, rule CancelRule) (changed bool, err error) {
 	var gone string
+	var sample bool
 	if rule.Ways == nil {
-		err = tx.QueryRow(ctx, cancelSQL, id).Scan(&gone)
+		err = tx.QueryRow(ctx, cancelSQL, id).Scan(&gone, &sample)
 	} else {
-		err = tx.QueryRow(ctx, cancelExpirySQL, id, rule.Ways, rule.PlacedBefore).Scan(&gone)
+		err = tx.QueryRow(ctx, cancelExpirySQL, id, rule.Ways, rule.PlacedBefore).Scan(&gone, &sample)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -145,9 +156,19 @@ func Cancel(ctx context.Context, tx Tx, id string, rule CancelRule) (changed boo
 	if err != nil {
 		return false, fmt.Errorf("cancel order: %w", err)
 	}
+	if sample {
+		return true, nil
+	}
 	lines, err := pairsOf(ctx, tx, id)
 	if err != nil {
 		return false, err
+	}
+	keys := make([]stock.Key, len(lines))
+	for i, l := range lines {
+		keys[i] = l.Key
+	}
+	if _, err := stock.Lock(ctx, tx, keys); err != nil {
+		return false, fmt.Errorf("lock the counts of an order: %w", err)
 	}
 	if err := stock.Return(ctx, tx, lines); err != nil {
 		return false, fmt.Errorf("return pairs: %w", err)

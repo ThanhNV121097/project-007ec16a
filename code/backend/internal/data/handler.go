@@ -37,13 +37,24 @@ func Register(mux *http.ServeMux, db Querier, log *slog.Logger) {
 // collections use: the same grammar for filters, ranges, sort, search and paging,
 // the same answers and the same errors. A second query language is never written.
 func ListHandler(db Querier, log *slog.Logger, c *Collection) http.Handler {
-	h := &handler{store: store{db: db}, log: log}
+	return ListHandlerServing(db, log, c)
+}
+
+// ListHandlerServing is ListHandler for a handler that serves more than the
+// Public columns: it selects the columns of the access classes it names (the
+// team's orders list names Public and Private). What a request may filter, sort
+// or search does not change: only Public columns, so a filter on a Private one
+// is a 400 whoever asks. With no class named it serves Public, which is what
+// ListHandler is.
+func ListHandlerServing(db Querier, log *slog.Logger, c *Collection, served ...Access) http.Handler {
+	h := &handler{store: store{db: db}, log: log, served: served}
 	return h.list(c)
 }
 
 type handler struct {
-	store store
-	log   *slog.Logger
+	store  store
+	log    *slog.Logger
+	served []Access
 }
 
 // listAnswer is the body of a list: the records, how many match in all, and the
@@ -65,6 +76,7 @@ func (h *handler) list(c *Collection) http.HandlerFunc {
 			httpx.Error(w, http.StatusBadRequest, "bad_request", badParameters, faults)
 			return
 		}
+		req.served = h.served
 		ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
 		defer cancel()
 		p, err := h.store.list(ctx, c, req)
