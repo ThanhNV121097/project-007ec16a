@@ -2,22 +2,15 @@
 //
 // An order holds a customer's name, phone and address, so it is no public
 // collection: GET /v1/orders is the shop team's list (401 with no session, 403
-<<<<<<< refs/heads/feature/dealer-handles-orders-status-courier-payment-be
 // for a customer; it carries the dealer's private fields), and GET /v1/orders/{id}
 // answers a dealer session the dealer view (dealer.go), the order's own
-// X-Order-Token the public view (never phone, email, address or note), and 404
-// to everything else. POST /v1/orders/{id}/payment is "Pay now"; it opens the
-// order through the same function (authorize, access.go). Changing an order
-// (update.go, settle.go) is the team's PUT and DELETE, mounted by internal/admin.
-=======
-// for a customer, never a phone, email, address or note), and GET /v1/orders/{id}
-// answers the public view (never phone, email, address or note) to the order's
-// X-Order-Token and 404 to everything else. POST /v1/orders/{id}/payment is "Pay
-// now"; it opens the order through the same function (authorize, access.go).
-// POST /v1/order-lookups gives a customer who typed an order number and its phone
-// a new token for that order (lookup_route.go), through the one matcher the
-// account story shares (lookup.go).
->>>>>>> refs/heads/main
+// X-Order-Token or the customer it is linked to the public view (never phone,
+// email, address or note), and 404 to everything else. POST /v1/orders/{id}/payment
+// is "Pay now"; it opens the order through the same function (authorize,
+// access.go). POST /v1/order-lookups gives a customer who typed an order number
+// and its phone a new token for that order (lookup_route.go), through the one
+// matcher the account story shares (lookup.go). Changing an order (update.go,
+// settle.go) is the team's PUT and DELETE, mounted by internal/admin.
 //
 // Placing goes through one transaction that takes the pairs off the shelf and
 // saves the order, its pairs and a hashed token together. The lock order, which
