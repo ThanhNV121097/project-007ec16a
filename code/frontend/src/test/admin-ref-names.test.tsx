@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-const open = (page: React.ReactElement) => render(<MemoryRouter>{page}</MemoryRouter>);
+const open = (page: import("react").ReactElement) => render(<MemoryRouter>{page}</MemoryRouter>);
 
 describe("a list that points at another record shows that record's name", () => {
   it("names each shoe's line and category on the Shoes list, never their ids", async () => {
