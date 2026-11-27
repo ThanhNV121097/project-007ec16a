@@ -19,8 +19,11 @@ export default function AdminOrders() {
   const shoes = new Map(useCollection<Product>("products", { pageSize: 100 }).items.map((p) => [p.id, p.name]));
   const columns = columnsFromFields(fieldsOf("orders").filter((f) => keys.includes(f.key)), keys.length)
     .map((c): Column<Row> => {
-      // The shoe is its name, once: the first pair of an order of several.
-      if (c.key === "product") return { ...c, render: (r: Row) => shoes.get(String(r.product)) ?? String(r.product ?? "") };
+      // The shoe is its name, once: the first pair of an order of several. The shop's list names it
+      // (`product_name`); the shoes read here are the fallback while a list from another source has none.
+      if (c.key === "product") {
+        return { ...c, render: (r: Row) => String(r.product_name ?? "") || (shoes.get(String(r.product)) ?? String(r.product ?? "")) };
+      }
       if (c.key === "placed_at") return { ...c, render: (r: Row) => formatDateTime(String(r.placed_at ?? "")) };
       if (c.key === "status") {
         return { ...c, render: (r: Row) => <Badge tone={toneOf(String(r.status))}>{labels[r.status as OrderStatus] ?? String(r.status)}</Badge> };

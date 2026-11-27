@@ -2,13 +2,15 @@
 //
 // An order holds a customer's name, phone and address, so it is no public
 // collection: GET /v1/orders is the shop team's list (401 with no session, 403
-// for a customer, never a phone, email, address or note), and GET /v1/orders/{id}
-// answers the public view (never phone, email, address or note) to the order's
-// X-Order-Token and 404 to everything else. POST /v1/orders/{id}/payment is "Pay
-// now"; it opens the order through the same function (authorize, access.go).
-// POST /v1/order-lookups gives a customer who typed an order number and its phone
-// a new token for that order (lookup_route.go), through the one matcher the
-// account story shares (lookup.go).
+// for a customer; it carries the dealer's private fields), and GET /v1/orders/{id}
+// answers a dealer session the dealer view (dealer.go), the order's own
+// X-Order-Token or the customer it is linked to the public view (never phone,
+// email, address or note), and 404 to everything else. POST /v1/orders/{id}/payment
+// is "Pay now"; it opens the order through the same function (authorize,
+// access.go). POST /v1/order-lookups gives a customer who typed an order number
+// and its phone a new token for that order (lookup_route.go), through the one
+// matcher the account story shares (lookup.go). Changing an order (update.go,
+// settle.go) is the team's PUT and DELETE, mounted by internal/admin.
 //
 // Placing goes through one transaction that takes the pairs off the shelf and
 // saves the order, its pairs and a hashed token together. The lock order, which
@@ -107,8 +109,9 @@ func Register(mux *http.ServeMux, db DB, log *slog.Logger, opts Options) {
 	mux.HandleFunc("POST /v1/orders/{id}/payment", s.payHandler)
 	// The team's list: auth.Require answers 401 with no session and 403 for a
 	// customer before the query string is read; a dealer reads the list the generic
-	// reader's grammar gives every collection, over dealerList (list.go).
-	mux.Handle("GET /v1/orders", auth.Require(auth.Admin, auth.Staff)(data.ListHandler(db, log, dealerList)))
+	// reader's grammar gives every collection, over dealerList (list.go), with the
+	// customer's private details served to this one handler.
+	mux.Handle("GET /v1/orders", auth.Require(auth.Admin, auth.Staff)(data.ListHandlerServing(db, log, dealerList, data.Public, data.Private)))
 	mux.HandleFunc("GET /v1/payment-options", s.paymentOptions)
 }
 

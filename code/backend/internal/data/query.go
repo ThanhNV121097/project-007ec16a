@@ -154,6 +154,8 @@ type listRequest struct {
 	words []string
 	// sort is nil for the seed's order.
 	sort *sortKey
+	// served are the access classes the handler selects; none means Public.
+	served []Access
 }
 
 // firstValue is the first value of a repeated name.
@@ -562,9 +564,13 @@ func orderBy(req listRequest) string {
 func listSQL(c *Collection, req listRequest) (string, []any) {
 	cond, args := where(c, req)
 	n := len(args)
+	order := orderBy(req)
+	if req.sort == nil && c.DefaultOrder != "" {
+		order = c.DefaultOrder
+	}
 	sql := "SELECT (SELECT count(*) FROM " + c.From + " WHERE " + cond + ") AS total, " +
-		"coalesce((SELECT json_agg(p) FROM (SELECT " + c.selectList() + " FROM " + c.From +
-		" WHERE " + cond + " ORDER BY " + orderBy(req) + " LIMIT $" + strconv.Itoa(n+1) + " OFFSET $" + strconv.Itoa(n+2) +
+		"coalesce((SELECT json_agg(p) FROM (SELECT " + c.selectServing(req.served) + " FROM " + c.From +
+		" WHERE " + cond + " ORDER BY " + order + " LIMIT $" + strconv.Itoa(n+1) + " OFFSET $" + strconv.Itoa(n+2) +
 		") p), '[]'::json)::text AS items"
 	args = append(args, req.limit, (req.page-1)*req.limit)
 	return sql, args

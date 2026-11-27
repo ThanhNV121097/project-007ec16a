@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/httpx"
 	"github.com/jackc/pgx/v5"
 )
@@ -87,9 +88,14 @@ func Read(ctx context.Context, db DB, id string, a Access) (json.RawMessage, err
 	return body, nil
 }
 
-// read answers GET /v1/orders/{id}: to the order's X-Order-Token, or to the
-// customer the order is linked to, and with the same 404 to everyone else.
+// read answers GET /v1/orders/{id}: a dealer session gets the dealer view; the
+// order's X-Order-Token, or the customer the order is linked to, gets the public
+// view; everyone else gets the same 404.
 func (s *service) read(w http.ResponseWriter, r *http.Request) {
+	if u, ok := auth.FromContext(r.Context()); ok && (u.Role == auth.Admin || u.Role == auth.Staff) {
+		s.readDealer(w, r)
+		return
+	}
 	id := r.PathValue("id")
 	ctx, cancel := context.WithTimeout(r.Context(), txTimeout)
 	defer cancel()
