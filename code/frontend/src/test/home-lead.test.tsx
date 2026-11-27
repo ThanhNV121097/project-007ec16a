@@ -88,7 +88,7 @@ describe("a heading drawn from a record's words", () => {
   it("rises word by word without claiming to be the Studio's text", () => {
     render(<SplitHeading text="Tc Feat B" as="h1" />);
     const heading = screen.getByRole("heading", { level: 1, name: "Tc Feat B" });
-    expect(heading.querySelectorAll("[data-word]")).toHaveLength(2);
+    expect(heading.querySelectorAll("[data-word]")).toHaveLength(3);
     expect(heading).not.toHaveAttribute("data-edit");
   });
 
