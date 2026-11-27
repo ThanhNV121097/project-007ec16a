@@ -6,6 +6,9 @@
 // answers the public view (never phone, email, address or note) to the order's
 // X-Order-Token and 404 to everything else. POST /v1/orders/{id}/payment is "Pay
 // now"; it opens the order through the same function (authorize, access.go).
+// POST /v1/order-lookups gives a customer who typed an order number and its phone
+// a new token for that order (lookup_route.go), through the one matcher the
+// account story shares (lookup.go).
 //
 // Placing goes through one transaction that takes the pairs off the shelf and
 // saves the order, its pairs and a hashed token together. The lock order, which
@@ -90,7 +93,7 @@ type service struct {
 	now       func() time.Time
 }
 
-// Register mounts the five routes of the order on mux.
+// Register mounts the six routes of the orders on mux.
 func Register(mux *http.ServeMux, db DB, log *slog.Logger, opts Options) {
 	s := &service{db: db, log: log, providers: opts.Providers, now: opts.Now}
 	if s.now == nil {
@@ -98,6 +101,7 @@ func Register(mux *http.ServeMux, db DB, log *slog.Logger, opts Options) {
 	}
 	mux.HandleFunc("POST /v1/orders", s.create)
 	mux.HandleFunc("GET /v1/orders/{id}", s.read)
+	mux.HandleFunc("POST /v1/order-lookups", s.lookup)
 	// "Pay now": no body, the order's own X-Order-Token. Another method on this path
 	// falls to the server's catch-all and answers 404.
 	mux.HandleFunc("POST /v1/orders/{id}/payment", s.payHandler)

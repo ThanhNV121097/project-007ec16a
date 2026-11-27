@@ -4,20 +4,24 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 // The sandbox sets NODE_ENV=production and React.act needs the development build.
-vi.hoisted(() => {
+const stubs = vi.hoisted(() => {
   vi.stubEnv("NODE_ENV", "test");
+  return { post: vi.fn() };
 });
 
-vi.mock("../lib/mock/track-an-order-by-number-and-phone", () => ({ postLookup: vi.fn() }));
+// The API client's one write, standing in for POST /v1/order-lookups; the real ApiError stays.
+vi.mock("../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/api")>();
+  return { ...actual, api: { ...actual.api, post: stubs.post } };
+});
 
 import TrackForm from "../components/TrackForm";
 import { ApiError } from "../lib/api";
-import { postLookup } from "../lib/mock/track-an-order-by-number-and-phone";
 
 // The Track form: what it sends, what each answer is told in, and what the
 // browser keeps. The shop's answer is stubbed at the transport.
 
-const post = vi.mocked(postLookup);
+const post = stubs.post;
 const FOUND = { id: "doi-24817", number: "DOI-24817", placed_at: "2026-11-24T09:12:00+07:00", token: "q3J0n8Zk2LmPa7Vx9TrBwE" };
 const NOT_FOUND = "No order matches that number and phone. Check both, or message us.";
 const TOO_MANY = "Too many tries. Please wait 15 minutes, or message us with your order number.";
@@ -58,7 +62,7 @@ describe("a right pair", () => {
     press();
     expect(await screen.findByText("the order page")).toBeInTheDocument();
     expect(post).toHaveBeenCalledTimes(1);
-    expect(post).toHaveBeenCalledWith({ number: "doi 24817", phone: "+84938410552" });
+    expect(post).toHaveBeenCalledWith("order-lookups", { number: "doi 24817", phone: "+84938410552" });
   });
 
   it("keeps the id, number, placed time and token in the one store and nothing else", async () => {
@@ -146,7 +150,7 @@ describe("each way it can fail has its own sentence, in the same place", () => {
       lines.push((await screen.findByTestId("track-error")).outerHTML);
     }
     expect(new Set(lines).size).toBe(1);
-    expect(post).toHaveBeenLastCalledWith({ number: "", phone: "" });
+    expect(post).toHaveBeenLastCalledWith("order-lookups", { number: "", phone: "" });
   });
 
   it("says it is offline, and sends nothing", async () => {
