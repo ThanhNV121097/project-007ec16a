@@ -1,6 +1,5 @@
-import { ApiError } from "./api";
+import { ApiError, api } from "./api";
 import { keepOrder, storedOrders, type StoredOrder } from "./orders";
-import { postLookup } from "./mock/track-an-order-by-number-and-phone";
 
 /**
  * LOOKING AN ORDER UP AGAIN, FROM THE BROWSER'S SIDE (POST /v1/order-lookups,
@@ -32,11 +31,8 @@ export type LookupResult = { ok: true; order: StoredOrder } | { ok: false; kind:
 
 const offline = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
-/**
- * The transport. UI stage: the mock stands in for the shop. The backend step
- * makes this `api.post<LookupAnswer>("order-lookups", body)` and deletes the mock.
- */
-const send = (body: LookupBody): Promise<unknown> => postLookup(body);
+/** The transport: POST ${base}/v1/order-lookups on the project's one client, never retried. */
+const send = (body: LookupBody): Promise<unknown> => api.post<LookupAnswer>("order-lookups", body);
 
 const ID = /^[a-z0-9][a-z0-9._-]*$/;
 const isId = (id: unknown): id is string => typeof id === "string" && id.length <= 100 && ID.test(id);
