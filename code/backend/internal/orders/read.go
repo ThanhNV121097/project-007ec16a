@@ -88,22 +88,15 @@ func Read(ctx context.Context, db DB, id string, a Access) (json.RawMessage, err
 	return body, nil
 }
 
-// read answers GET /v1/orders/{id}: to the order's X-Order-Token, or to the
-// customer the order is linked to, and with the same 404 to everyone else.
+// read answers GET /v1/orders/{id}: a dealer session gets the dealer view; the
+// order's X-Order-Token, or the customer the order is linked to, gets the public
+// view; everyone else gets the same 404.
 func (s *service) read(w http.ResponseWriter, r *http.Request) {
-<<<<<<< refs/heads/feature/dealer-handles-orders-status-courier-payment-be
 	if u, ok := auth.FromContext(r.Context()); ok && (u.Role == auth.Admin || u.Role == auth.Staff) {
 		s.readDealer(w, r)
 		return
 	}
-	id, access := r.PathValue("id"), Access{Token: r.Header.Get("X-Order-Token")}
-	if !access.couldOpen(id) {
-		notFound(w)
-		return
-	}
-=======
 	id := r.PathValue("id")
->>>>>>> refs/heads/main
 	ctx, cancel := context.WithTimeout(r.Context(), txTimeout)
 	defer cancel()
 	body, err := Read(ctx, s.db, id, Access{Token: r.Header.Get("X-Order-Token"), AccountID: callerAccount(r)})
