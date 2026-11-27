@@ -42,6 +42,25 @@ describe("a list that does not opt in (every dealer list)", () => {
   });
 });
 
+describe("the search box's text", () => {
+  it("keeps the spaces as typed, so a second word can be typed", () => {
+    const { result } = setup("/admin/products", { size: 20 });
+    act(() => result.current.t.setQ("Tc "));
+    expect(result.current.t.q).toBe("Tc ");
+    act(() => result.current.t.setQ("Tc Shoe"));
+    expect(result.current.t.q).toBe("Tc Shoe");
+    expect(params(result.current.search)).toEqual(["q=Tc Shoe"]);
+  });
+
+  it("takes the search off when the box holds only spaces, and does not call that filtering", () => {
+    const { result } = setup("/admin/products?q=Tc", { size: 20 });
+    act(() => result.current.t.setQ("   "));
+    expect(result.current.t.q).toBe("");
+    expect(result.current.search).toBe("");
+    expect(setup("/admin/products?q=%20%20").result.current.t.filtering).toBe(false);
+  });
+});
+
 describe("the shop's list (size is an EU size)", () => {
   const shop = { sizeIsFilter: true };
 
