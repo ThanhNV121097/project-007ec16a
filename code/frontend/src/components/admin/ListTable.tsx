@@ -33,7 +33,7 @@ export default function ListTable({ collection, t, filters, columns, caption, ro
   const where: Record<string, Filter | undefined> = {};
   for (const f of filters) where[f.key] = t.get(f.key);
   const { items, total, pages, page, loading } = useCollection(collection, {
-    page: t.page, pageSize: t.size, sort: t.sort, q: t.q, where,
+    page: t.page, pageSize: t.size, sort: t.sort, q: t.q.trim(), where,
   });
   const addButton = onAdd ? <Button kind="primary" icon="plus" onClick={onAdd}>Add</Button> : null;
 
