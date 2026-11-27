@@ -98,7 +98,7 @@ func (s *service) payHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	ctx, cancel := context.WithTimeout(r.Context(), txTimeout)
 	defer cancel()
-	ref, err := authorize(ctx, s.db, id, Access{Token: r.Header.Get("X-Order-Token")}, modePay)
+	ref, err := authorize(ctx, s.db, id, Access{Token: r.Header.Get("X-Order-Token"), AccountID: callerAccount(r)}, modePay)
 	if err != nil {
 		s.fail(w, r, id, err)
 		return

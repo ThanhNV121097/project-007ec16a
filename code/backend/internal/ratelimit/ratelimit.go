@@ -83,32 +83,40 @@ func Fail(ctx context.Context, q Querier, scope string, subject []byte, limit in
 	return err
 }
 
-// hitSQL counts one attempt, whatever its outcome. The attempt after the
-// limit-th inside the window is refused and locks the subject until the
-// window's end. $3 is the limit, $4 the window in seconds.
+// hitSQL counts one attempt. The limit-th attempt inside the window is let
+// through; the next one finds hits at the limit, leaves it there, locks the
+// subject until the window's end and returns the seconds left; every later one
+// returns the shrinking wait without moving anything, so a refused call never
+// extends the lock. Once the window is over the next call starts a new one. In an
+// UPDATE every right-hand side sees the old row. $3 is the limit, $4 the window
+// in seconds. The answer is NULL when the attempt may go on.
 const hitSQL = `INSERT INTO rate_limits AS r (scope, subject_hash, hits, window_started_at, locked_until)
-VALUES ($1, $2, 1, now(), CASE WHEN 1 > $3 THEN now() + make_interval(secs => $4) END)
+VALUES ($1, $2, 1, now(), NULL)
 ON CONFLICT (scope, subject_hash) DO UPDATE SET
   hits = CASE
     WHEN r.window_started_at <= now() - make_interval(secs => $4) THEN 1
-    WHEN r.locked_until > now() THEN r.hits
+    WHEN r.hits >= $3 THEN r.hits
     ELSE r.hits + 1 END,
   window_started_at = CASE
     WHEN r.window_started_at <= now() - make_interval(secs => $4) THEN now()
     ELSE r.window_started_at END,
   locked_until = CASE
     WHEN r.window_started_at <= now() - make_interval(secs => $4) THEN NULL
-    WHEN r.locked_until > now() THEN r.locked_until
-    WHEN r.hits + 1 > $3 THEN r.window_started_at + make_interval(secs => $4)
-    ELSE NULL END
-RETURNING coalesce(locked_until > now(), false)`
+    WHEN r.hits >= $3 THEN r.window_started_at + make_interval(secs => $4)
+    ELSE r.locked_until END
+RETURNING CASE WHEN locked_until > now() THEN greatest(1, ceil(extract(epoch FROM locked_until - now()))::int) END`
 
-// Hit counts one attempt (the sign-up counter) and says whether this call is
-// refused: the limit-th attempt in the window is let through, the next one and
-// every one after it until the window ends is refused.
-func Hit(ctx context.Context, q Querier, scope string, subject []byte, limit int, window time.Duration) (refused bool, err error) {
-	err = q.QueryRow(ctx, hitSQL, scope, subject, limit, window.Seconds()).Scan(&refused)
-	return refused, err
+// Hit counts one attempt (the sign-up counter) and reports how long the subject
+// is locked: zero means this attempt may go on.
+func Hit(ctx context.Context, q Querier, scope string, subject []byte, limit int, window time.Duration) (wait time.Duration, err error) {
+	var secs *int32
+	if err := q.QueryRow(ctx, hitSQL, scope, subject, limit, window.Seconds()).Scan(&secs); err != nil {
+		return 0, err
+	}
+	if secs == nil {
+		return 0, nil
+	}
+	return time.Duration(*secs) * time.Second, nil
 }
 
 // Purge deletes the counters nobody needs any more: a window a day old with no
