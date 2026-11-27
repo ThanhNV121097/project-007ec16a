@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useContent } from "../editable";
-import { ApiError } from "./api";
-import { transport } from "./mock/dealer-handles-orders-status-courier-payment";
+import { api, ApiError } from "./api";
 import type { OrderStatus } from "./shop";
 
 /**
  * The dealer's one door to an order (services §2.8, §3.11, §3.15, §3.16).
  *
- * Everything the order page reads or writes goes through `transport`, the one
- * line that changes when the API lands: the mock module stands behind it now.
+ * Everything the order page reads or writes goes through `transport`, three
+ * calls on `/v1/orders/{id}` made with the project's one client, `lib/api.ts`.
  * Wire names are the API's.
  */
 
@@ -134,11 +133,14 @@ export type OrderLoad =
   | { state: "missing" }
   | { state: "ready"; order: DealerOrder };
 
-export interface Transport {
-  read(id: string): Promise<DealerOrder>;
-  update(id: string, body: OrderPatch): Promise<DealerOrder>;
-  remove(id: string): Promise<void>;
-}
+const at = (id: string) => `orders/${encodeURIComponent(id)}`;
+
+/** The dealer's read of an order, a save of it (the dealer view answers) and its removal. */
+const transport = {
+  read: (id: string) => api.get<DealerOrder>(at(id)),
+  update: (id: string, body: OrderPatch) => api.put<DealerOrder>(at(id), body),
+  remove: (id: string) => api.delete(at(id)),
+};
 
 /** A record that is not there: the API's own `not_found`, never just any 404. */
 function isNotFound(e: unknown): boolean {

@@ -7,16 +7,22 @@
 // hand-written mirror of the frontend's src/data/schema.json (the backend image
 // is built from code/backend and cannot embed a file of the frontend; a test
 // reads the schema and fails when the two drift). Every column carries an
-// access class, and the handlers put ONLY the Public columns in their SELECT:
-// a private or bookkeeping column is not in the query, so it cannot be read off
-// the wire and no later code can forget to delete it. The registry is also what
+// access class, and the handlers put ONLY the Public columns in their SELECT
+// (a handler that names Private in its served set, today only the team's list
+// of orders, selects those too): a column that is not served is not in the
+// query, so it cannot be read off the wire and no later code can forget to
+// delete it. Whatever is served, only Public columns are ever filterable,
+// sortable or searchable. The registry is also what
 // keeps every SQL identifier out of the request's reach: a query string can
 // only select an entry of it, never name a column. The same holds for what a
 // request may filter, range, sort and search: only Public columns, and only the
 // words each collection's Search expression names.
 package data
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Access says who may read a column.
 type Access int
@@ -133,6 +139,7 @@ type Collection struct {
 	// left"; {s} stands for the sizes as a text array. Empty for every
 	// collection but the shoes.
 	Sizes string
+<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
 	// Live is the condition a record must meet to be seen by a caller who is
 	// not the shop's team (a shoe on sale, a review that is shown). Empty when
 	// every record is public. The dealer's view is not narrowed by it.
@@ -141,6 +148,12 @@ type Collection struct {
 	// bookkeeping ones (a shoe's pairs in each size). They are not fields of the
 	// schema, so no filter, sort or search can name them.
 	Dealer []Column
+=======
+	// DefaultOrder is the ORDER BY of a list that names no sort, written over the
+	// table alias t; empty means the seed's order, t.seq. A named sort still ends
+	// in t.seq, so a page never repeats or skips a record.
+	DefaultOrder string
+>>>>>>> refs/heads/main
 }
 
 // public returns the columns a caller with no session may read, in output order.
@@ -164,6 +177,7 @@ func (c *Collection) selectList() string {
 	return strings.Join(parts, ", ")
 }
 
+<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
 // viewList is the SELECT list of one of the two views. The public view is the
 // Public columns. The dealer view adds the bookkeeping columns and the
 // dealer-only ones; a Private column (an order's phone) is in neither.
@@ -195,6 +209,23 @@ func (c *Collection) dealerSees(cols ...Column) *Collection {
 	return c
 }
 
+=======
+// selectServing is the SELECT list of a view that serves the given access
+// classes; none means the public view, which is what selectList is.
+func (c *Collection) selectServing(served []Access) string {
+	if len(served) == 0 {
+		return c.selectList()
+	}
+	parts := make([]string, 0, len(c.Columns))
+	for _, col := range c.Columns {
+		if slices.Contains(served, col.Access) {
+			parts = append(parts, col.Select+` AS "`+col.Name+`"`)
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
+>>>>>>> refs/heads/main
 // searching sets what a typed word is looked for in.
 func (c *Collection) searching(expr string) *Collection {
 	c.Search = expr
