@@ -59,15 +59,21 @@ func readView(ctx context.Context, q querier, id string) (json.RawMessage, error
 	return json.RawMessage(body), nil
 }
 
-// snapshot lets the caller in and reads the order's view inside one read-only
-// REPEATABLE READ transaction, so the access decision and the view are of the
-// same moment.
-func (s *service) snapshot(ctx context.Context, id string, a Access) (json.RawMessage, error) {
-	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+// Read returns the public view of the order to a caller who holds its token or is
+// the customer it is linked to, inside one read-only REPEATABLE READ transaction,
+// so the access decision and the view are of the same moment. An id, a token or an
+// account id that cannot be one never reaches the database: a caller with neither
+// a well-formed token nor an account costs no transaction. Every other way of not
+// being let in, an order that does not exist included, is ErrNotFound.
+func Read(ctx context.Context, db DB, id string, a Access) (json.RawMessage, error) {
+	if !a.couldOpen(id) {
+		return nil, ErrNotFound
+	}
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
 	ref, err := authorize(ctx, tx, id, a, modeRead)
 	if err != nil {
 		return nil, err
@@ -82,10 +88,10 @@ func (s *service) snapshot(ctx context.Context, id string, a Access) (json.RawMe
 	return body, nil
 }
 
-// read answers GET /v1/orders/{id}. The order's X-Order-Token is the only
-// credential in this story. An id or a token that cannot be one never reaches the
-// database, and every way of not being let in answers the same 404.
+// read answers GET /v1/orders/{id}: to the order's X-Order-Token, or to the
+// customer the order is linked to, and with the same 404 to everyone else.
 func (s *service) read(w http.ResponseWriter, r *http.Request) {
+<<<<<<< refs/heads/feature/dealer-handles-orders-status-courier-payment-be
 	if u, ok := auth.FromContext(r.Context()); ok && (u.Role == auth.Admin || u.Role == auth.Staff) {
 		s.readDealer(w, r)
 		return
@@ -95,9 +101,12 @@ func (s *service) read(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
+=======
+	id := r.PathValue("id")
+>>>>>>> refs/heads/main
 	ctx, cancel := context.WithTimeout(r.Context(), txTimeout)
 	defer cancel()
-	body, err := s.snapshot(ctx, id, access)
+	body, err := Read(ctx, s.db, id, Access{Token: r.Header.Get("X-Order-Token"), AccountID: callerAccount(r)})
 	if err != nil {
 		s.fail(w, r, id, err)
 		return

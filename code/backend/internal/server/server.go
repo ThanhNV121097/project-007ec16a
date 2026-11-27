@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ThanhNV121097/project-007ec16a/backend/internal/account"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/admin"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/auth"
 	"github.com/ThanhNV121097/project-007ec16a/backend/internal/catalogue"
@@ -50,6 +51,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *slog.Logger) http.Handler {
 	}, pool, log, nil)
 	orders.Register(mux, pool, log, orders.Options{Providers: map[string]orders.Provider{"vnpay": vnpay}})
 	payments.Register(mux, vnpay)
+	account.Register(mux, account.Deps{Auth: svc, DB: pool, Log: log})
 	mux.HandleFunc("/", notFound)
 
 	// The chain, outermost first: RequestID, Recover, AccessLog, CORS, CleanPaths

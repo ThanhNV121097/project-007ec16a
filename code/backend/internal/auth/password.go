@@ -44,14 +44,27 @@ var b64 = base64.RawStdEncoding
 // HashPassword returns an argon2id hash of plain, encoded as
 // $argon2id$v=19$m=19456,t=2,p=1$<salt>$<key>. Call it before opening a
 // transaction, never inside one: it takes tens of milliseconds and must not
-// hold a row lock. It logs nothing.
+// hold a row lock. It logs nothing. It waits for a hash slot as long as it
+// takes; a request handler uses HashPasswordContext, which gives up when its
+// request does.
 func HashPassword(plain string) (string, error) {
+	return HashPasswordContext(context.Background(), plain)
+}
+
+// HashPasswordContext is HashPassword that stops waiting for a hash slot when
+// ctx ends (the request was cancelled or its deadline passed) and returns the
+// context's error, so a flood of sign-ups cannot leave handlers queued behind
+// work nobody is waiting for.
+func HashPasswordContext(ctx context.Context, plain string) (string, error) {
 	salt := make([]byte, saltBytes)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return "", fmt.Errorf("auth: no randomness for a salt: %w", err)
 	}
-	hashSlots <- struct{}{}
-	defer func() { <-hashSlots }()
+	release, err := acquire(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer release()
 	key := argon2.IDKey([]byte(plain), salt, passes, memoryKiB, lanes, keyBytes)
 	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
 		argon2.Version, memoryKiB, passes, lanes, b64.EncodeToString(salt), b64.EncodeToString(key)), nil

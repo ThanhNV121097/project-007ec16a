@@ -150,6 +150,17 @@ export async function signOut(): Promise<void> {
   }
 }
 
+/**
+ * Asks the server again who is signed in, for a flow that changes the answer
+ * (a customer signing up, in or out): the one cache of `GET /v1/auth/me` is this
+ * file's, so the header, the gate on /admin and My account never disagree. It
+ * does not go back to "checking", so nothing flashes while the answer is awaited.
+ */
+export async function refreshSession(): Promise<void> {
+  epoch += 1;
+  await check();
+}
+
 /** The role the visitor acts as, or "" when nobody is signed in. */
 export function useRole(): Role | "" {
   return useSession()?.role ?? "";

@@ -60,12 +60,13 @@ export default function Checkout() {
     headAlt: useContent("pages.checkout.head_alt"),
   };
   const [form, setForm] = useState<Details>({ name: "", phone: "", address: "", city: "", note: "" });
-  useSavedDetailsFill(setForm);
   const [problems, setProblems] = useState<string[]>([]);
   const [placing, setPlacing] = useState(false);
   const [closed, setClosed] = useState(false);
   const [keyFor] = useState(keyKeeper);
   const sending = useRef(false);
+  // A signed-in customer's saved details fill the empty fields; the note stays empty.
+  useSavedDetailsFill(setForm);
 
   const example: CartLine[] = products.slice(1, 3).map((p) => ({
     id: p.id, name: p.name, price: p.price, image: p.image, variant: `EU ${(p.sizes ?? [])[3] ?? ""}`, qty: 1,
