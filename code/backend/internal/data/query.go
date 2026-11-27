@@ -154,6 +154,9 @@ type listRequest struct {
 	words []string
 	// sort is nil for the seed's order.
 	sort *sortKey
+	// dealer is true for a session of the shop's team: the list is not narrowed
+	// to what is on sale and the dealer's columns are served.
+	dealer bool
 	// served are the access classes the handler selects; none means Public.
 	served []Access
 }
@@ -563,21 +566,41 @@ func orderBy(req listRequest) string {
 // database from the public columns, in the requested order.
 func listSQL(c *Collection, req listRequest) (string, []any) {
 	cond, args := where(c, req)
+	if !req.dealer && c.Live != "" {
+		// Whoever is not the team sees only what is on sale, whatever else they
+		// asked for: a ?status=draft finds nothing.
+		if cond == "TRUE" {
+			cond = c.Live
+		} else {
+			cond = "(" + cond + ") AND (" + c.Live + ")"
+		}
+	}
 	n := len(args)
 	order := orderBy(req)
 	if req.sort == nil && c.DefaultOrder != "" {
 		order = c.DefaultOrder
 	}
+	// The team's view of a registry collection, or the classes a handler that is
+	// pinned to its own set names (the team's orders list); never both.
+	columns := c.selectServing(req.served)
+	if req.dealer {
+		columns = c.viewList(true)
+	}
 	sql := "SELECT (SELECT count(*) FROM " + c.From + " WHERE " + cond + ") AS total, " +
-		"coalesce((SELECT json_agg(p) FROM (SELECT " + c.selectServing(req.served) + " FROM " + c.From +
+		"coalesce((SELECT json_agg(p) FROM (SELECT " + columns + " FROM " + c.From +
 		" WHERE " + cond + " ORDER BY " + order + " LIMIT $" + strconv.Itoa(n+1) + " OFFSET $" + strconv.Itoa(n+2) +
 		") p), '[]'::json)::text AS items"
 	args = append(args, req.limit, (req.page-1)*req.limit)
 	return sql, args
 }
 
-// recordSQL is the one statement of a record: its public columns as a JSON
-// object.
-func recordSQL(c *Collection) string {
-	return "SELECT row_to_json(p)::text FROM (SELECT " + c.selectList() + " FROM " + c.From + " WHERE t.id = $1) p"
+// recordSQL is the one statement of a record: its columns as a JSON object. A
+// caller who is not the team gets the public columns, and only a record that is
+// on sale: a draft answers as an id that does not exist.
+func recordSQL(c *Collection, dealer bool) string {
+	live := ""
+	if !dealer && c.Live != "" {
+		live = " AND (" + c.Live + ")"
+	}
+	return "SELECT row_to_json(p)::text FROM (SELECT " + c.viewList(dealer) + " FROM " + c.From + " WHERE t.id = $1" + live + ") p"
 }

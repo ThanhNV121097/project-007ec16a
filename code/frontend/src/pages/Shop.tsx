@@ -72,7 +72,7 @@ export default function Shop() {
 
   const search = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    t.setQ(String(new FormData(e.currentTarget).get("q") ?? ""));
+    t.setQ(String(new FormData(e.currentTarget).get("q") ?? "").trim());
   };
   const toggleSize = (s: string) => t.set("size", query.size.includes(s) ? query.size.filter((x) => x !== s) : [...query.size, s]);
 

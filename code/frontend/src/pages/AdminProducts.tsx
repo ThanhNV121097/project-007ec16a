@@ -1,6 +1,6 @@
 import { useContent } from "../editable";
 import { useCollection } from "../data";
-import type { Category } from "../lib/shop";
+import type { Category, Line } from "../lib/shop";
 import ListPage from "../components/admin/ListPage";
 import { columnsFromFields, fieldsOf } from "../components/admin/fields";
 import { LIST_COLUMNS, useAdminNav } from "./admin-nav";
@@ -10,6 +10,9 @@ export default function AdminProducts() {
   const nav = useAdminNav();
   const keys = LIST_COLUMNS.products;
   const cats = useCollection<Category>("categories", { pageSize: 50 }).items;
+  // The Line column names each shoe's line, and a name is looked up among the rows
+  // already read (fields.tsx nameIn): the lines are read here so the table never draws an id.
+  useCollection<Line>("lines", { pageSize: 50 });
   return (
     <ListPage
       collection="products"

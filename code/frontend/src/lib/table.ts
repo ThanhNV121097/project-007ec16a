@@ -13,7 +13,7 @@ import type { Filter } from "../data";
  *
  *   const t = useTableQuery({ size: 20 });
  *   const { items, total, pages, page } = useCollection("products", {
- *     page: t.page, pageSize: t.size, sort: t.sort, q: t.q,
+ *     page: t.page, pageSize: t.size, sort: t.sort, q: t.q.trim(),
  *     where: { status: t.list("status"), created_at: t.range("created") },
  *   });
  *
@@ -26,7 +26,11 @@ export interface TableQuery {
   size: number;
   /** "price" ascending, "-price" descending, "" for the default order. */
   sort: string;
-  /** What was typed in the search box. */
+  /**
+   * What was typed in the search box, exactly as typed: the box is controlled
+   * by it, so a trailing space must survive or a second word cannot be typed.
+   * Whoever sends it to a server trims it first.
+   */
   q: string;
   /** One filter's value, or "" when it is not set. */
   get(name: string): string;
@@ -38,6 +42,7 @@ export interface TableQuery {
   setSize(size: number): void;
   /** Sorts by field; the same field again turns the order round. */
   toggleSort(field: string): void;
+  /** Keeps the text as typed; a box holding only spaces takes the search off. */
   setQ(q: string): void;
   set(name: string, value: string | readonly string[]): void;
   setRange(name: string, from: string, to: string): void;
@@ -105,7 +110,7 @@ export function useTableQuery(defaults: { size?: number; sort?: string; sizeIsFi
       setPage: (p) => put("page", p > 1 ? String(p) : "", true),
       setSize: (s) => put("size", String(s)),
       toggleSort: (field) => put("sort", sort === field ? `-${field}` : sort === `-${field}` ? "" : field),
-      setQ: (text) => put("q", text.trim()),
+      setQ: (text) => put("q", text.trim() ? text : ""),
       set: (name, value) => put(name, Array.isArray(value) ? value.join(",") : String(value ?? "")),
       setRange: (name, from, to) =>
         write((next) => {
@@ -120,7 +125,7 @@ export function useTableQuery(defaults: { size?: number; sort?: string; sizeIsFi
             if (key !== "sort" && (sizeIsFilter || key !== "size")) next.delete(key);
           }
         }, false),
-      filtering: [...params.keys()].some((k) => !OWN.includes(k) || (sizeIsFilter && k === "size")) || q !== "",
+      filtering: [...params.keys()].some((k) => !OWN.includes(k) || (sizeIsFilter && k === "size")) || q.trim() !== "",
     };
   }, [params, page, size, sort, q, sizeIsFilter, put, write]);
 }

@@ -13,7 +13,7 @@
         { "key": "price", "label": "Price", "type": "price", "currency": "VND", "required": true, "section": "Basics" },
         { "key": "price_listed", "label": "Price on the source page", "type": "text", "hidden": true },
         { "key": "status", "label": "Status", "type": "text", "options": [["live", "On sale"], ["draft", "Draft"]], "section": "Basics" },
-        { "key": "featured", "label": "Opens the home page", "type": "bool", "section": "Basics", "hint": "One pair at a time. Change the home page headline with it." },
+        { "key": "featured", "label": "Opens the home page", "type": "bool", "section": "Basics", "hint": "One pair at a time. Its name is the home page headline." },
         { "key": "is_new", "label": "New this month", "type": "bool", "section": "Basics" },
         { "key": "description", "label": "Description", "type": "longtext", "section": "Basics" },
         { "key": "code", "label": "Style code", "type": "text", "section": "Details" },

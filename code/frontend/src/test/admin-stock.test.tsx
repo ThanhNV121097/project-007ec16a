@@ -7,14 +7,14 @@ vi.hoisted(() => {
   vi.stubEnv("NODE_ENV", "test");
 });
 
-vi.mock("../lib/mock/manage-shoes-lines-categories-reviews-and-orders", () => ({
+vi.mock("../lib/manage-shoes-lines-categories-reviews-and-orders-wire", () => ({
   default: { create: vi.fn(), update: vi.fn(), remove: vi.fn(), read: vi.fn(), upload: vi.fn(), setPairs: vi.fn() },
 }));
 
 import RecordForm from "../components/admin/RecordForm";
 import { fieldsOf } from "../components/admin/fields";
 import type { Row } from "../data";
-import transport from "../lib/mock/manage-shoes-lines-categories-reviews-and-orders";
+import transport from "../lib/manage-shoes-lines-categories-reviews-and-orders-wire";
 import type { Wire } from "../lib/manage-shoes-lines-categories-reviews-and-orders";
 
 const shop = vi.mocked(transport);

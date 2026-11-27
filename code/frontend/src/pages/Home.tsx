@@ -20,7 +20,8 @@ import Rule from "../components/Rule";
  * its name large at the left and its tile running off the right edge — then the
  * pairs new this month, who they are for, the lines as an index, and what
  * the shop promises. The pair that opens the site is the record marked
- * `featured` in src/data, chosen by the owner in the Data panel.
+ * `featured`, chosen by the dealer in the admin; the headline is that pair's
+ * own name, so it follows the choice instead of staying a fixed line.
  */
 export default function Home() {
   usePageMeta("pages.home.title", "pages.home.description");
@@ -48,7 +49,7 @@ export default function Home() {
         <section data-record={`products:${lead.id}`} className="grid gap-10 pb-12 pt-8 lg:grid-cols-12 lg:gap-8 lg:pb-14 lg:pt-10">
           <div className="flex flex-col lg:col-span-5 lg:pt-2">
             <T k="pages.home.eyebrow" as="p" className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink-soft" />
-            <SplitHeading k="pages.home.headline" as="h1" className="mt-4 max-w-[11ch] text-[length:var(--size-h1)] leading-[1.02] text-ink" />
+            <SplitHeading text={lead.name} as="h1" className="mt-4 max-w-[11ch] text-[length:var(--size-h1)] leading-[1.02] text-ink" />
             <p className="mt-5 text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-ink-soft">{range}</p>
             <p className="mt-2 text-2xl tabular-nums text-ink">{formatPrice(lead.price)}</p>
             <div className="mt-3">

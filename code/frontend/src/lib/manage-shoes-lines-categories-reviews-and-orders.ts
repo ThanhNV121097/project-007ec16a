@@ -4,10 +4,9 @@
  *
  * ONE TRANSPORT, ONE FILE TO SWAP. Every call goes through `transport`, which
  * answers with a plain {status, body} and never throws; status 0 is "no
- * answer came". Today it is the pretend shop in lib/mock; the backend step
- * points it at src/lib/api.ts (POST, PUT, DELETE, PATCH, the upload) and
- * deletes the mock. Nothing below it changes: what a 422 or a 409 means to a
- * person is decided here, once.
+ * answer came". It is the shop itself, through src/lib/api.ts (POST, PUT,
+ * DELETE, PATCH, the upload): see the -wire file beside this one. What a 422 or
+ * a 409 means to a person is decided here, once.
  *
  *   fields       the shop refused named fields (422, or a 409 that names a size)
  *   message      the shop's own sentence, to show as it is (409, 413, 415)
@@ -19,7 +18,7 @@
  * No call is ever repeated by this file: a save is not idempotent.
  */
 import type { Row } from "../data";
-import transport from "./mock/manage-shoes-lines-categories-reviews-and-orders";
+import transport from "./manage-shoes-lines-categories-reviews-and-orders-wire";
 
 /** What a transport hands back. Status 0: no answer came. */
 export interface Wire {

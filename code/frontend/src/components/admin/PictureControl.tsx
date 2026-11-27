@@ -6,6 +6,10 @@ import { Button, Field } from "./index";
 import { FailureLine } from "./SaveNote";
 import { uploadFile, type Failure } from "./store";
 
+/** The most the shop takes: 5 MB, read as 5 MiB — exactly that is accepted. */
+const MAX_BYTES = 5 * 1024 * 1024;
+const TOO_LARGE = "That picture is too large (5 MB at most).";
+
 /**
  * A PICTURE IS CHOSEN BY LOOKING AT IT, AND SENT TO THE SHOP AT ONCE.
  *
@@ -13,7 +17,10 @@ import { uploadFile, type Failure } from "./store";
  * address the shop answers with — never the file's own bytes as text. While it
  * is on its way the control says so and tells the form (`onWorking`), which
  * makes Save wait; a refusal (a GIF, a file over 5 MB, no answer) shows beside
- * the control and every other typed value stays.
+ * the control and every other typed value stays. A file over the limit is
+ * refused here with the shop's own sentence, before a byte is sent: a browser
+ * still sending 6 MB when the shop has already answered may see the connection
+ * close instead of the answer.
  */
 export default function PictureControl({ spec, value, error, onChange, onWorking }: ControlProps & {
   onWorking?: (key: string, working: boolean) => void;
@@ -25,6 +32,11 @@ export default function PictureControl({ spec, value, error, onChange, onWorking
 
   async function take(file: File | undefined) {
     if (!file) return;
+    if (file.size > MAX_BYTES) {
+      setRefused({ kind: "message", message: TOO_LARGE });
+      if (input.current) input.current.value = "";
+      return;
+    }
     setSending(true);
     setRefused(null);
     onWorking?.(spec.key, true);

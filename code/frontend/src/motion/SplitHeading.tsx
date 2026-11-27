@@ -11,9 +11,15 @@ import { atLeastLively, EASE, movement } from "./level";
  * letters rise into. When the site is calm or still it is a plain heading.
  * One a page, on the line that matters: a page where every heading performs
  * has no heading that does.
+ *
+ * A heading that is a RECORD's words, not the site's — the home page's lead
+ * shoe, whose name the dealer changes in the admin — passes `text` instead of
+ * `k`. Those words are not content, so the element carries no data-edit.
  */
-export default function SplitHeading({ k, as = "h2", className = "" }: { k: string; as?: ElementType; className?: string }) {
-  const text = String(useContent(k) ?? "");
+export default function SplitHeading({ k, text: given, as = "h2", className = "" }: { k?: string; text?: string; as?: ElementType; className?: string }) {
+  const own = String(useContent(k ?? "") ?? "");
+  const text = given ?? own;
+  const edit = given === undefined && k ? { "data-edit": k } : {};
   const box = useRef<HTMLElement>(null);
   const lively = atLeastLively(movement());
   useEffect(() => {
@@ -31,7 +37,7 @@ export default function SplitHeading({ k, as = "h2", className = "" }: { k: stri
     seen.observe(el);
     return () => { seen.disconnect(); };
   }, [lively, text]);
-  if (!lively) return createElement(as, { className, "data-edit": k }, text);
+  if (!lively) return createElement(as, { className, ...edit }, text);
   // THE SAME WHITE SPACE IN BOTH RENDERINGS. Each word used to carry a space
   // after it, the last one included, and the plain heading above carries none
   // — so `<SplitHeading as="span" /><em>…</em>` read "for the climb" while it
@@ -40,7 +46,7 @@ export default function SplitHeading({ k, as = "h2", className = "" }: { k: stri
   // spaces now sit BETWEEN the words, and a space the content itself begins or
   // ends with is kept, exactly as the plain heading keeps it.
   const words = text.split(/\s+/).filter(Boolean);
-  return createElement(as, { ref: box, className, "data-edit": k, "aria-label": text },
+  return createElement(as, { ref: box, className, ...edit, "aria-label": text },
     /^\s/.test(text) ? " " : null,
     words.map((word, i) => (
       <Fragment key={`${word}-${i}`}>

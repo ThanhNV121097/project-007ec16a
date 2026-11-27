@@ -7,7 +7,7 @@ vi.hoisted(() => {
   vi.stubEnv("NODE_ENV", "test");
 });
 
-vi.mock("../lib/mock/manage-shoes-lines-categories-reviews-and-orders", () => ({
+vi.mock("../lib/manage-shoes-lines-categories-reviews-and-orders-wire", () => ({
   default: { create: vi.fn(), update: vi.fn(), remove: vi.fn(), read: vi.fn(), upload: vi.fn(), setPairs: vi.fn() },
 }));
 
@@ -15,7 +15,7 @@ import DeleteQuestion from "../components/admin/DeleteQuestion";
 import RecordDialog from "../components/admin/RecordDialog";
 import { fieldsOf } from "../components/admin/fields";
 import { deleteRow } from "../components/admin/store";
-import transport from "../lib/mock/manage-shoes-lines-categories-reviews-and-orders";
+import transport from "../lib/manage-shoes-lines-categories-reviews-and-orders-wire";
 import type { Wire } from "../lib/manage-shoes-lines-categories-reviews-and-orders";
 
 const shop = vi.mocked(transport);
@@ -91,6 +91,29 @@ describe("saving from the add dialog", () => {
     expect(screen.queryByText("Enter a whole number")).toBeNull();
   });
 
+  it("shows the shop's earlier sentence and the blank-field sentence together, with nothing else lost", async () => {
+    shop.create.mockResolvedValueOnce(reply(422, { error: "invalid", message: "x", errors: { since: "Enter a whole number" } }));
+    openAdd("lines", "Lines");
+    type("Name", "Samba");
+    type("First made", "1949");
+    press("Add");
+    await screen.findByText("Enter a whole number");
+    // The name is cleared and Add pressed again: the client finds the blank name
+    // before sending, and the shop's sentence for the untouched field stays.
+    type("Name", "");
+    press("Add");
+    expect(screen.getByText("Name is needed")).toBeInTheDocument();
+    expect(screen.getByText("Enter a whole number")).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("First made")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("First made")).toHaveValue(1949);
+    expect(shop.create).toHaveBeenCalledTimes(1);
+    // Editing a field takes only its own sentence away.
+    type("First made", "1950");
+    expect(screen.queryByText("Enter a whole number")).toBeNull();
+    expect(screen.getByText("Name is needed")).toBeInTheDocument();
+  });
+
   it("says it could not save when the shop cannot be reached, and lets the person try again", async () => {
     shop.create.mockResolvedValueOnce(reply(0));
     openAdd("lines", "Lines");
@@ -151,6 +174,26 @@ describe("the picture control", () => {
     choose(png());
     expect(await screen.findByText("We could not upload that picture. Please try again.")).toBeInTheDocument();
     expect(screen.queryByText("Choose a JPEG, PNG or WebP picture.")).toBeNull();
+  });
+
+  it("refuses a file over 5 MB beside the control without sending a byte, and takes exactly 5 MB", async () => {
+    openAdd("categories", "Categories");
+    type("Name", "Women");
+    const big = png();
+    Object.defineProperty(big, "size", { value: 5 * 1024 * 1024 + 1 });
+    choose(big);
+    expect(await screen.findByText("That picture is too large (5 MB at most).")).toHaveAttribute("role", "alert");
+    expect(shop.upload).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Name")).toHaveValue("Women");
+    expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+
+    shop.upload.mockResolvedValueOnce(reply(201, { url: "/api/v1/uploads/abc.png" }));
+    const exact = png();
+    Object.defineProperty(exact, "size", { value: 5 * 1024 * 1024 });
+    choose(exact);
+    expect(await screen.findByRole("button", { name: "Replace" })).toBeInTheDocument();
+    expect(shop.upload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("That picture is too large (5 MB at most).")).toBeNull();
   });
 });
 
