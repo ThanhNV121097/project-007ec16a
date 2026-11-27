@@ -139,7 +139,6 @@ type Collection struct {
 	// left"; {s} stands for the sizes as a text array. Empty for every
 	// collection but the shoes.
 	Sizes string
-<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
 	// Live is the condition a record must meet to be seen by a caller who is
 	// not the shop's team (a shoe on sale, a review that is shown). Empty when
 	// every record is public. The dealer's view is not narrowed by it.
@@ -148,12 +147,10 @@ type Collection struct {
 	// bookkeeping ones (a shoe's pairs in each size). They are not fields of the
 	// schema, so no filter, sort or search can name them.
 	Dealer []Column
-=======
 	// DefaultOrder is the ORDER BY of a list that names no sort, written over the
 	// table alias t; empty means the seed's order, t.seq. A named sort still ends
 	// in t.seq, so a page never repeats or skips a record.
 	DefaultOrder string
->>>>>>> refs/heads/main
 }
 
 // public returns the columns a caller with no session may read, in output order.
@@ -177,7 +174,6 @@ func (c *Collection) selectList() string {
 	return strings.Join(parts, ", ")
 }
 
-<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
 // viewList is the SELECT list of one of the two views. The public view is the
 // Public columns. The dealer view adds the bookkeeping columns and the
 // dealer-only ones; a Private column (an order's phone) is in neither.
@@ -209,7 +205,6 @@ func (c *Collection) dealerSees(cols ...Column) *Collection {
 	return c
 }
 
-=======
 // selectServing is the SELECT list of a view that serves the given access
 // classes; none means the public view, which is what selectList is.
 func (c *Collection) selectServing(served []Access) string {
@@ -225,7 +220,6 @@ func (c *Collection) selectServing(served []Access) string {
 	return strings.Join(parts, ", ")
 }
 
->>>>>>> refs/heads/main
 // searching sets what a typed word is looked for in.
 func (c *Collection) searching(expr string) *Collection {
 	c.Search = expr
