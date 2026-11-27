@@ -218,19 +218,19 @@ func TestHitLetsTheLimitThroughAndRefusesTheNext(t *testing.T) {
 	ctx := context.Background()
 	s := Subject("sign_up_address", "203.0.113.9")
 	for i := 1; i <= 10; i++ {
-		refused, err := Hit(ctx, pool, "sign_up_address", s, 10, time.Hour)
-		if err != nil || refused {
-			t.Fatalf("attempt %d: refused %v, %v", i, refused, err)
+		wait, err := Hit(ctx, pool, "sign_up_address", s, 10, time.Hour)
+		if err != nil || wait != 0 {
+			t.Fatalf("attempt %d: wait %v, %v", i, wait, err)
 		}
 	}
 	for i := 11; i <= 13; i++ {
-		if refused, err := Hit(ctx, pool, "sign_up_address", s, 10, time.Hour); err != nil || !refused {
-			t.Fatalf("attempt %d: refused %v, %v", i, refused, err)
+		if wait, err := Hit(ctx, pool, "sign_up_address", s, 10, time.Hour); err != nil || wait < time.Second || wait > time.Hour {
+			t.Fatalf("attempt %d: wait %v, %v", i, wait, err)
 		}
 	}
 	shift(t, pool, "61 minutes")
-	if refused, err := Hit(ctx, pool, "sign_up_address", s, 10, time.Hour); err != nil || refused {
-		t.Errorf("after the window: refused %v, %v", refused, err)
+	if wait, err := Hit(ctx, pool, "sign_up_address", s, 10, time.Hour); err != nil || wait != 0 {
+		t.Errorf("after the window: wait %v, %v", wait, err)
 	}
 	if hits, locked := rowOf(t, pool, "sign_up_address", s); hits != 1 || locked {
 		t.Errorf("after the window: hits %d locked %v", hits, locked)

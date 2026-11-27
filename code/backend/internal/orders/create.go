@@ -55,7 +55,9 @@ func (s *service) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := s.place(r.Context(), key, req)
+	// The order is linked to the session's account only for a customer; a guest, a
+	// staff member and the admin give "".
+	res, err := s.place(r.Context(), key, req, callerAccount(r))
 	if err != nil {
 		s.refuse(w, r, err)
 		return
