@@ -13,7 +13,7 @@ import type { Filter } from "../data";
  *
  *   const t = useTableQuery({ size: 20 });
  *   const { items, total, pages, page } = useCollection("products", {
- *     page: t.page, pageSize: t.size, sort: t.sort, q: t.q,
+ *     page: t.page, pageSize: t.size, sort: t.sort, q: t.q.trim(),
  *     where: { status: t.list("status"), created_at: t.range("created") },
  *   });
  *
