@@ -154,14 +154,11 @@ type listRequest struct {
 	words []string
 	// sort is nil for the seed's order.
 	sort *sortKey
-<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
 	// dealer is true for a session of the shop's team: the list is not narrowed
 	// to what is on sale and the dealer's columns are served.
 	dealer bool
-=======
 	// served are the access classes the handler selects; none means Public.
 	served []Access
->>>>>>> refs/heads/main
 }
 
 // firstValue is the first value of a repeated name.
@@ -583,14 +580,15 @@ func listSQL(c *Collection, req listRequest) (string, []any) {
 	if req.sort == nil && c.DefaultOrder != "" {
 		order = c.DefaultOrder
 	}
+	// The team's view of a registry collection, or the classes a handler that is
+	// pinned to its own set names (the team's orders list); never both.
+	columns := c.selectServing(req.served)
+	if req.dealer {
+		columns = c.viewList(true)
+	}
 	sql := "SELECT (SELECT count(*) FROM " + c.From + " WHERE " + cond + ") AS total, " +
-<<<<<<< refs/heads/feature/manage-shoes-lines-categories-reviews-and-orders-be
-		"coalesce((SELECT json_agg(p) FROM (SELECT " + c.viewList(req.dealer) + " FROM " + c.From +
-		" WHERE " + cond + " ORDER BY " + orderBy(req) + " LIMIT $" + strconv.Itoa(n+1) + " OFFSET $" + strconv.Itoa(n+2) +
-=======
-		"coalesce((SELECT json_agg(p) FROM (SELECT " + c.selectServing(req.served) + " FROM " + c.From +
+		"coalesce((SELECT json_agg(p) FROM (SELECT " + columns + " FROM " + c.From +
 		" WHERE " + cond + " ORDER BY " + order + " LIMIT $" + strconv.Itoa(n+1) + " OFFSET $" + strconv.Itoa(n+2) +
->>>>>>> refs/heads/main
 		") p), '[]'::json)::text AS items"
 	args = append(args, req.limit, (req.page-1)*req.limit)
 	return sql, args
