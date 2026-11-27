@@ -417,8 +417,8 @@ func inList(list []string, v string) bool {
 	return false
 }
 
-var dayShape = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`)
-
+// isDay says whether v is a calendar day written YYYY-MM-DD (dayShape, in
+// orders_input.go, is the shape both the records and the orders check first).
 func isDay(v string) bool {
 	if !dayShape.MatchString(v) {
 		return false
